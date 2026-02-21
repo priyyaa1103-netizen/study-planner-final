@@ -1,20 +1,29 @@
 <!DOCTYPE html>
 <html>
-<head><title>Study Planner Login</title>
-<style>
-body{font-family:Arial;background:#4a90e2;color:white;text-align:center;padding:50px}
-input{padding:15px;margin:10px;font-size:18px;border:none;border-radius:5px}
-button{padding:15px 30px;background:#50c878;color:white;border:none;border-radius:5px;font-size:18px;cursor:pointer}
-</style>
+<head>
+    <title>Study Planner Login</title>
+    <style>
+        body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}
+        .login-box{background:white;color:#333;padding:40px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.1);width:350px}
+        input{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #ddd;border-radius:8px;box-sizing:border-box}
+        input:focus{border-color:#667eea;outline:none}
+        button{width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:18px;cursor:pointer;font-weight:bold}
+        button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}
+        h1{text-align:center;margin-bottom:30px;font-size:28px}
+        .error{color:#e74c3c;font-size:14px;text-align:center;margin-top:10px}
+        .demo{text-align:center;margin-top:20px;font-size:14px;color:#666}
+    </style>
 </head>
 <body>
-<h1>🎓 Study Planner Login</h1>
-<form method="POST">
-    <input type="email" name="email" placeholder="Email" required><br>
-    <input type="password" name="password" placeholder="Password" required><br>
-    <button type="submit">Login</button>
-</form>
-<p>No account? Use: test@test.com / 123456</p>
+    <div class="login-box">
+        <h1>🎓 Study Planner</h1>
+        <form method="POST">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        {% if error %}<div class="error">{{error}}</div>{% endif %}
+        <div class="demo">Demo: test@test.com / 123456</div>
+    </div>
 </body>
 </html>
-
