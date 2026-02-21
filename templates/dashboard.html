@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head><title>Dashboard</title>
-<style>body{font-family:Arial;background:#4a90e2;color:white;padding:50px;text-align:center}
-button{padding:20px 40px;margin:20px;background:#50c878;color:white;border:none;border-radius:10px;font-size:20px;cursor:pointer}
-h1{font-size:32px;margin-bottom:50px}
+<style>
+body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:20px}
+.container{max-width:800px;margin:0 auto;text-align:center}
+h1{font-size:36px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
+h2{font-size:24px;margin-bottom:40px}
+.btn{display:inline-block;padding:20px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:15px;font-size:20px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.2);transition:all 0.3s}
+.btn:hover{transform:translateY(-5px);box-shadow:0 15px 40px rgba(0,0,0,0.3)}
+.welcome{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:40px;backdrop-filter:blur(10px)}
 </style>
 </head>
 <body>
-<h1>Welcome {{name}}! 🎓</h1>
-<h2>Study Planner & Reminder App</h2>
-<a href="/study"><button>📚 Study Dashboard</button></a>
-<a href="/goals"><button>🎯 Set Goal</button></a>
-<a href="/view-goals"><button>📊 View Goals</button></a>
-<a href="/reminders"><button>⏰ Reminders</button></a>
+<div class="container">
+    <div class="welcome">
+        <h1>Welcome {{name}}! 🎓</h1>
+        <h2>Study Planner & Reminder App</h2>
+    </div>
+    <a href="/study" class="btn">📚 Study Dashboard</a>
+    <a href="/goals" class="btn">🎯 Set Goal</a>
+    <a href="/view-goals" class="btn">📊 View Goals</a>
+    <a href="/reminders" class="btn">⏰ Reminders</a>
+    <br><a href="/logout" style="color:#ffd700;font-size:16px;margin-top:30px;display:inline-block">Logout</a>
+</div>
 </body>
 </html>
