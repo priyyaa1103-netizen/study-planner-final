@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><head><title>Upload {{subject}} Notes</title>
+<style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+input[type=file]{width:400px;padding:15px;margin:20px;border-radius:10px;border:none;background:rgba(255,255,255,0.9)}
+button{padding:20px 40px;margin:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;cursor:pointer}
+h1{font-size:36px;margin-bottom:40px}</style></head>
+<body>
+<h1>📤 Upload {{subject}} Notes</h1>
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".pdf" required>
+    <br><button type="submit">✅ Upload PDF</button>
+</form>
+<a href="/subject/{{subject}}" class="btn" style="background:#3498db">← Back to {{subject}}</a>
+</body></html>
