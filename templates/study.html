@@ -4,5 +4,7 @@
 .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}
 h1{font-size:32px;margin-bottom:40px}</style></head>
 <body><h1>📚 Study Dashboard</h1>
-{% for year in years %}<a href="/study/{{year[0]}}" class="btn">{{year[0]}}</a>{% endfor %}
+{% for year in years %}
+<a href="/{{year[0].lower().replace(' ', '')}}" class="btn">{{year[0]}}</a>
+{% endfor %}
 <a href="/dashboard" class="btn" style="background:#f39c12">← Back</a></body></html>
