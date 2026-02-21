@@ -9,13 +9,15 @@ def login():
             session['logged_in'] = True
             return redirect('/dashboard')
     return '''
-<center><h1>🎓 Study Planner Login</h1>
+<center><h1 style="color:#4a90e2;font-size:36px">🎓 Study Planner Login</h1>
+<div style="background:rgba(255,255,255,0.1);padding:30px;border-radius:15px;max-width:400px;margin:50px auto">
 <form method="POST">
-Email: <input name="email"><br>
-Password: <input name="password" type="password"><br><br>
-<button>Login</button>
+<input style="padding:15px;margin:10px;width:90%;border-radius:8px;border:none;font-size:16px" name="email" placeholder="Email" required>
+<input style="padding:15px;margin:10px;width:90%;border-radius:8px;border:none;font-size:16px" name="password" type="password" placeholder="Password" required>
+<button style="padding:15px 40px;background:#50c878;color:white;border:none;border-radius:8px;font-size:18px;cursor:pointer;width:100%">Login</button>
 </form>
-<p>test@test.com / 123456</p>
+<p style="color:#ffd700;margin-top:20px">Demo: test@test.com / 123456</p>
+</div>
     '''
 
 @app.route('/dashboard')
@@ -23,12 +25,15 @@ def dashboard():
     if not session.get('logged_in'):
         return redirect('/')
     return '''
-<center><h1>Welcome Student! 🎓</h1>
-<h2>Study Planner App</h2>
-<a href="/study"><button style="padding:20px 40px;font-size:20px;margin:10px">📚 Study Dashboard</button></a><br>
-<a href="/goals"><button style="padding:20px 40px;font-size:20px;margin:10px">🎯 Set Goal</button></a><br>
-<a href="/view-goals"><button style="padding:20px 40px;font-size:20px;margin:10px">📊 View Goals</button></a><br>
-<a href="/logout"><button style="padding:20px 40px;font-size:20px;margin:10px;background:red;color:white">Logout</button></a>
+<center><h1 style="color:#4a90e2;font-size:40px;margin:30px">Welcome Student! 🎓</h1>
+<h2 style="color:white;font-size:28px">Study Planner & Reminder App</h2>
+<div style="margin:40px">
+<a href="/study"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer;box-shadow:0 8px 20px rgba(80,200,120,0.3)">📚 Study Dashboard</button></a><br>
+<a href="/goals"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#f39c12;color:white;border:none;border-radius:15px;cursor:pointer;box-shadow:0 8px 20px rgba(243,156,18,0.3)">🎯 Set Goal</button></a><br>
+<a href="/view-goals"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer;box-shadow:0 8px 20px rgba(52,152,219,0.3)">📊 View Goals</button></a><br>
+<a href="/reminders"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#e74c3c;color:white;border:none;border-radius:15px;cursor:pointer;box-shadow:0 8px 20px rgba(231,76,60,0.3)">⏰ Reminders</button></a><br>
+<a href="/logout"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#95a5a6;color:white;border:none;border-radius:15px;cursor:pointer;box-shadow:0 8px 20px rgba(149,165,166,0.3)">Logout</button></a>
+</div>
     '''
 
 @app.route('/study')
@@ -36,94 +41,77 @@ def study():
     if not session.get('logged_in'):
         return redirect('/')
     return '''
-<center><h1>📚 Study Dashboard</h1>
-<a href="/year1"><button style="padding:20px 40px;font-size:20px;margin:10px">1st Year</button></a><br>
-<a href="/year2"><button style="padding:20px 40px;font-size:20px;margin:10px">2nd Year</button></a><br>
-<a href="/year3"><button style="padding:20px 40px;font-size:20px;margin:10px">3rd Year</button></a><br><br>
-<a href="/dashboard"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📚 Study Dashboard</h1>
+<div style="margin:40px">
+<a href="/year1"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">1st Year</button></a><br>
+<a href="/year2"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">2nd Year</button></a><br>
+<a href="/year3"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">3rd Year</button></a>
+</div>
+<a href="/dashboard"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back to Dashboard</button></a>
     '''
 
 @app.route('/year1')
 def year1():
     return '''
-<center><h1>📚 1st Year</h1>
-<a href="/sem1"><button style="padding:20px 40px;font-size:20px;margin:10px">Semester 1</button></a><br>
-<a href="/sem2"><button style="padding:20px 40px;font-size:20px;margin:10px">Semester 2</button></a><br><br>
-<a href="/study"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📚 1st Year</h1>
+<div style="margin:40px">
+<a href="/sem1"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 1</button></a><br>
+<a href="/sem2"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 2</button></a>
+</div>
+<a href="/study"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back</button></a>
+    '''
+
+@app.route('/year2')
+def year2():
+    return '''
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📚 2nd Year</h1>
+<div style="margin:40px">
+<a href="/sem3"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 3</button></a><br>
+<a href="/sem4"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 4</button></a>
+</div>
+<a href="/study"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back</button></a>
+    '''
+
+@app.route('/year3')
+def year3():
+    return '''
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📚 3rd Year</h1>
+<div style="margin:40px">
+<a href="/sem5"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 5</button></a><br>
+<a href="/sem6"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer">Semester 6</button></a>
+</div>
+<a href="/study"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back</button></a>
     '''
 
 @app.route('/sem1')
 def sem1():
     return '''
-<center><h1>📖 Semester 1</h1>
-<a href="/maths"><button style="padding:20px 40px;font-size:20px;margin:10px">Maths</button></a><br>
-<a href="/physics"><button style="padding:20px 40px;font-size:20px;margin:10px">Physics</button></a><br>
-<a href="/chem"><button style="padding:20px 40px;font-size:20px;margin:10px">Chemistry</button></a><br><br>
-<a href="/year1"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
-    '''
-
-@app.route('/maths')
-def maths():
-    return '''
-<center><h1>📖 Maths</h1>
-<h2>Notes Section</h2>
-<form>Upload PDF: <input type="file" accept=".pdf"><button>Upload</button></form><br>
-<button style="padding:15px 30px;background:green;color:white">📥 Download Notes</button><br>
-<p>📄 Available: Maths-Notes.pdf, Formulas.pdf</p>
-<br><a href="/sem1"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
-    '''
-
-@app.route('/physics')
-def physics():
-    return '''
-<center><h1>⚛️ Physics</h1>
-<h2>Notes Section</h2>
-<form>Upload PDF: <input type="file" accept=".pdf"><button>Upload</button></form><br>
-<button style="padding:15px 30px;background:green;color:white">📥 Download Notes</button><br>
-<p>📄 Available: Physics-Notes.pdf, Mechanics.pdf</p>
-<br><a href="/sem1"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
-    '''
-
-@app.route('/chem')
-def chem():
-    return '''
-<center><h1>🧪 Chemistry</h1>
-<h2>Notes Section</h2>
-<form>Upload PDF: <input type="file" accept=".pdf"><button>Upload</button></form><br>
-<button style="padding:15px 30px;background:green;color:white">📥 Download Notes</button><br>
-<p>📄 Available: Chemistry-Notes.pdf, Organic.pdf</p>
-<br><a href="/sem1"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
-    '''
-
-@app.route('/goals')
-def goals():
-    return '''
-<center><h1>🎯 Set Goals</h1>
-<form method="POST">
-Subject: <input name="subject"><br>
-Description: <input name="goal"><br><br>
-<button style="padding:15px 30px;font-size:18px">Add Goal</button>
-</form>
-<br><a href="/dashboard"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
-    '''
-
-@app.route('/view-goals')
-def view_goals():
-    return '''
-<center><h1>📊 View Goals</h1>
-<h2>Progress: 75%</h2>
-<div style="background:grey;width:300px;height:30px;border-radius:15px;margin:20px auto">
-<div style="background:green;width:75%;height:30px;border-radius:15px"></div>
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📖 Semester 1</h1>
+<div style="margin:40px">
+<a href="/maths"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">📖 Maths</button></a><br>
+<a href="/physics"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">⚛️ Physics</button></a><br>
+<a href="/chem"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">🧪 Chemistry</button></a>
 </div>
-<br><a href="/dashboard"><button style="padding:20px 40px;font-size:20px;background:orange">← Back</button></a>
+<a href="/year1"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back</button></a>
     '''
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
+@app.route('/sem2')
+def sem2():
+    return '''
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📖 Semester 2</h1>
+<div style="margin:40px">
+<a href="/maths2"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">📖 Advanced Maths</button></a><br>
+<a href="/physics2"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">⚛️ Physics-II</button></a><br>
+<a href="/bio"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">🧬 Biology</button></a>
+</div>
+<a href="/year1"><button style="padding:25px 50px;font-size:22px;background:orange;color:white;border:none;border-radius:15px;cursor:pointer">← Back</button></a>
+    '''
 
-if __name__ == '__main__':
-    from os import environ
-    port = int(environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+@app.route('/sem3')
+def sem3():
+    return '''
+<center><h1 style="color:#4a90e2;font-size:36px;margin:30px">📖 Semester 3</h1>
+<div style="margin:40px">
+<a href="/ds"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">📚 Data Structures</button></a><br>
+<a href="/algo"><button style="padding:25px 50px;font-size:22px;margin:15px;background:#50c878;color:white;border:none;border-radius:15px;cursor:pointer">⚙️ Algorithms</button></a><br>
+<a href="/dbms"><button style="padding:25px 50px;font-size:22px;margin:15px;background
