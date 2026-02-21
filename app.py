@@ -111,7 +111,7 @@ def login():
                 error = "❌ Wrong email or password!"
     
     return render_login_page(error)
-
+    
 def render_login_page(error=""):
     return f'''
     <!DOCTYPE html>
@@ -121,8 +121,8 @@ def render_login_page(error=""):
         <style>
             *{{margin:0;padding:0;box-sizing:border-box}}
             body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:white;color:#333;padding:40px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}}
-            .tabs{{display:flex;background:#f8f9fa;border-radius:12px 12px 0 0;overflow:hidden;margin:-40px -40px 30px -40px}}
+            .login-box{{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}}
+            .tabs{{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:30px 0}}
             .tab{{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}}
             .tab.active{{background:#667eea;color:white}}
             input{{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}}
@@ -130,18 +130,24 @@ def render_login_page(error=""):
             button{{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}}
             button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
             .error{{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}}
-            .demo{{text-align:center;margin-top:20px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}}
-            h1{{text-align:center;margin-bottom:25px;font-size:28px;color:#333}}
+            .demo{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}}
+            h1{{text-align:center;margin-bottom:30px;font-size:32px;color:#333}}
+            .tabs-container{{margin:25px 0}}
         </style>
     </head>
     <body>
         <div class="login-box">
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-                <div class="tab" onclick="showTab('register')">➕ Register</div>
+            
+            <!-- TABS KEELA VARUM -->
+            <div class="tabs-container">
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('login')">🔐 Login</div>
+                    <div class="tab" onclick="showTab('register')">➕ Register</div>
+                </div>
             </div>
+            
             <form method="POST" id="login-form">
                 <input type="hidden" name="action" value="login">
                 <input type="email" name="email" placeholder="your-email@gmail.com" required>
@@ -154,6 +160,7 @@ def render_login_page(error=""):
                 <input type="password" name="password" placeholder="Create Password" required>
                 <button type="submit">Create Account</button>
             </form>
+            
             <div class="demo">
                 Demo: test@test.com / 123456
             </div>
@@ -537,3 +544,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
