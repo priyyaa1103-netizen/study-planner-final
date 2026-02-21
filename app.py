@@ -1,5 +1,18 @@
 from flask import Flask, request, redirect, session
 import os
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (email TEXT PRIMARY KEY, password TEXT)''')
+    # Default test user
+    c.execute("INSERT OR IGNORE INTO users VALUES ('test@test.com', '123456')")
+    conn.commit()
+    conn.close()
+
+init_db()
 
 app = Flask(__name__)
 app.secret_key = 'study2026'
@@ -10,38 +23,32 @@ os.makedirs('static/uploads', exist_ok=True)
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form['email'] == 'test@test.com' and request.form['password'] == '123456':
+        email = request.form['email']
+        password = request.form['password']
+        
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+        user = c.fetchone()
+        conn.close()
+        
+        if user:
             session['logged_in'] = True
-            session['name'] = 'Student'
+            session['email'] = email
             return redirect('/dashboard')
-        else:
-            return '''
-            <!DOCTYPE html>
-            <html><head><title>Login Failed</title>
-            <style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}
-            .login-box{background:white;color:#333;padding:40px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.1);width:350px}</style></head>
-            <body><div class="login-box">
-            <h1>❌ Wrong Credentials!</h1>
-            <form method="POST">
-            <input type="email" name="email" placeholder="Email" style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
-            <input type="password" name="password" placeholder="Password" style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
-            <button type="submit" style="width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:18px">Login</button>
-            </form><p>test@test.com / 123456</p></div></body></html>
-            '''
+    
     return '''
-    <!DOCTYPE html>
-    <html><head><title>Study Planner Login</title>
+    <!DOCTYPE html><html><head><title>Login</title>
     <style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}
-    .login-box{background:white;color:#333;padding:40px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.1);width:350px}
-    input{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #ddd;border-radius:8px;box-sizing:border-box}
-    button{width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:18px;cursor:pointer;font-weight:bold}</style></head>
-    <body><div class="login-box">
+    .box{background:white;color:#333;padding:40px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.1);width:350px}</style></head>
+    <body><div class="box">
     <h1>🎓 Study Planner</h1>
     <form method="POST">
-    <input type="email" name="email" placeholder="Email" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-    </form><p>Demo: test@test.com / 123456</p></div></body></html>
+    <input type="email" name="email" placeholder="Your Email" required style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
+    <input type="password" name="password" placeholder="Password" required style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
+    <button type="submit" style="width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:18px">Login</button>
+    </form>
+    <p><b>Demo:</b> test@test.com / 123456<br>Or use your own email!</p></div></body></html>
     '''
 
 @app.route('/dashboard')
@@ -58,6 +65,7 @@ def dashboard():
     <a href="/goals" class="btn">🎯 Set Goal</a>
     <a href="/view-goals" class="btn">📊 View Goals</a>
     <a href="/reminders" class="btn">⏰ Reminders</a>
+    <a href="/set-reminder" class="btn">⏰ Set Reminder</a>
     <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
     </body></html>
     '''
@@ -183,18 +191,32 @@ def sem6():
     <a href="/subject/electives" class="btn">Electives</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
+    
+@app.route('/unit/<subject_name>/<unit_num>')
+def unit_page(subject_name, unit_num):
+    if not session.get('logged_in'): return redirect('/')
+    return f'''
+    <!DOCTYPE html><html><head><title>Unit {unit_num}</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:20px 40px;margin:20px;background:#e74c3c;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block}}.dl-btn{{background:#27ae60}}.back{{background:#f39c12}}h1{{font-size:36px}}</style></head>
+    <body><h1>📖 Unit {unit_num} - {subject_name.replace("-"," ").title()}</h1>
+    <a href="/upload/{subject_name}_unit{unit_num}" class="btn">📤 Upload PDF</a>
+    <a href="/static/uploads/{subject_name}_unit{unit_num}.pdf" class="dl-btn btn">📥 Download PDF</a>
+    <a href="/subject/{subject_name}" class="back btn">← All Units</a></body></html>
+    '''
 
 # ===== SUBJECT NOTES PAGES =====
 @app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>{subject_name} Notes</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:20px;background:#e74c3c;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block}}.download-btn{{background:#27ae60}}h1{{font-size:36px;margin-bottom:40px}}</style></head>
-    <body><h1>📚 {subject_name.replace("-"," ").title()} Notes</h1>
-    <a href="/upload/{subject_name}" class="btn">📤 Upload PDF Notes</a>
-    <a href="/static/uploads/{subject_name}.pdf" class="download-btn btn" target="_blank">📥 Download PDF</a>
-    <a href="/dashboard" class="btn" style="background:#f39c12">← Dashboard</a></body></html>
+    <!DOCTYPE html><html><head><title>{subject_name}</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .units{{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;max-width:900px;margin:0 auto}}
+    .unit-btn{{padding:20px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:18px;display:block}}
+    .unit-btn:hover{{background:#45b06a;transform:translateY(-2px)}}h1{{font-size:36px}}</style></head>
+    <body><h1>📚 {subject_name.replace("-"," ").title()}</h1>
+    <div class="units">
+    ''' + ''.join([f'<a href="/unit/{subject_name}/{i}" class="unit-btn">Unit {i}</a>' for i in range(1,11)]) + '''
+    </div><a href="/dashboard" style="padding:15px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:10px;font-size:18px;margin-top:30px;display:inline-block">← Dashboard</a></body></html>
     '''
 
 @app.route('/upload/<subject_name>', methods=['GET', 'POST'])
@@ -260,6 +282,28 @@ def reminders():
     <div class="card">🎯 <b>Physics Ch3</b><br>Friday Deadline</div>
     <a href="/dashboard" class="btn">← Dashboard</a></body></html>
     '''
+@app.route('/set-reminder', methods=['GET', 'POST'])
+def set_reminder():
+    if not session.get('logged_in'): return redirect('/')
+    if request.method == 'POST':
+        email = session['email']
+        subject = request.form['subject']
+        time = request.form['time']
+        return f'''
+        <h1 style="text-align:center;color:green;font-size:40px;margin-top:100px">✅ Reminder Set for {email}!</h1>
+        <p>{subject} - {time}</p>
+        <a href="/dashboard" style="display:inline-block;padding:20px 40px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px">← Dashboard</a>
+        '''
+    return '''
+    <!DOCTYPE html><html><head><title>Reminder</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    input{width:300px;padding:15px;margin:10px;border-radius:10px;border:none}button{padding:20px 40px;background:#ff6b6b;color:white;border:none;border-radius:15px;font-size:20px}h1{font-size:36px}</style></head>
+    <body><h1>⏰ Set Reminder</h1>
+    <form method="POST">
+    Subject: <input name="subject" required><br>
+    Time: <input name="time" type="datetime-local" required><br>
+    <button>Set Reminder</button>
+    </form><a href="/dashboard" style="color:white;font-size:20px">← Back</a></body></html>
+    '''
     
 @app.route('/logout')
 def logout():
@@ -269,4 +313,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
