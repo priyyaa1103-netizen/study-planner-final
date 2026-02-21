@@ -57,6 +57,7 @@ def dashboard():
     <a href="/study" class="btn">📚 Study Dashboard</a>
     <a href="/goals" class="btn">🎯 Set Goal</a>
     <a href="/view-goals" class="btn">📊 View Goals</a>
+    <a href="/reminders" class="btn">⏰ Reminders</a>
     <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
     </body></html>
     '''
@@ -246,7 +247,20 @@ def view_goals():
     <!DOCTYPE html><html><head><title>View Goals</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}h1{{font-size:36px;margin-bottom:40px}}</style></head>
     <body><h1>📊 Your Goals</h1>{goals_html}<a href="/dashboard" style="color:white;font-size:20px">← Dashboard</a></body></html>
     '''
-
+    
+@app.route('/reminders')
+def reminders():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>Reminders</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .card{background:linear-gradient(135deg,orange,#f39c12);padding:25px;margin:20px;border-radius:20px;display:inline-block;box-shadow:0 10px 30px rgba(0,0,0,0.3)}
+    .btn{padding:20px 40px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px}h1{font-size:36px}</style></head>
+    <body><h1>⏰ Study Reminders</h1>
+    <div class="card">📚 <b>Maths Test</b><br>Tomorrow 10AM</div>
+    <div class="card">🎯 <b>Physics Ch3</b><br>Friday Deadline</div>
+    <a href="/dashboard" class="btn">← Dashboard</a></body></html>
+    '''
+    
 @app.route('/logout')
 def logout():
     session.clear()
@@ -255,3 +269,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
