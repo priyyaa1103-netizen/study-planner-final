@@ -258,61 +258,120 @@ def study():
     </body></html>
     '''
 
-# Year Routes
+# ===== 1st YEAR =====
 @app.route('/year1')
 def year1():
     if not session.get('logged_in'): return redirect('/')
-    return f'''
-    <!DOCTYPE html><html><head><title>1st Year</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block;box-shadow:0 10px 25px rgba(80,200,120,0.4)}}h1{{font-size:38px;margin-bottom:50px}}</style></head>
-    <body><h1>📚 1st Year</h1>
-    <a href="/sem1" class="btn">📖 Semester 1</a>
-    <a href="/sem2" class="btn">📖 Semester 2</a>
+    return '''
+    <!DOCTYPE html><html><head><title>1st Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📚 1st Year</h1><a href="/sem1" class="btn">Semester 1</a><a href="/sem2" class="btn">Semester 2</a>
     <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
-    '''
-
-@app.route('/year2')
-@app.route('/year3')
-def other_years():
-    if not session.get('logged_in'): return redirect('/')
-    return f'''
-    <!DOCTYPE html><html><head><title>Coming Soon</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}}
-    .box{{background:rgba(255,255,255,0.1);padding:60px;border-radius:25px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.3);backdrop-filter:blur(15px);width:90%;max-width:500px}}</style></head>
-    <body><div class="box">
-    <h1 style="font-size:48px">🚧 Coming Soon</h1>
-    <p style="font-size:24px;margin:30px 0">This section is under development</p>
-    <a href="/dashboard" style="padding:20px 50px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:22px;display:inline-block">← Dashboard</a>
-    </div></body></html>
     '''
 
 @app.route('/sem1')
 def sem1():
     if not session.get('logged_in'): return redirect('/')
-    return f'''
-    <!DOCTYPE html><html><head><title>Semester 1</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block;box-shadow:0 10px 25px rgba(80,200,120,0.4)}}h1{{font-size:38px;margin-bottom:50px}}</style></head>
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 1</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 1</h1>
-    <a href="/subject/maths" class="btn">📐 Mathematics</a>
-    <a href="/subject/physics" class="btn">⚛️ Physics</a>
-    <a href="/subject/chemistry" class="btn">🧪 Chemistry</a>
+    <a href="/subject/maths" class="btn">Mathematics</a>
+    <a href="/subject/python" class="btn">Python</a>
+    <a href="/subject/tamil" class="btn">Tamil</a>
+    <a href="/subject/english" class="btn">English</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
 @app.route('/sem2')
 def sem2():
     if not session.get('logged_in'): return redirect('/')
-    return f'''
-    <!DOCTYPE html><html><head><title>Semester 2</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block;box-shadow:0 10px 25px rgba(80,200,120,0.4)}}h1{{font-size:38px;margin-bottom:50px}}</style></head>
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 2</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 2</h1>
-    <a href="/subject/maths2" class="btn">📐 Maths-II</a>
-    <a href="/subject/physics2" class="btn">⚛️ Physics-II</a>
-    <a href="/subject/biology" class="btn">🧬 Biology</a>
+    <a href="/subject/maths2" class="btn">Maths-II</a>
+    <a href="/subject/physics" class="btn">Physics-II</a>
+    <a href="/subject/tamil" class="btn">Tamil</a>
+    <a href="/subject/english" class="btn">english</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+# ===== 2nd YEAR =====
+@app.route('/year2')
+def year2():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>2nd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📚 2nd Year</h1><a href="/sem3" class="btn">Semester 3</a><a href="/sem4" class="btn">Semester 4</a>
+    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+@app.route('/sem3')
+def sem3():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📖 Semester 3</h1>
+    <a href="/subject/java programming" class="btn">Java Programming</a>
+    <a href="/subject/statistics-1" class="btn">Statistics-1</a>
+    <a href="/subject/tamil" class="btn">Tamil</a>
+    <a href="/subject/english" class="btn">English</a>
+    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+@app.route('/sem4')
+def sem4():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 4</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📖 Semester 4</h1>
+    <a href="/subject/data structures" class="btn">Data structures</a>
+    <a href="/subject/statistics" class="btn">Statistics</a>
+    <a href="/subject/tamil" class="btn">Tamil</a>
+    <a href="/subject/english" class="btn">English</a>
+    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+# ===== 3rd YEAR =====
+@app.route('/year3')
+def year3():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>3rd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📚 3rd Year</h1><a href="/sem5" class="btn">Semester 5</a><a href="/sem6" class="btn">Semester 6</a>
+    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+@app.route('/sem5')
+def sem5():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 5</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📖 Semester 5</h1>
+    <a href="/subject/os" class="btn">Operating System</a>
+    <a href="/subject/RDBMS" class="btn">Relational database management system</a>
+    <a href="/subject/SE" class="btn">Software engineering</a>
+    <a href="/subject/DMW" class="btn">Data mining and warehousing</a>
+    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
+    '''
+
+@app.route('/sem6')
+def sem6():
+    if not session.get('logged_in'): return redirect('/')
+    return '''
+    <!DOCTYPE html><html><head><title>Semester 6</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <body><h1>📖 Semester 6</h1>
+    <a href="/subject/ASP.net" class="btn">Programming in ASP.net</a>
+    <a href="/subject/DS" class="btn">Data science</a>
+    <a href="/subject/CC" class="btn">Cloud computing</a>
+    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
 @app.route('/subject/<subject_name>')
@@ -544,4 +603,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
