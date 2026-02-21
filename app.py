@@ -10,9 +10,7 @@ os.makedirs('static/uploads', exist_ok=True)
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-       email = request.form['email']
-       password = request.form['password']
-    if (email == 'test@test.com' and password == '123456') or (email == 'ravi@gmail.com' and password == '123'):
+        if request.form['email'] == 'test@test.com' and request.form['password'] == '123456':
             session['logged_in'] = True
             session['name'] = 'Student'
             return redirect('/dashboard')
@@ -185,31 +183,18 @@ def sem6():
     <a href="/subject/electives" class="btn">Electives</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
-    
-@app.route('/unit/<subject_name>/<int:unit_num>')
-def unit_page(subject_name, unit_num):
-    if not session.get('logged_in'): return redirect('/')
-    return f'''
-    <!DOCTYPE html><html><head><title>Unit {unit_num}</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:20px;background:#e74c3c;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block}}.upload-btn{{background:#50c878}}.back-btn{{background:#f39c12}}h1{{font-size:36px}}</style></head>
-    <body><h1>📖 Unit {unit_num} - {subject_name.replace("-"," ").title()}</h1>
-    <a href="/upload/{subject_name}_unit{unit_num}" class="upload-btn btn">📤 Upload PDF</a>
-    <a href="/static/uploads/{subject_name}_unit{unit_num}.pdf" class="btn" target="_blank">📥 Download PDF</a>
-    <a href="/subject/{subject_name}" class="back-btn btn">← All Units</a></body></html>
-    '''
 
 # ===== SUBJECT NOTES PAGES =====
 @app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
-    units = ''
-    for i in range(1, 11):
-        units += f'<a href="/unit/{subject_name}/{i}" style="display:inline-block;padding:20px 30px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:18px">Unit {i}</a><br>'
     return f'''
-    <!DOCTYPE html><html><head><title>{subject_name}</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}h1{{font-size:36px;margin-bottom:40px}}</style></head>
-    <body><h1>📚 {subject_name.replace("-"," ").title()}</h1>
-    <div style="max-width:1000px;margin:0 auto">{units}</div>
-    <a href="/dashboard" style="display:inline-block;padding:20px 40px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:20px;margin-top:30px">← Dashboard</a></body></html>
+    <!DOCTYPE html><html><head><title>{subject_name} Notes</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:20px 40px;margin:20px;background:#e74c3c;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block}}.download-btn{{background:#27ae60}}h1{{font-size:36px;margin-bottom:40px}}</style></head>
+    <body><h1>📚 {subject_name.replace("-"," ").title()} Notes</h1>
+    <a href="/upload/{subject_name}" class="btn">📤 Upload PDF Notes</a>
+    <a href="/static/uploads/{subject_name}.pdf" class="download-btn btn" target="_blank">📥 Download PDF</a>
+    <a href="/dashboard" class="btn" style="background:#f39c12">← Dashboard</a></body></html>
     '''
 
 @app.route('/upload/<subject_name>', methods=['GET', 'POST'])
