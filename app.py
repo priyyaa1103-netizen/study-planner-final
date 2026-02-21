@@ -4,6 +4,9 @@ import os
 app = Flask(__name__)
 app.secret_key = 'study2026'
 
+# Create uploads folder if not exists
+os.makedirs('static/uploads', exist_ok=True)
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -90,12 +93,40 @@ def sem6():
     subjects = [('Project',), ('Internship',), ('Electives',)]
     return render_template('subjects.html', year='3rd Year', sem='Semester 6', subjects=subjects)
 
+# NEW: SUBJECT NOTES PAGES
+@app.route('/subject/<subject_name>')
+def subject_notes(subject_name):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    return render_template('subject_notes.html', subject=subject_name)
+
+@app.route('/upload/<subject_name>', methods=['GET', 'POST'])
+def upload_notes(subject_name):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    if request.method == 'POST':
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename != '':
+                file.save(f'static/uploads/{subject_name}.pdf')
+                return render_template('subject_notes.html', subject=subject_name, message="✅ PDF Uploaded Successfully!")
+    return render_template('upload_notes.html', subject=subject_name)
+
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
     if not session.get('logged_in'):
         return redirect('/')
     if request.method == 'POST':
-        session['goals'] = session.get('goals', []) + [request.form['subject']]
+        goal_data = {
+            'subject': request.form['subject'],
+            'description': request.form['goal'],
+            'target_score': request.form.get('target_score', 0),
+            'study_hours': request.form.get('study_hours', 0),
+            'progress': 0
+        }
+        goals = session.get('goals', [])
+        goals.append(goal_data)
+        session['goals'] = goals
         return redirect('/view-goals')
     return render_template('goals.html')
 
