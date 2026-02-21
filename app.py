@@ -1,5 +1,4 @@
 from flask import Flask, request, redirect, session
-import os
 import sqlite3
 
 def init_db():
@@ -38,17 +37,17 @@ def login():
             return redirect('/dashboard')
     
     return '''
-    <!DOCTYPE html><html><head><title>Login</title>
+    <!DOCTYPE html>
+    <html><head><title>Login</title>
     <style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}
     .box{background:white;color:#333;padding:40px;border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.1);width:350px}</style></head>
     <body><div class="box">
     <h1>🎓 Study Planner</h1>
     <form method="POST">
-    <input type="email" name="email" placeholder="Your Email" required style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
+    <input type="email" name="email" placeholder="Email" required style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
     <input type="password" name="password" placeholder="Password" required style="width:100%;padding:15px;margin:10px 0;border-radius:8px">
     <button type="submit" style="width:100%;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:18px">Login</button>
-    </form>
-    <p><b>Demo:</b> test@test.com / 123456<br>Or use your own email!</p></div></body></html>
+    </form><p><b>Test:</b> test@test.com / 123456</p></div></body></html>
     '''
 
 @app.route('/dashboard')
@@ -313,5 +312,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
 
