@@ -373,10 +373,10 @@ def sem6():
     <a href="/subject/CC" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
-
 @app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
     units_html = ''
     subject_folder = f"static/uploads/{subject_name}"
@@ -385,29 +385,47 @@ def subject_notes(subject_name):
     for i in range(1, 11):
         unit_file = f"{subject_folder}/unit{i}.pdf"
         upload_link = f"/upload/{subject_name}/unit{i}"
+        download_link = f"/download/{subject_name}/unit{i}.pdf"
+        delete_link = f"/delete/{subject_name}/unit{i}.pdf"
         has_file = os.path.exists(unit_file)
         
-        units_html += f'''
-        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
-        </div>
+        html = f'''
+        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:240px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+            <h3 style="margin-bottom:15px">Unit {i}</h3>
+            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:6px 0;font-weight:500">Upload PDF</a>
         '''
+        
+        if has_file:
+            html += f'''
+            <a href="{download_link}" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:6px 0;font-weight:500">Download PDF</a>
+            <a href="{delete_link}" onclick="return confirm('Unit {i} delete pannalama?')" style="display:block;padding:12px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin:6px 0;font-weight:500">Delete File</a>
+            '''
+        else:
+            html += '<p style="color:#f39c12;font-weight:500;margin-top:10px">No file uploaded</p>'
+        
+        html += '</div>'
+        units_html += html
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
+    <html>
+    <head>
+        <title>{subject_name.replace("-"," ").title()} Notes</title>
+        <style>
+        body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+        .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600}}
+        h1{{font-size:40px;margin:80px 0 40px 0;text-align:center}}
+        .container{{max-width:1400px;margin:0 auto}}
+        </style>
+    </head>
     <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
-    <div class="container">{units_html}</div>
-    </body></html>
+        <a href="/dashboard" class="back-btn">← Back</a>
+        <h1>📚 {subject_name.replace("-"," ").title()}</h1>
+        <div class="container">{units_html}</div>
+    </body>
+    </html>
     '''
-
+    
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
     if not session.get('logged_in'): return redirect('/')
@@ -495,20 +513,13 @@ def view_goals():
     goals = conn.execute('SELECT * FROM goals WHERE email=?', (session['email'],)).fetchall()
     conn.close()
     
-    goals_html = ''
-    for goal in goals:
-        progress_width = min(goal['progress'] * 5, 100)
-        goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 {goal['subject']}</h3>
-            <p><strong>Goal:</strong> {goal['goal']}</p>
-            <p><strong>Target:</strong> {goal['target_score']}% | <strong>Hours:</strong> {goal['study_hours']}h</p>
-            <div style="background:#e1e8ed;height:25px;border-radius:15px;overflow:hidden;margin:20px 0">
-                <div style="background:#2ecc71;width:{progress_width}%;height:100%;transition:all 0.3s"></div>
-            </div>
-            <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
-        </div>
-        '''
+    goals_html += f'''
+    <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
+       <a href="/delete-goal/{goal['id']}" onclick="return confirm('Goal ஐ delete பண்ணலாமா?')" style="position:absolute;top:15px;right:15px;padding:8px 15px;background:#e74c3c;color:white;border-radius:8px;font-size:14px">🗑️</a>
+       <h3>📚 {goal['subject']}</h3>
+    <!-- rest same -->
+    </div>
+    '''
     
     return f'''
     <!DOCTYPE html>
@@ -525,7 +536,7 @@ def view_goals():
     </div>
     </body></html>
     '''
-
+    
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
@@ -555,9 +566,10 @@ def reminders():
         else:
             status = "🚨 OVERDUE"
             status_color = "#e74c3c"
-        
         reminders_html += f'''
-        <div style="background:linear-gradient(135deg,{status_color},darken({status_color},10%));padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+        <div style="background:linear-gradient(135deg,{status_color},#333);padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3);position:relative">
+            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete this reminder?')" 
+               style="position:absolute;top:15px;right:15px;padding:8px 15px;background:#e74c3c;color:white;border-radius:8px;font-size:14px;text-decoration:none;font-weight:500">🗑️ Delete</a>
             <h3 style="margin-bottom:10px">{status}</h3>
             <p><strong>{r['title']}</strong></p>
             <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
@@ -594,6 +606,32 @@ def reminders():
     <a href="/dashboard" style="padding:25px 60px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block">← Dashboard</a>
     </body></html>
     '''
+    
+@app.route('/delete/<subject_name>/<filename>')
+def delete_file(subject_name, filename):
+    if not session.get('logged_in'): return redirect('/')
+    file_path = f'static/uploads/{subject_name}/{filename}'
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    return redirect(f'/subject/{subject_name}')
+
+@app.route('/delete-goal/<goal_id>')
+def delete_goal(goal_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (goal_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/view-goals')
+
+@app.route('/delete-reminder/<reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (reminder_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/reminders')
 
 @app.route('/logout')
 def logout():
@@ -603,5 +641,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
