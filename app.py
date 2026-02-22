@@ -17,7 +17,7 @@ os.makedirs('static/uploads', exist_ok=True)
 
 # Initialize SQLite Database
 def init_db():
-    conn = sqlite3.connect('/tmp/users.db')
+    conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
@@ -391,13 +391,9 @@ def subject_notes(subject_name):
         <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
             <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
             <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'''
-            <a href="/download/{subject_name}/unit{i}.pdf" target="_blank"
-            style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>
-
-            <a href="/delete/{subject_name}/unit{i}.pdf"
-            style="display:block;padding:12px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">🗑 Delete</a>
-            ''' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
+            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
@@ -452,18 +448,6 @@ def upload_unit(subject_name, unit_num):
 @app.route('/download/<subject_name>/<filename>')
 def download_file(subject_name, filename):
     return send_from_directory(f'static/uploads/{subject_name}', filename)
-    
-@app.route('/delete/<subject_name>/<filename>')
-def delete_file(subject_name, filename):
-    if not session.get('logged_in'):
-        return redirect('/')
-
-    file_path = f'static/uploads/{subject_name}/{filename}'
-
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    return redirect(f'/subject/{subject_name}')
 
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
@@ -523,10 +507,6 @@ def view_goals():
                 <div style="background:#2ecc71;width:{progress_width}%;height:100%;transition:all 0.3s"></div>
             </div>
             <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
-            <a href="/delete-goal/{goal['id']}"
-            style="display:inline-block;padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin-top:10px">
-            🗑 Delete Goal
-            </a>
         </div>
         '''
     
@@ -545,18 +525,6 @@ def view_goals():
     </div>
     </body></html>
     '''
-@app.route('/delete-goal/<int:goal_id>')
-def delete_goal(goal_id):
-    if not session.get('logged_in'):
-        return redirect('/')
-
-    conn = get_db_connection()
-    conn.execute("DELETE FROM goals WHERE id=? AND email=?", 
-                 (goal_id, session['email']))
-    conn.commit()
-    conn.close()
-
-    return redirect('/view-goals')
 
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
@@ -587,18 +555,15 @@ def reminders():
         else:
             status = "🚨 OVERDUE"
             status_color = "#e74c3c"
+        
         reminders_html += f'''
-        <div style="background:{status_color};padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
-        <h3 style="margin-bottom:10px">{status}</h3>
-        <p><strong>{r['title']}</strong></p>
-        <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
-        <a href="/delete-reminder/{r['id']}"
-        style="display:inline-block;padding:8px 15px;background:#c0392b;color:white;text-decoration:none;border-radius:8px;margin-top:10px">
-        🗑 Delete
-        </a>
+        <div style="background:linear-gradient(135deg,{status_color},darken({status_color},10%));padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+            <h3 style="margin-bottom:10px">{status}</h3>
+            <p><strong>{r['title']}</strong></p>
+            <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
         </div>
         '''
-       
+    
     return f'''
     <!DOCTYPE html>
     <html><head><title>Reminders</title>
@@ -630,19 +595,6 @@ def reminders():
     </body></html>
     '''
 
-@app.route('/delete-reminder/<int:reminder_id>')
-def delete_reminder(reminder_id):
-    if not session.get('logged_in'):
-        return redirect('/')
-
-    conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
-                 (reminder_id, session['email']))
-    conn.commit()
-    conn.close()
-
-    return redirect('/reminders')
-
 @app.route('/logout')
 def logout():
     session.clear()
@@ -651,7 +603,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-
-
-
