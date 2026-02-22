@@ -17,7 +17,7 @@ os.makedirs('static/uploads', exist_ok=True)
 
 # Initialize SQLite Database
 def init_db():
-    conn = sqlite3.connect('users.db')
+    conn = sqlite3.connect('/tmp/users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
@@ -587,19 +587,18 @@ def reminders():
         else:
             status = "🚨 OVERDUE"
             status_color = "#e74c3c"
-        
         reminders_html += f'''
-        <div style="background:linear-gradient(135deg,{status_color},darken({status_color},10%));padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
-            <h3 style="margin-bottom:10px">{status}</h3>
-            <p><strong>{r['title']}</strong></p>
-            <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
-            <a href="/delete-reminder/{r['id']}"
-            style="display:inline-block;padding:8px 15px;background:#c0392b;color:white;text-decoration:none;border-radius:8px;margin-top:10px">
-            🗑 Delete
-            </a>
+        <div style="background:{status_color};padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+        <h3 style="margin-bottom:10px">{status}</h3>
+        <p><strong>{r['title']}</strong></p>
+        <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
+        <a href="/delete-reminder/{r['id']}"
+        style="display:inline-block;padding:8px 15px;background:#c0392b;color:white;text-decoration:none;border-radius:8px;margin-top:10px">
+        🗑 Delete
+        </a>
         </div>
         '''
-    
+       
     return f'''
     <!DOCTYPE html>
     <html><head><title>Reminders</title>
@@ -652,6 +651,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
