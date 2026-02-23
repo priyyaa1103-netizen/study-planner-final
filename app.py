@@ -530,25 +530,29 @@ def reminders():
     conn.close()
     
     reminders_html = ''
-    now = datetime.now()
+now = datetime.now()
+
+for r in reminders_list:
+    deadline = datetime.fromisoformat(r['deadline'])
+    time_left = deadline - now
+    if time_left.total_seconds() > 0:
+        status = f"⏰ Due in {int(time_left.total_seconds()//3600)}h"
+        status_color = "orange"
+    else:
+        status = "🚨 OVERDUE"
+        status_color = "#e74c3c"
     
-    for r in reminders_list:
-        deadline = datetime.fromisoformat(r['deadline'])
-        time_left = deadline - now
-        if time_left.total_seconds() > 0:
-            status = f"⏰ Due in {int(time_left.total_seconds()//3600)}h"
-            status_color = "orange"
-        else:
-            status = "🚨 OVERDUE"
-            status_color = "#e74c3c"
-        
-        reminders_html += f'''
-        <div style="background:linear-gradient(135deg,{status_color},darken({status_color},10%));padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
-            <h3 style="margin-bottom:10px">{status}</h3>
-            <p><strong>{r['title']}</strong></p>
-            <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
+    reminders_html += f'''
+    <div style="background:linear-gradient(135deg,{status_color},#333);padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+            <h3 style="margin:0">{status}</h3>
+            <a href="/delete_reminder/{r['id']}" style="color:#e74c3c;font-size:24px;padding:10px;background:rgba(255,255,255,0.2);border-radius:10px;text-decoration:none" 
+               onclick="return confirm('இந்த Reminder ஐ Delete பண்ணலாமா? 🗑️')" title="Delete">🗑️</a>
         </div>
-        '''
+        <p style="margin:0 0 10px 0;font-size:18px;font-weight:600">{r['title']}</p>
+        <p style="opacity:0.9;margin:0">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
+    </div>
+    '''
     
     return f'''
     <!DOCTYPE html>
@@ -623,4 +627,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
