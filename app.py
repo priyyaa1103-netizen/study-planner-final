@@ -428,8 +428,6 @@ def upload_unit(subject_name, unit_num):
                 conn.close()
                 return redirect(f'/subject/{subject_name}')
         return '<h1>No file selected!</h1>'
-    
-    # Your existing upload form HTML
 
 @app.route('/download/<subject_name>/<filename>')
 def download_file(subject_name, filename):
@@ -584,8 +582,7 @@ for r in reminders_list:
     <a href="/dashboard" style="padding:25px 60px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block">← Dashboard</a>
     </body></html>
     '''
-
-# 🔥 Files Delete Route
+    
 @app.route('/delete_file/<file_id>')
 def delete_file(file_id):
     if not session.get('logged_in'): return redirect('/')
@@ -599,25 +596,54 @@ def delete_file(file_id):
     conn.close()
     return redirect(request.referrer or '/dashboard')
 
-# 🔥 Goals Delete Route  
-@app.route('/delete_goal/<goal_id>')
+@app.route('/delete_reminder/<int:reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    try:
+        conn = get_db_connection()
+        conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (reminder_id, session['email']))
+        conn.commit()
+        conn.close()
+        print(f"✅ Deleted reminder ID: {reminder_id}") 
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
+        conn.close()
+    return redirect('/reminders')
+
+@app.route('/delete_goal/<int:goal_id>')
 def delete_goal(goal_id):
-    if not session.get('logged_in'): return redirect('/')
-    conn = get_db_connection()
-    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (goal_id, session['email']))
-    conn.commit()
-    conn.close()
+    if not session.get('logged_in'): 
+        return redirect('/')
+    try:
+        conn = get_db_connection()
+        conn.execute('DELETE FROM goals WHERE id=? AND email=?', (goal_id, session['email']))
+        conn.commit()
+        conn.close()
+        print(f"✅ Deleted goal ID: {goal_id}")
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
     return redirect('/view-goals')
 
-# 🔥 Reminders Delete Route
-@app.route('/delete_reminder/<reminder_id>')
-def delete_reminder(reminder_id):
-    if not session.get('logged_in'): return redirect('/')
-    conn = get_db_connection()
-    conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (reminder_id, session['email']))
-    conn.commit()
-    conn.close()
-    return redirect('/reminders')
+@app.route('/delete_file/<int:file_id>')
+def delete_file(file_id):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    try:
+        conn = get_db_connection()
+        file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
+                           (file_id, session['email'])).fetchone()
+        if file:
+            file_path = f'static/uploads/{file["subject"]}/{file["filename"]}'
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            conn.execute('DELETE FROM files WHERE id=?', (file_id,))
+            conn.commit()
+            print(f"✅ Deleted file ID: {file_id}")
+        conn.close()
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
+    return redirect(request.referrer or '/dashboard')
 
 @app.route('/logout')
 def logout():
@@ -627,5 +653,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
