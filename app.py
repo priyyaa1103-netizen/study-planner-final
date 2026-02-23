@@ -29,6 +29,10 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, unit_num INTEGER,
+                  filename TEXT, upload_date TEXT)''')
     conn.commit()
     conn.close()
 
@@ -378,35 +382,31 @@ def sem6():
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     
-    units_html = ''
-    subject_folder = f"static/uploads/{subject_name}"
-    os.makedirs(subject_folder, exist_ok=True)
+    conn = get_db_connection()
+    files = conn.execute('SELECT * FROM files WHERE email=? AND subject=? ORDER BY unit_num', 
+                        (session['email'], subject_name)).fetchall()
+    conn.close()
     
+    units_html = ''
     for i in range(1, 11):
-        unit_file = f"{subject_folder}/unit{i}.pdf"
-        upload_link = f"/upload/{subject_name}/unit{i}"
-        has_file = os.path.exists(unit_file)
-        
+        unit_files = [f for f in files if f['unit_num'] == i]
         units_html += f'''
-        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
+        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:250px">
+            <h3>📚 Unit {i}</h3>
+            <a href="/upload/{subject_name}/unit{i}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📤 Upload</a>
+            {''.join([f'''
+                <div style="background:rgba(39,174,96,0.8);padding:10px;margin:5px 0;border-radius:8px;display:flex;justify-content:space-between">
+                    <span>{f["filename"]}</span>
+                    <div>
+                        <a href="/download/{subject_name}/{f["filename"]}" style="color:white;font-size:20px;margin-right:10px" target="_blank">📥</a>
+                        <a href="/delete_file/{f["id"]}" style="color:#e74c3c;font-size:20px" onclick="return confirm('Delete?')">🗑️</a>
+                    </div>
+                </div>
+            ''' for f in unit_files]) or '<p style="color:#f39c12">No files</p>'}
         </div>
         '''
     
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
-    <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
-    <div class="container">{units_html}</div>
-    </body></html>
-    '''
+    return f'''[YOUR EXISTING HTML HERE]'''
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
@@ -417,33 +417,19 @@ def upload_unit(subject_name, unit_num):
             file = request.files['file']
             if file.filename != '':
                 os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
-                filename = secure_filename(f"unit{unit_num}.pdf")
-                file.save(f'static/uploads/{subject_name}/{filename}')
-                return f'''
-                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
-                <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
-                <p style="font-size:24px;margin:30px 0">{subject_name.title()} Unit {unit_num} uploaded!</p>
-                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
-                </div>
-                '''
-        return '<h1 style="color:red;text-align:center">No file selected!</h1>'
+                filename = secure_filename(f"unit{unit_num}_{int(datetime.now().timestamp())}.pdf")
+                filepath = f'static/uploads/{subject_name}/{filename}'
+                file.save(filepath)
+                
+                conn = get_db_connection()
+                conn.execute('INSERT INTO files (email, subject, unit_num, filename, upload_date) VALUES (?, ?, ?, ?, ?)',
+                           (session['email'], subject_name, int(unit_num), filename, datetime.now().isoformat()))
+                conn.commit()
+                conn.close()
+                return redirect(f'/subject/{subject_name}')
+        return '<h1>No file selected!</h1>'
     
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    input[type=file]{{width:500px;padding:20px;margin:30px;border-radius:15px;border:none;background:rgba(255,255,255,0.95);font-size:18px}}
-    button{{padding:25px 60px;margin:30px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;cursor:pointer;font-weight:600;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:40px}}</style></head>
-    <body>
-    <h1>📤 Upload Unit {unit_num}</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".pdf" required>
-        <br><button type="submit">✅ Upload PDF</button>
-    </form>
-    <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
-    </body></html>
-    '''
+    # Your existing upload form HTML
 
 @app.route('/download/<subject_name>/<filename>')
 def download_file(subject_name, filename):
@@ -595,6 +581,40 @@ def reminders():
     </body></html>
     '''
 
+# 🔥 Files Delete Route
+@app.route('/delete_file/<file_id>')
+def delete_file(file_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', (file_id, session['email'])).fetchone()
+    if file:
+        file_path = f'static/uploads/{file["subject"]}/{file["filename"]}'
+        if os.path.exists(file_path): os.remove(file_path)
+        conn.execute('DELETE FROM files WHERE id=?', (file_id,))
+        conn.commit()
+    conn.close()
+    return redirect(request.referrer or '/dashboard')
+
+# 🔥 Goals Delete Route  
+@app.route('/delete_goal/<goal_id>')
+def delete_goal(goal_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (goal_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/view-goals')
+
+# 🔥 Reminders Delete Route
+@app.route('/delete_reminder/<reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (reminder_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/reminders')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -603,3 +623,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
