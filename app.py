@@ -24,7 +24,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, study_hours INTEGER, 
+                  target_score INTEGER, study_hours TEXT, 
                   progress INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -451,15 +451,26 @@ def download_file(subject_name, filename):
 
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
     if request.method == 'POST':
         conn = get_db_connection()
+
+        hour = request.form['hour']
+        minute = request.form['minute']
+        ampm = request.form['ampm']
+
+        study_time = f"{hour}:{minute} {ampm}"
+
         conn.execute('''INSERT INTO goals (email, subject, goal, target_score, study_hours) 
                        VALUES (?, ?, ?, ?, ?)''', 
-                    (session['email'], request.form['subject'], 
-                     request.form['goal'], request.form['target_score'], 
-                     request.form['study_hours']))
+                    (session['email'], 
+                     request.form['subject'], 
+                     request.form['goal'], 
+                     request.form['target_score'], 
+                     study_time))
+
         conn.commit()
         conn.close()
         return redirect('/view-goals')
@@ -479,7 +490,25 @@ def goals():
             <input name="subject" placeholder="Subject (ex: Mathematics)" required>
             <input name="goal" placeholder="Goal Description" required>
             <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
-            <input name="study_hours" type="number" placeholder="Study Hours Target" required>
+            <label style="font-size:18px;font-weight:600">⏰ Target Study Hours:</label>
+
+<div style="display:flex;gap:10px;margin:15px 0">
+    <select name="hour" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+        {''.join([f'<option value="{i}">{i}</option>' for i in range(1,13)])}
+    </select>
+
+    <select name="minute" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+        <option value="00">00</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+    </select>
+
+    <select name="ampm" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+    </select>
+</div>
             <button type="submit">✅ Save Goal</button>
         </form>
     </div>
@@ -603,3 +632,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
