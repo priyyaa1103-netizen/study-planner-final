@@ -498,11 +498,8 @@ def goals():
     </select>
 
     <select name="minute" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-        <option value="00">00</option>
-        <option value="15">15</option>
-        <option value="30">30</option>
-        <option value="45">45</option>
-    </select>
+    {''.join([f'<option value="{i}">{i:02}</option>' for i in range(1,61)])}
+</select>
 
     <select name="ampm" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
         <option value="AM">AM</option>
@@ -632,4 +629,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
