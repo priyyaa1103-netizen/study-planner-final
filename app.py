@@ -494,11 +494,11 @@ def goals():
 
 <div style="display:flex;gap:10px;margin:15px 0">
     <select name="hour" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-        {''.join([f'<option value="{i}">{i}</option>' for i in range(1,13)])}
+        {''.join([f'<option value="{i}">{i}</option>' for i in range(0,13)])}
     </select>
 
     <select name="minute" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-    {''.join([f'<option value="{i}">{i:02}</option>' for i in range(1,61)])}
+    {''.join([f'<option value="{i}">{i:02}</option>' for i in range(0,61)])}
 </select>
 
     <select name="ampm" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
@@ -629,5 +629,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
