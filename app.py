@@ -525,16 +525,11 @@ def view_goals():
     for goal in goals:
         progress_width = min(goal['progress'] * 5, 100)
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 {goal['subject']}</h3>
-            <p><strong>Goal:</strong> {goal['goal']}</p>
-            <p><strong>Target:</strong> {goal['target_score']}% | <strong>Hours:</strong> {goal['study_hours']}h</p>
-            <div style="background:#e1e8ed;height:25px;border-radius:15px;overflow:hidden;margin:20px 0">
-                <div style="background:#2ecc71;width:{progress_width}%;height:100%;transition:all 0.3s"></div>
-            </div>
-            <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
-        </div>
-        '''
+<div style="...">
+  <h3>{goal['subject']} <a href="/delete_goal/{goal['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a></h3>
+  Goal: {goal['goal']}...
+</div>
+'''
     
     return f'''
     <!DOCTYPE html>
@@ -583,12 +578,12 @@ def reminders():
             status_color = "#e74c3c"
         
         reminders_html += f'''
-        <div style="background:linear-gradient(135deg,{status_color},darken({status_color},10%));padding:25px;margin:20px;border-radius:20px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3)">
-            <h3 style="margin-bottom:10px">{status}</h3>
-            <p><strong>{r['title']}</strong></p>
-            <p style="opacity:0.9">Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
-        </div>
-        '''
+<div style="background:linear-gradient(135deg,{status_color},#333);padding:25px;margin:20px;border-radius:20px">
+  <h3>{status} <a href="/delete_reminder/{r['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete?')">🗑️</a></h3>
+  <p><strong>{r['title']}</strong></p>
+  <p>Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
+</div>
+'''
     
     return f'''
     <!DOCTYPE html>
@@ -660,6 +655,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
