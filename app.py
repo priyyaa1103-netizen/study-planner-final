@@ -621,6 +621,37 @@ def reminders():
     </body></html>
     '''
 
+@app.route('/delete_reminder/<int:id>')
+def delete_reminder(id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = sqlite3.connect('users.db')
+    conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/reminders')
+
+@app.route('/delete_goal/<int:id>')
+def delete_goal(id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = sqlite3.connect('users.db')
+    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/view-goals')
+
+@app.route('/delete_file/<int:id>')
+def delete_file(id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = sqlite3.connect('users.db')
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', (id, session['email'])).fetchone()
+    if file:
+        import os
+        os.remove(f'static/uploads/{file[2]}/{file[3]}')
+    conn.execute('DELETE FROM files WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or '/dashboard')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -629,6 +660,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
