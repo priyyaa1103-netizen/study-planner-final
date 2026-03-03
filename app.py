@@ -19,16 +19,29 @@ os.makedirs('static/uploads', exist_ok=True)
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
+    
+    # Users table
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
+    
+    # Goals table
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
                   target_score INTEGER, study_hours INTEGER, 
                   progress INTEGER DEFAULT 0)''')
+    
+    # Reminders table  
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    
+    # Files table (notes uploads)
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, unit_num INTEGER,
+                  filename TEXT, upload_date TEXT)''')
+    
     conn.commit()
     conn.close()
 
@@ -668,6 +681,16 @@ def update_progress(goal_id, progress):
     conn.close()
     return f'<script>window.location.reload();</script>'
 
+@app.route('/update_progress/<int:goal_id>/<int:progress>')
+def update_progress(goal_id, progress):
+    if not session.get('logged_in'): return redirect('/')
+    conn = sqlite3.connect('users.db')
+    conn.execute('UPDATE goals SET progress=? WHERE id=? AND email=?', 
+                (progress, goal_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/view-goals')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -676,6 +699,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
