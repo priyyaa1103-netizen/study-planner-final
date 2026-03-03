@@ -519,6 +519,12 @@ def view_goals():
             <p><strong>Target:</strong> {goal["target_score"]}%</p>
             <div style="background:#ddd;height:20px;border-radius:10px">
                 <div style="background:#2ecc71;width:{progress_width}%;height:100%"></div>
+                <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+                <button onclick="setProgress({goal['id']}, 25)" style="padding:8px 16px;background:#3498db;color:white;border:none;border-radius:8px">25%</button>
+                <button onclick="setProgress({goal['id']}, 50)" style="padding:8px 16px;background:#2ecc71;color:white;border:none;border-radius:8px">50%</button>
+                <button onclick="setProgress({goal['id']}, 75)" style="padding:8px 16px;background:#f39c12;color:white;border:none;border-radius:8px">75%</button>
+                <button onclick="setProgress({goal['id']}, 100)" style="padding:8px 16px;background:#e74c3c;color:white;border:none;border-radius:8px">100% ✅</button>
+        </div>
             </div>
             <p>Progress: {goal["progress"]}%</p>
         </div>
@@ -534,9 +540,10 @@ body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100
 .container{{max-width:900px;margin:auto}}
 </style>
 <script>
-function updateProgress(id, progress) {{
-    fetch(`/update_progress/${{id}}/${{progress}}`).then(() => location.reload());
-}}
+function setProgress(id, progress) {
+    document.getElmentById('progress${id}').textContent=progress + '%';
+    fetch(`/update_progress/${id}/${progress}`).then(() => location.reload());
+}
 </script>
 </head>
 <body>
@@ -669,6 +676,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
