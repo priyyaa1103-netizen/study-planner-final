@@ -497,33 +497,65 @@ h1{{font-size:42px;margin-bottom:30px}}
 
 @app.route('/view-goals')
 def view_goals():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
-    conn = get_db_connection()
-    goals = conn.execute('SELECT * FROM goals WHERE email=?', (session['email'],)).fetchall()
-    conn.close()
+    try:
+        conn = sqlite3.connect('users.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('SELECT * FROM goals WHERE email=?', (session['email'],))
+        goals = c.fetchall()
+        conn.close()
+    except:
+        goals = []
     
     goals_html = ''
-    for goal in goals:
-        progress_width = min(goal['progress'] * 5, 100)
-        goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-                <h3 style="margin:0">📚 {goal['subject']}</h3>
-                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;padding:10px;background:rgba(255,0,0,0.2);border-radius:10px;text-decoration:none" onclick="return confirm('இந்த Goal ஐ Delete பண்ணலாமா? 🗑️')">🗑️</a>
+    if goals:
+        for goal in goals:
+            progress_width = min(goal['progress'] * 5, 100)
+            goals_html += f'''
+            <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+                    <h3 style="margin:0">📚 {goal['subject']}</h3>
+                    <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;padding:10px;background:rgba(255,0,0,0.2);border-radius:10px;text-decoration:none" onclick="return confirm('Delete Goal?')">🗑️</a>
+                </div>
+                <p><strong>Goal:</strong> {goal['goal']}</p>
+                <p><strong>Target:</strong> {goal['target_score']}% | <strong>Hours:</strong> {goal['study_hours']}h</p>
+                <div style="background:#e1e8ed;height:25px;border-radius:15px;overflow:hidden;margin:20px 0">
+                    <div style="background:#2ecc71;width:{progress_width}%;height:100%"></div>
+                </div>
+                <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
             </div>
-            <p><strong>Goal:</strong> {goal['goal']}</p>
-            <p><strong>Target:</strong> {goal['target_score']}% | <strong>Hours:</strong> {goal['study_hours']}h</p>
-            <div style="background:#e1e8ed;height:25px;border-radius:15px;overflow:hidden;margin:20px 0">
-                <div style="background:#2ecc71;width:{progress_width}%;height:100%"></div>
-            </div>
-            <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
+            '''
+    else:
+        goals_html = '''
+        <div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px">
+            <p>No goals set yet! 🎯</p>
+            <a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">Set goals now!</a>
         </div>
         '''
     
     return f'''
     <!DOCTYPE html>
-    <!-- your existing HTML -->
+    <html>
+    <head><title>Your Goals</title>
+    <style>
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
+    .container{{max-width:900px;margin:0 auto;text-align:center}}
+    h1{{font-size:42px;margin-bottom:50px}}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <h1>📊 Your Goals</h1>
+        {goals_html}
+        <div style="text-align:center;margin-top:50px">
+            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
+        </div>
+    </div>
+    </body>
+    </html>
     '''
 
 @app.route('/reminders', methods=['GET', 'POST'])
@@ -634,6 +666,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
