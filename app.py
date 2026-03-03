@@ -658,6 +658,18 @@ def delete_file(id):
     conn.close()
     return redirect(request.referrer or '/dashboard')
 
+@app.route('/update_progress/<int:goal_id>/<int:progress>')
+def update_progress(goal_id, progress):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    conn = sqlite3.connect('users.db')
+    conn.execute('UPDATE goals SET progress=? WHERE id=? AND email=?', 
+                (progress, goal_id, session['email']))
+    conn.commit()
+    conn.close()
+    return f'<script>window.location.reload();</script>'
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -666,6 +678,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
