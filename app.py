@@ -525,26 +525,23 @@ def view_goals():
     for goal in goals:
         progress_width = min(goal['progress'] * 5, 100)
         goals_html += f'''
-<div style="...">
-  <h3>{goal['subject']} <a href="/delete_goal/{goal['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a></h3>
-  Goal: {goal['goal']}...
-</div>
-'''
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+                <h3 style="margin:0">📚 {goal['subject']}</h3>
+                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;padding:10px;background:rgba(255,0,0,0.2);border-radius:10px;text-decoration:none" onclick="return confirm('இந்த Goal ஐ Delete பண்ணலாமா? 🗑️')">🗑️</a>
+            </div>
+            <p><strong>Goal:</strong> {goal['goal']}</p>
+            <p><strong>Target:</strong> {goal['target_score']}% | <strong>Hours:</strong> {goal['study_hours']}h</p>
+            <div style="background:#e1e8ed;height:25px;border-radius:15px;overflow:hidden;margin:20px 0">
+                <div style="background:#2ecc71;width:{progress_width}%;height:100%"></div>
+            </div>
+            <p style="font-size:20px;font-weight:600">Progress: {goal['progress']}%</p>
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Your Goals</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
-    .container{{max-width:900px;margin:0 auto}}</style></head>
-    <body>
-    <div class="container">
-        <h1 style="font-size:42px;text-align:center;margin-bottom:50px">📊 Your Goals</h1>
-        {goals_html or '<div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px"><p>No goals set yet!</p><a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">🎯 Set goals now!</a></div>'}
-        <div style="text-align:center;margin-top:50px">
-            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
-        </div>
-    </div>
-    </body></html>
+    <!-- your existing HTML -->
     '''
 
 @app.route('/reminders', methods=['GET', 'POST'])
@@ -655,6 +652,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
