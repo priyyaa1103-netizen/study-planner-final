@@ -455,41 +455,45 @@ def goals():
         return redirect('/')
     
     if request.method == 'POST':
-        try:
-            conn = get_db_connection()
-            conn.execute('''INSERT INTO goals (email, subject, goal, target_score, study_hours) 
-                           VALUES (?, ?, ?, ?, ?)''', 
-                        (session['email'], 
-                         request.form['subject'], 
-                         request.form['goal'], 
-                         int(request.form['target_score']), 
-                         int(request.form['study_hours'])))
-            conn.commit()
-            conn.close()
-            return redirect('/view-goals')  # ✅ Fixed redirect
-        except Exception as e:
-            print(f"Goal save error: {e}")
-            return redirect('/goals')
+        subject = request.form['subject']
+        goal_desc = request.form['goal']
+        target_score = request.form['target_score']
+        study_hours = request.form['study_hours']
+        
+        conn = sqlite3.connect('users.db')
+        conn.execute('INSERT INTO goals (email, subject, goal, target_score, study_hours) VALUES (?, ?, ?, ?, ?)',
+                    (session['email'], subject, goal_desc, target_score, study_hours))
+        conn.commit()
+        conn.close()
+        return redirect('/view-goals')
     
-    # GET request - Show form
     return f'''
-    <!DOCTYPE html>
-    <html><head><title>Set Goals</title>
-    <style>/* your existing styles */</style></head>
-    <body>
-    <div class="form-box">
-        <h1>🎯 Set Study Goals</h1>
-        <form method="POST">
-            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
-            <input name="goal" placeholder="Goal Description" required>
-            <input name="target_score" type="number" placeholder="Target Score (90)" required>
-            <input name="study_hours" type="number" placeholder="Study Hours (50)" required>
-            <button type="submit">✅ Save Goal</button>
-        </form>
-    </div>
-    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px">← Dashboard</a>
-    </body></html>
-    '''
+<!DOCTYPE html>
+<html>
+<head><title>Set Goals</title>
+<style>
+body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+.form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
+button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+h1{{font-size:42px;margin-bottom:30px}}
+</style>
+</head>
+<body>
+<div class="form-box">
+    <h1>🎯 Set Study Goals</h1>
+    <form method="POST">
+        <input name="subject" placeholder="Subject (Mathematics)" required>
+        <input name="goal" placeholder="Goal Description" required>
+        <input name="target_score" type="number" placeholder="Target Score (90)" required>
+        <input name="study_hours" type="number" placeholder="Study Hours (50)" required>
+        <button type="submit">✅ Save Goal</button>
+    </form>
+</div>
+<a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
+</body>
+</html>
+'''
 
 @app.route('/view-goals')
 def view_goals():
@@ -630,6 +634,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
