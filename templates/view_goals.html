@@ -5,4 +5,10 @@ h1{font-size:32px}</style></head>
 <body><h1>📊 View Goals - Coming Soon!</h1>
 <a href="/dashboard" style="color:white;font-size:20px">← Back</a></body></html>
 <a href="/delete_goal/{{goal['id']}}" style="color:#e74c3c;font-size:18px;float:right" onclick="return confirm('Delete goal?')">🗑️</a>
-<h3>📚 {{goal['subject']}} 🗑️</h3>  <!-- Header மேல delete button -->
+<h3>📚 {{goal['subject']}} 🗑️</h3> 
+<div style="margin:20px 0">
+    <label>Update Progress:</label>
+    <input type="range" min="0" max="100" value="{{goal['progress']}}" 
+           onchange="updateProgress({{goal['id']}}, this.value)" style="width:300px;height:30px">
+    <span id="progress{{goal['id']}}">{{goal['progress']}}%</span>
+</div>
