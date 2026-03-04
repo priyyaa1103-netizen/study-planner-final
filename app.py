@@ -19,29 +19,16 @@ os.makedirs('static/uploads', exist_ok=True)
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    
-    # Users table
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
-    
-    # Goals table
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, study_hours INTEGER, 
+                  target_score INTEGER, study_hours TEXT, 
                   progress INTEGER DEFAULT 0)''')
-    
-    # Reminders table  
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
-    
-    # Files table (notes uploads)
-    c.execute('''CREATE TABLE IF NOT EXISTS files 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, subject TEXT, unit_num INTEGER,
-                  filename TEXT, upload_date TEXT)''')
-    
     conn.commit()
     conn.close()
 
@@ -468,106 +455,97 @@ def goals():
         return redirect('/')
     
     if request.method == 'POST':
-        subject = request.form['subject']
-        goal_desc = request.form['goal']
-        target_score = request.form['target_score']
-        study_hours = request.form['study_hours']
-        
-        conn = sqlite3.connect('users.db')
-        conn.execute('INSERT INTO goals (email, subject, goal, target_score, study_hours) VALUES (?, ?, ?, ?, ?)',
-                    (session['email'], subject, goal_desc, target_score, study_hours))
+        conn = get_db_connection()
+
+        hour = request.form['hour']
+        minute = request.form['minute']
+        ampm = request.form['ampm']
+
+        study_time = f"{hour}:{minute} {ampm}"
+
+        conn.execute('''INSERT INTO goals (email, subject, goal, target_score, study_hours) 
+                       VALUES (?, ?, ?, ?, ?)''', 
+                    (session['email'], 
+                     request.form['subject'], 
+                     request.form['goal'], 
+                     request.form['target_score'], 
+                     study_time))
+
         conn.commit()
         conn.close()
         return redirect('/view-goals')
     
     return f'''
-<!DOCTYPE html>
-<html>
-<head><title>Set Goals</title>
-<style>
-body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-.form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
-button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-h1{{font-size:42px;margin-bottom:30px}}
-</style>
-</head>
-<body>
-<div class="form-box">
-    <h1>🎯 Set Study Goals</h1>
-    <form method="POST">
-        <input name="subject" placeholder="Subject (Mathematics)" required>
-        <input name="goal" placeholder="Goal Description" required>
-        <input name="target_score" type="number" placeholder="Target Score (90)" required>
-        <input name="study_hours" type="number" placeholder="Study Hours (50)" required>
-        <button type="submit">✅ Save Goal</button>
-    </form>
+    <!DOCTYPE html>
+    <html><head><title>Set Goals</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+    input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
+    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+    h1{{font-size:42px;margin-bottom:30px}}</style></head>
+    <body>
+    <div class="form-box">
+        <h1>🎯 Set Study Goals</h1>
+        <form method="POST">
+            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
+            <input name="goal" placeholder="Goal Description" required>
+            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
+            <label style="font-size:18px;font-weight:600">⏰ Target Study Hours:</label>
+
+<div style="display:flex;gap:10px;margin:15px 0">
+    <select name="hour" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+        {''.join([f'<option value="{i}">{i}</option>' for i in range(0,13)])}
+    </select>
+
+    <select name="minute" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+    {''.join([f'<option value="{i}">{i:02}</option>' for i in range(0,61)])}
+</select>
+
+    <select name="ampm" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+    </select>
 </div>
-<a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-</body>
-</html>
-'''
+            <button type="submit">✅ Save Goal</button>
+        </form>
+    </div>
+    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
+    </body></html>
+    '''
 
 @app.route('/view-goals')
 def view_goals():
     if not session.get('logged_in'): return redirect('/')
     
-    conn = sqlite3.connect('users.db')
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('SELECT * FROM goals WHERE email=?', (session['email'],))
-    goals = c.fetchall()
+    conn = get_db_connection()
+    goals = conn.execute('SELECT * FROM goals WHERE email=?', (session['email'],)).fetchall()
     conn.close()
     
     goals_html = ''
     for goal in goals:
         progress_width = min(goal['progress'] * 5, 100)
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
-            <h3 style="display:flex;justify-content:space-between">
-                📚 {goal["subject"]}
-                <a href="/delete_goal/{goal["id"]}" style="color:#e74c3c;font-size:24px" onclick="return confirm("Delete?")">🗑️</a>
-            </h3>
-            <p><strong>Goal:</strong> {goal["goal"]}</p>
-            <p><strong>Target:</strong> {goal["target_score"]}%</p>
-            <div style="background:#ddd;height:20px;border-radius:10px">
-                <div style="background:#2ecc71;width:{progress_width}%;height:100%"></div>
-                <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
-                <button onclick="setProgress({goal['id']}, 25)" style="padding:8px 16px;background:#3498db;color:white;border:none;border-radius:8px">25%</button>
-                <button onclick="setProgress({goal['id']}, 50)" style="padding:8px 16px;background:#2ecc71;color:white;border:none;border-radius:8px">50%</button>
-                <button onclick="setProgress({goal['id']}, 75)" style="padding:8px 16px;background:#f39c12;color:white;border:none;border-radius:8px">75%</button>
-                <button onclick="setProgress({goal['id']}, 100)" style="padding:8px 16px;background:#e74c3c;color:white;border:none;border-radius:8px">100% ✅</button>
-        </div>
-            </div>
-            <p>Progress: {goal["progress"]}%</p>
-        </div>
-        '''
+<div style="...">
+  <h3>{goal['subject']} <a href="/delete_goal/{goal['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a></h3>
+  Goal: {goal['goal']}...
+</div>
+'''
     
     return f'''
-<!DOCTYPE html>
-<html>
-<head>
-<title>Your Goals</title>
-<style>
-body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:50px}}
-.container{{max-width:900px;margin:auto}}
-</style>
-<script>
-function setProgress(id, progress) {
-    document.getElmentById('progress${id}').textContent=progress + '%';
-    fetch(`/update_progress/${id}/${progress}`).then(() => location.reload());
-}
-</script>
-</head>
-<body>
-<div class="container">
-<h1>📊 Your Goals</h1>
-{goals_html or '<p style="text-align:center;font-size:30px">No goals! <a href="/goals" style="color:#f1c40f">Add now</a></p>'}
-<a href="/dashboard" style="display:inline-block;padding:15px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:15px">← Dashboard</a>
-</div>
-</body>
-</html>
-'''
+    <!DOCTYPE html>
+    <html><head><title>Your Goals</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
+    .container{{max-width:900px;margin:0 auto}}</style></head>
+    <body>
+    <div class="container">
+        <h1 style="font-size:42px;text-align:center;margin-bottom:50px">📊 Your Goals</h1>
+        {goals_html or '<div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px"><p>No goals set yet!</p><a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">🎯 Set goals now!</a></div>'}
+        <div style="text-align:center;margin-top:50px">
+            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
+        </div>
+    </div>
+    </body></html>
+    '''
 
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
@@ -669,46 +647,11 @@ def delete_file(id):
     conn.close()
     return redirect(request.referrer or '/dashboard')
 
-@app.route('/update_progress/<int:goal_id>/<int:progress>')
-def update_progress(goal_id, progress):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    conn = sqlite3.connect('users.db')
-    conn.execute('UPDATE goals SET progress=? WHERE id=? AND email=?', 
-                (progress, goal_id, session['email']))
-    conn.commit()
-    conn.close()
-    return f'<script>window.location.reload();</script>'
-
-@app.route('/update_progress/<int:goal_id>/<int:progress>')
-def update_progress(goal_id, progress):
-    if not session.get('logged_in'): return redirect('/')
-    conn = sqlite3.connect('users.db')
-    conn.execute('UPDATE goals SET progress=? WHERE id=? AND email=?', 
-                (progress, goal_id, session['email']))
-    conn.commit()
-    conn.close()
-    return redirect('/view-goals')
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect('/')
 
 if __name__ == '__main__':
-app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
