@@ -240,7 +240,7 @@ def check_notifications():
     for reminder in overdue:
         send_email(email, "🚨 OVERDUE", f"{reminder['title']} due!")
         conn.execute("UPDATE reminders SET notified=1 WHERE id=?", (reminder['id'],))
-        notifications += f'<div class="notification">🚨 {reminder["title"]}</div>'
+        notifications += f'<div class="notification">🚨 <strong>{reminder["title"]}</strong> - Deadline Passed!</div>'
     
     conn.commit()
     conn.close()
@@ -545,16 +545,12 @@ def view_goals():
 for goal in goals:
     progress_width = min(goal['progress'] * 5, 100)  # 20% per point
     goals_html += f'''
-    <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;text-align:left;">
-        <h3>{goal["subject"]} <a href="/delete_goal/{goal["id"]}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm("Delete Goal?")">🗑️</a></h3>
-        <p>Goal: {goal["goal"]}</p>
-        <p>Target: {goal["target_score"]} | Hours: {goal["study_hours"]}</p>
-        <div style="background:#333;height:20px;border-radius:10px;overflow:hidden;">
-            <div style="width:{progress_width}%;background:#50c878;height:100%;transition:width 0.3s;"></div>
-        </div>
-        <p>Progress: {goal["progress"]}%</p>
-    </div>
-    '''
+<div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;text-align:left;">
+  <h3>{goal["subject"]} <a href="/delete_goal/{goal["id"]}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm("Delete Goal?")">🗑️</a></h3>
+  <p>Goal: {goal["goal"]}</p>
+  <p>Target: {goal["target_score"]} | Hours: {goal["study_hours"]}</p>
+</div>
+'''
     
     return f'''
     <!DOCTYPE html>
@@ -680,6 +676,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
