@@ -4,7 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
 from datetime import datetime, timedelta
+from flask_wtf.csrf
 import sqlite3
+app.config['MAX_CONTENT_LENGTH']=16*1024*1024
+app.secrect_key=os.environ.get('SECRET_KEY') or os.urandom(24).hex() vsrf=CSRFProtect(app)
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,15 +31,16 @@ def init_db():
                   progress INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, title TEXT, deadline TEXT)''')
+                  email TEXT, title TEXT, deadline TEXT,
+                  notified INTEGER DEFAULT 0)''')
     conn.commit()
     conn.close()
 
 init_db()
 
 # Email Configuration - UPDATE THESE WITH YOUR GMAIL
-GMAIL_USER = "your-gmail@gmail.com"  # Change this
-GMAIL_PASS = "your-16-digit-app-password"  # Gmail App Password
+GMAIL_USER = os.environ.get('GMAIL_USER',"your-gmail@gmail.com"  # Change this
+GMAIL_PASS = os.environ.get('GMAIL_PASS',"your-16-digit-app-password"  # Gmail App Password
 
 def send_email(to_email, subject, body):
     try:
@@ -219,23 +223,30 @@ def dashboard():
     </body>
     </html>
     '''
-
+    
 def check_notifications():
     conn = get_db_connection()
     c = conn.cursor()
     email = session.get('email', '')
     now = datetime.now()
     
-    c.execute("SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
-              (email, now.isoformat()))
-    overdue = c.fetchall()
+    overdue = c.execute("""
+        SELECT * FROM reminders 
+        WHERE email=? AND datetime(deadline) <= datetime(?) AND notified=0
+    """, (email, now.isoformat())).fetchall()
     
     notifications = ""
     for reminder in overdue:
         send_email(email, "🚨 Study Reminder - OVERDUE", 
                   f"Your reminder '{reminder['title']}' was due at {reminder['deadline']}!")
-        notifications += f'<div class="notification">🚨 <strong>{reminder["title"]}</strong> - Deadline Passed!</div>'
+        c.execute("UPDATE reminders SET notified=1 WHERE id=?", (reminder['id'],))
+        notifications += f'''
+        <div class="notification">
+            🚨 <strong>{reminder["title"]}</strong> - Deadline Passed!
+        </div>
+        '''
     
+    conn.commit()
     conn.close()
     return notifications
 
@@ -416,6 +427,19 @@ def upload_unit(subject_name, unit_num):
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
+                ALLOWED_EXTENSIONS = {'pdf'}
+                def allowed_file(filename):
+                    return '.' in filename and \
+                           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+                
+                if not allowed_file(file.filename) or file.mimetype != 'application/pdf':
+                    return f'''
+                    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
+                    <h1 style="font-size:50px;color:#e74c3c">❌ Invalid File!</h1>
+                    <p style="font-size:24px;margin:30px 0">Only PDF files allowed (≤16MB)</p>
+                    <a href="/upload/{subject_name}/{unit_num}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Try Again</a>
+                    </div>
+                    '''
                 os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
                 filename = secure_filename(f"unit{unit_num}.pdf")
                 file.save(f'static/uploads/{subject_name}/{filename}')
@@ -522,14 +546,19 @@ def view_goals():
     conn.close()
     
     goals_html = ''
-    for goal in goals:
-        progress_width = min(goal['progress'] * 5, 100)
-        goals_html += f'''
-<div style="...">
-  <h3>{goal['subject']} <a href="/delete_goal/{goal['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a></h3>
-  Goal: {goal['goal']}...
-</div>
-'''
+for goal in goals:
+    progress_width = min(goal['progress'] * 5, 100)  # 20% per point
+    goals_html += f'''
+    <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;text-align:left;">
+        <h3>{goal["subject"]} <a href="/delete_goal/{goal["id"]}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm("Delete Goal?")">🗑️</a></h3>
+        <p>Goal: {goal["goal"]}</p>
+        <p>Target: {goal["target_score"]} | Hours: {goal["study_hours"]}</p>
+        <div style="background:#333;height:20px;border-radius:10px;overflow:hidden;">
+            <div style="width:{progress_width}%;background:#50c878;height:100%;transition:width 0.3s;"></div>
+        </div>
+        <p>Progress: {goal["progress"]}%</p>
+    </div>
+    '''
     
     return f'''
     <!DOCTYPE html>
@@ -655,3 +684,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
