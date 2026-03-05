@@ -535,20 +535,14 @@ def goals():
 
 @app.route('/view-goals')
 def view_goals():
-    if not session.get('logged_in'): return redirect('/')
-    
-    conn = get_db_connection()
-    goals = conn.execute('SELECT * FROM goals WHERE email=?', (session['email'],)).fetchall()
-    conn.close()
-    
+    # ...
     goals_html = ''
-for goal in goals:
-    progress_width = min(goal['progress'] * 5, 100)  # 20% per point
-    goals_html += f'''
-<div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px;text-align:left;">
-  <h3>{goal["subject"]} <a href="/delete_goal/{goal["id"]}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm("Delete Goal?")">🗑️</a></h3>
-  <p>Goal: {goal["goal"]}</p>
-  <p>Target: {goal["target_score"]} | Hours: {goal["study_hours"]}</p>
+    for goal in goals:
+        progress_width = min(goal['progress'] * 5, 100)
+        goals_html += f'''
+<div style="...">
+  <h3>{goal['subject']} <a href="/delete_goal/{goal['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a></h3>
+  Goal: {goal['goal']}...
 </div>
 '''
     
@@ -676,6 +670,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
