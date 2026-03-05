@@ -6,8 +6,10 @@ import json
 from datetime import datetime, timedelta
 from flask_wtf.csrf
 import sqlite3
-app.config['MAX_CONTENT_LENGTH']=16*1024*1024
 app.secrect_key=os.environ.get('SECRET_KEY') or os.urandom(24).hex() vsrf=CSRFProtect(app)
+csrf = CSRFProtect(app)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['WTF_CSRF_ENABLED'] = True
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -226,30 +228,23 @@ def dashboard():
     
 def check_notifications():
     conn = get_db_connection()
-    c = conn.cursor()
     email = session.get('email', '')
     now = datetime.now()
     
-    overdue = c.execute("""
-        SELECT * FROM reminders 
-        WHERE email=? AND datetime(deadline) <= datetime(?) AND notified=0
+    overdue = conn.execute("""
+        SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= ? AND notified=0
     """, (email, now.isoformat())).fetchall()
     
     notifications = ""
     for reminder in overdue:
-        send_email(email, "🚨 Study Reminder - OVERDUE", 
-                  f"Your reminder '{reminder['title']}' was due at {reminder['deadline']}!")
-        c.execute("UPDATE reminders SET notified=1 WHERE id=?", (reminder['id'],))
-        notifications += f'''
-        <div class="notification">
-            🚨 <strong>{reminder["title"]}</strong> - Deadline Passed!
-        </div>
-        '''
+        send_email(email, "🚨 OVERDUE", f"{reminder['title']} due!")
+        conn.execute("UPDATE reminders SET notified=1 WHERE id=?", (reminder['id'],))
+        notifications += f'<div class="notification">🚨 {reminder["title"]}</div>'
     
     conn.commit()
     conn.close()
     return notifications
-
+    
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
@@ -684,4 +679,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
