@@ -19,11 +19,8 @@ os.makedirs('static/uploads', exist_ok=True)
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-              email TEXT,
-              password TEXT,
-              notification_enabled INTEGER DEFAULT 1)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
@@ -32,20 +29,6 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS notes
-             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-              email TEXT,
-              subject TEXT,
-              drive_link TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS quiz
-             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-              subject TEXT,
-              question TEXT,
-              option1 TEXT,
-              option2 TEXT,
-              option3 TEXT,
-              option4 TEXT,
-              answer TEXT)''')
     conn.commit()
     conn.close()
 
@@ -232,21 +215,7 @@ def dashboard():
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
-            <a href="/notes" class="btn">📚 Notes</a>
-            <a href="/quiz" class="btn">📝 Quiz</a>
-            <a href="/toggle-notification">🔕 Disable Notifications</a>
         </div>
-        <script>
-if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-}
-
-function showReminder() {
-    new Notification("Study Reminder!", {
-        body: "Time to study!"
-    });
-}
-</script>
     </body>
     </html>
     '''
@@ -647,45 +616,6 @@ def reminders():
     </body></html>
     '''
 
-@app.route('/notes', methods=['GET', 'POST'])
-def notes():
-    if not session.get('logged_in'):
-        return redirect('/')
-
-    conn = get_db_connection()
-
-    if request.method == 'POST':
-        conn.execute('INSERT INTO notes (email, subject, drive_link) VALUES (?, ?, ?)',
-                     (session['email'],
-                      request.form['subject'],
-                      request.form['drive_link']))
-        conn.commit()
-        return redirect('/notes')
-
-    notes_list = conn.execute('SELECT * FROM notes WHERE email=?',
-                              (session['email'],)).fetchall()
-    conn.close()
-
-    notes_html = ""
-    for n in notes_list:
-        notes_html += f'''
-        <div style="margin:20px;padding:20px;background:white;color:black;border-radius:10px">
-            <h3>{n['subject']}</h3>
-            <a href="{n['drive_link']}" target="_blank">📄 Open PDF</a>
-        </div>
-        '''
-
-    return f'''
-    <h1>📚 Notes</h1>
-    <form method="POST">
-        <input name="subject" placeholder="Subject" required>
-        <input name="drive_link" placeholder="Google Drive PDF Link" required>
-        <button type="submit">Save</button>
-    </form>
-    {notes_html}
-    <br><a href="/dashboard">← Dashboard</a>
-    '''
-
 @app.route('/delete_reminder/<int:id>')
 def delete_reminder(id):
     if not session.get('logged_in'): return redirect('/')
@@ -717,35 +647,6 @@ def delete_file(id):
     conn.close()
     return redirect(request.referrer or '/dashboard')
 
-@app.route('/quiz')
-def quiz():
-    return '''
-    <h1>📘 Simple Quiz</h1>
-    <form method="POST" action="/quiz-result">
-        <p>Python keyword for function?</p>
-        <input type="radio" name="q1" value="def"> def<br>
-        <input type="radio" name="q1" value="func"> func<br><br>
-        <button type="submit">Submit</button>
-    </form>
-    '''
-
-@app.route('/quiz-result', methods=['POST'])
-def quiz_result():
-    score = 0
-    if request.form.get('q1') == 'def':
-        score += 1
-
-    return f"<h1>Your Score: {score}/1</h1><a href='/dashboard'>Dashboard</a>"
-
-@app.route('/toggle-notification')
-def toggle_notification():
-    conn = get_db_connection()
-    conn.execute("UPDATE users SET notification_enabled = 0 WHERE email=?",
-                 (session['email'],))
-    conn.commit()
-    conn.close()
-    return redirect('/dashboard')
-
 @app.route('/logout')
 def logout():
     session.clear()
@@ -754,4 +655,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
