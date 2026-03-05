@@ -232,7 +232,8 @@ def check_notifications():
     now = datetime.now()
     
     overdue = conn.execute("""
-        SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= ? AND notified=0
+        SELECT * FROM reminders 
+        WHERE email=? AND datetime(deadline) <= ? AND notified=0
     """, (email, now.isoformat())).fetchall()
     
     notifications = ""
@@ -679,5 +680,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
