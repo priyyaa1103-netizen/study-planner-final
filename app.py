@@ -84,17 +84,15 @@ def login():
         email = request.form['email'].lower().strip()
         password = request.form['password']
         
+        # ✅ CONNECTION OPEN - DON'T CLOSE UNTIL END
         conn = get_db_connection()
         c = conn.cursor()
         
         if action == 'register':
-            # Check if email exists
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
                 error = "❌ Email already registered!"
-                conn.close()
             else:
-                # Create new user
                 name = email.split('@')[0].title()
                 hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
                 c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
@@ -103,26 +101,30 @@ def login():
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = name
-                conn.close()
+                conn.close()  # ✅ Register success - close
                 return redirect('/dashboard')
         
         elif action == 'login':
-            # Find user by email
+            # ✅ Query first - DON'T close yet
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
-            conn.close()
             
-            # STRICT CHECK - Email இல்லை OR Password wrong = ERROR
-            if not user:
-                error = "❌ Email not found! Register first."
-            elif not check_password_hash(str(user['password']), password):
-                error = "❌ Wrong password!"
+            # ✅ STRICT CHECK - Connection still open
+            if user:
+                password_match = check_password_hash(user['password'], password)
+                if password_match:
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    conn.close()  # ✅ Success - close
+                    return redirect('/dashboard')
+                else:
+                    error = "❌ Wrong password!"
             else:
-                # SUCCESS - Both email + password correct
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
+                error = "❌ Email not found! Register first."
+            
+            conn.close()  # ✅ Error - close
+            return render_login_page(error)
     
     return render_login_page(error)
     
@@ -669,6 +671,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
