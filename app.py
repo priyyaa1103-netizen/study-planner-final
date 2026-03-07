@@ -8,6 +8,27 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+# ===== AUTO CREATE TEST USER ON STARTUP =====
+def create_test_user():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    
+    # Check if test user exists
+    c.execute("SELECT email FROM users WHERE email='test@test.com'")
+    if not c.fetchone():
+        # Create test user
+        from werkzeug.security import generate_password_hash
+        hashed_pw = generate_password_hash('123456', method='pbkdf2:sha256')
+        c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                 ('test@test.com', hashed_pw, 'Test User'))
+        conn.commit()
+        print("✅ Test user created: test@test.com / 123456")
+    
+    conn.close()
+
+# Call on startup
+create_test_user()
+init_db()
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -76,7 +97,7 @@ def login():
     error = ""
     if request.method == 'POST':
         action = request.form.get('action', 'login')
-        email = request.form['email'].lower()
+        email = request.form['email'].lower().strip()
         password = request.form['password']
         
         conn = get_db_connection()
@@ -86,45 +107,33 @@ def login():
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
                 error = "❌ Email already registered!"
-                conn.close()
             else:
                 name = email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
-                c.execute(
-                    "INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                    (email, hashed_pw, name)
-                )
+                hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
+                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                         (email, hashed_pw, name))
                 conn.commit()
-                conn.close()
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = name
+                conn.close()
                 return redirect('/dashboard')
-        
-       elif action == 'login':
-    c.execute("SELECT * FROM users WHERE email=?", (email,))
-    user = c.fetchone()
+            conn.close()
+            
+        elif action == 'login':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
+            conn.close()
+            
+            if user and check_password_hash(str(user['password']), password):
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                return redirect('/dashboard')
+            else:
+                error = "❌ Wrong email or password!"
     
-    # 🔍 DEBUG CODE - இத முழுஆ copy-paste பண்ணுங்க
-    print("🔍 LOGIN DEBUG:")
-    print(f"   Email: '{email}'")
-    print(f"   User found: {user is not None}")
-    if user:
-        print(f"   Stored hash: '{user['password'][:20]}...'")
-        print(f"   Password check: {check_password_hash(str(user['password']), password)}")
-    
-    conn.close()
-    
-    # STRICT LOGIN CHECK
-    if user and check_password_hash(str(user['password']), password):
-        session['logged_in'] = True
-        session['email'] = email
-        session['name'] = user['name']
-        print("✅ LOGIN SUCCESS!")
-        return redirect('/dashboard')
-    else:
-        print("❌ LOGIN FAILED!")
-        error = "❌ Wrong email or password!"
+    return render_login_page(error)
     
 def render_login_page(error=""):
     return f'''
@@ -669,5 +678,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
