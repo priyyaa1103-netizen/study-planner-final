@@ -88,10 +88,13 @@ def login():
         c = conn.cursor()
         
         if action == 'register':
+            # Check if email exists
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
                 error = "❌ Email already registered!"
+                conn.close()
             else:
+                # Create new user
                 name = email.split('@')[0].title()
                 hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
                 c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
@@ -102,20 +105,24 @@ def login():
                 session['name'] = name
                 conn.close()
                 return redirect('/dashboard')
-            conn.close()
-            
+        
         elif action == 'login':
+            # Find user by email
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
             conn.close()
             
-            if user and check_password_hash(str(user['password']), password):
+            # STRICT CHECK - Email இல்லை OR Password wrong = ERROR
+            if not user:
+                error = "❌ Email not found! Register first."
+            elif not check_password_hash(str(user['password']), password):
+                error = "❌ Wrong password!"
+            else:
+                # SUCCESS - Both email + password correct
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = user['name']
                 return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
     
     return render_login_page(error)
     
@@ -662,6 +669,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
