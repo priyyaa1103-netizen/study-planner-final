@@ -101,21 +101,30 @@ def login():
                 session['name'] = name
                 return redirect('/dashboard')
         
-        elif action == 'login':
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-            conn.close()
-
-            # user is sqlite3.Row → column names use பண்ணலாம்
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
+       elif action == 'login':
+    c.execute("SELECT * FROM users WHERE email=?", (email,))
+    user = c.fetchone()
     
-    return render_login_page(error)
+    # 🔍 DEBUG CODE - இத முழுஆ copy-paste பண்ணுங்க
+    print("🔍 LOGIN DEBUG:")
+    print(f"   Email: '{email}'")
+    print(f"   User found: {user is not None}")
+    if user:
+        print(f"   Stored hash: '{user['password'][:20]}...'")
+        print(f"   Password check: {check_password_hash(str(user['password']), password)}")
+    
+    conn.close()
+    
+    # STRICT LOGIN CHECK
+    if user and check_password_hash(str(user['password']), password):
+        session['logged_in'] = True
+        session['email'] = email
+        session['name'] = user['name']
+        print("✅ LOGIN SUCCESS!")
+        return redirect('/dashboard')
+    else:
+        print("❌ LOGIN FAILED!")
+        error = "❌ Wrong email or password!"
     
 def render_login_page(error=""):
     return f'''
@@ -660,4 +669,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
