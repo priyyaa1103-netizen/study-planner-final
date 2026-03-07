@@ -108,24 +108,19 @@ def login():
                 return redirect('/dashboard')
             
             elif action == 'login':
-                c.execute("SELECT * FROM users WHERE email=?", (email,))
-                user = c.fetchone()
-                
-                # STRICT VALIDATION
-                if user is None:
-                    conn.close()
-                    return render_login_page("❌ Email not found! Register first.")
-                
-                from werkzeug.security import check_password_hash
-                if check_password_hash(user['password'], password):
-                    session['logged_in'] = True
-                    session['email'] = email
-                    session['name'] = user['name']
-                    conn.close()
-                    return redirect('/dashboard')
-                else:
-                    conn.close()
-                    return render_login_page("❌ Wrong password!")
+    c.execute("SELECT * FROM users WHERE email=?", (email,))
+    user = c.fetchone()
+    if user is None:
+        error = "❌ Email not found!"
+    elif not check_password_hash(user['password'], password):
+        error = "❌ Wrong password!" 
+    else:
+        session['logged_in'] = True
+        session['email'] = email
+        session['name'] = user['name']
+        conn.close()
+        return redirect('/dashboard')
+    conn.close()
         
         except Exception as e:
             conn.close()
@@ -678,6 +673,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
