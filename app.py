@@ -5,41 +5,16 @@ import os
 import json
 from datetime import datetime, timedelta
 import sqlite3
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-# ===== AUTO CREATE TEST USER ON STARTUP =====
-def create_test_user():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    
-    # Check if test user exists
-    c.execute("SELECT email FROM users WHERE email='test@test.com'")
-    if not c.fetchone():
-        # Create test user
-        from werkzeug.security import generate_password_hash
-        hashed_pw = generate_password_hash('123456', method='pbkdf2:sha256')
-        c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                 ('test@test.com', hashed_pw, 'Test User'))
-        conn.commit()
-        print("✅ Test user created: test@test.com / 123456")
-    
-    conn.close()
-
-# Call on startup
-create_test_user()
-init_db()
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
 
-# Create necessary folders
-os.makedirs('static/uploads', exist_ok=True)
-
-# Initialize SQLite Database
+# ✅ DEPLOY-SAFE DB INITIALIZATION
 def init_db():
-    conn = sqlite3.connect('users.db')
+    conn = sqlite3.connect('users.db', check_same_thread=False)
     c = conn.cursor()
+    
+    # Create tables
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
@@ -50,6 +25,15 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    
+    # ✅ AUTO CREATE TEST USER - Deploy fail ஆகாது
+    c.execute("SELECT email FROM users WHERE email='test@test.com'")
+    if not c.fetchone():
+        hashed_pw = generate_password_hash('123456', method='pbkdf2:sha256')
+        c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                 ('test@test.com', hashed_pw, 'Test User'))
+        print("✅ Test user created: test@test.com / 123456")
+    
     conn.commit()
     conn.close()
 
@@ -678,6 +662,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
