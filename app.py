@@ -458,7 +458,6 @@ def upload_unit(subject_name, unit_num):
 
     filename = secure_filename(f"unit{unit_num}.pdf")
     file.save(f'static/uploads/{subject_name}/{filename}')
-
 else:
     return "<h1 style='color:red;text-align:center'>Only PDF files allowed!</h1>"
                 return f'''
@@ -694,6 +693,7 @@ def logout():
     session.clear()
     return redirect('/')
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
