@@ -206,57 +206,23 @@ def dashboard():
 
     conn.close()
 
-    # Check notifications
     notifications = check_notifications()
 
     return f"""
     <h1>Welcome {session['name']} 🎓</h1>
 
-    <h2>Study Planner</h2>
-
-    <p>📊 Goals: {goals_count}</p>
-    <p>⏰ Reminders: {reminders_count}</p>
+    <p>Goals: {goals_count}</p>
+    <p>Reminders: {reminders_count}</p>
 
     {notifications}
-    """    
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Dashboard - Study Planner</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-            .container{{max-width:1000px;margin:0 auto;text-align:center}}
-            h1{{font-size:42px;margin-bottom:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
-            h2{{font-size:24px;margin-bottom:40px;opacity:0.9}}
-            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s;position:relative;overflow:hidden}}
-            .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-            .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
-            .notification{{background:rgba(231,76,60,0.9);padding:20px;border-radius:15px;margin:20px auto;font-size:20px;max-width:600px;box-shadow:0 10px 30px rgba(231,76,60,0.4)}}
-            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px;backdrop-filter:blur(15px);box-shadow:0 20px 40px rgba(0,0,0,0.2)}}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="welcome-card">
-                <h1>Welcome {session['name']}! 🎓</h1>
-                <h2>Study Planner & Reminder App</h2>
-                <div style="margin-top:20px;font-size:22px">
-📊 Goals: {goals_count} <br>
-⏰ Reminders: {reminders_count}
-</div>
-                {notifications}
-            </div>
-            <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goal</a>
-            <a href="/view-goals" class="btn">📊 View Goals</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/logout" class="btn logout">🚪 Logout</a>
-        </div>
-    </body>
-    </html>
-    '''
+
+    <br><br>
+    <a href="/study">Study</a><br>
+    <a href="/goals">Set Goal</a><br>
+    <a href="/view-goals">View Goals</a><br>
+    <a href="/reminders">Reminders</a><br>
+    <a href="/logout">Logout</a>
+    """
 
 def check_notifications():
     conn = get_db_connection()
@@ -448,19 +414,36 @@ def subject_notes(subject_name):
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
-    if not session.get('logged_in'): return redirect('/')
-    
+
+    if not session.get('logged_in'):
+        return redirect('/')
+
     if request.method == 'POST':
-        if 'file' in request.files:
-            file = request.files['file']
-            if file.filename != '' and file.filename.endswith('.pdf'):
-    os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
 
-    filename = secure_filename(f"unit{unit_num}.pdf")
-    file.save(f'static/uploads/{subject_name}/{filename}')
+        if 'file' not in request.files:
+            return "<h1>No file selected</h1>"
 
-else:
-    return "<h1 style='color:red;text-align:center'>Only PDF files allowed!</h1>"
+        file = request.files['file']
+
+        if file.filename == '':
+            return "<h1>No file selected</h1>"
+
+        if file.filename.endswith('.pdf'):
+
+            os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
+
+            filename = secure_filename(f"unit{unit_num}.pdf")
+
+            file.save(f'static/uploads/{subject_name}/{filename}')
+
+            return f"""
+            <h1>✅ Upload Successful</h1>
+            <p>{subject_name} Unit {unit_num} uploaded</p>
+            <a href="/subject/{subject_name}">Back</a>
+            """
+
+        else:
+            return "<h1>Only PDF files allowed</h1>"
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
@@ -697,6 +680,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
