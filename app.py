@@ -104,7 +104,7 @@ def login():
                 
                 elif action == 'login':
                     c.execute("SELECT * FROM users WHERE email=?", (email,))
-                    user = c.fetchone()
+                    user = dict(c.fetchone())
                     conn.close()
                     if user and check_password_hash(user['password'], password):
                         session['logged_in'] = True
@@ -658,6 +658,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
