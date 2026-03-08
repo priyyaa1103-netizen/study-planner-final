@@ -76,50 +76,46 @@ def login():
     error = ""
 
     if request.method == 'POST':
-        action = request.form.get('action')
 
-        email = request.form.get('email').strip().lower()
+        action = request.form.get('action')
+        email = request.form.get('email').lower().strip()
         password = request.form.get('password')
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        c = conn.cursor()
 
-        if action == 'login':
-
-            cursor.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = cursor.fetchone()
+        # LOGIN
+        if action == "login":
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
 
             if user:
-                if check_password_hash(user['password'], password):
-
+                if check_password_hash(user["password"], password):
                     session['logged_in'] = True
-                    session['email'] = user['email']
-                    session['name'] = user['name']
+                    session['email'] = user["email"]
+                    session['name'] = user["name"]
 
                     conn.close()
                     return redirect('/dashboard')
-
                 else:
-                    error = "❌ Wrong password!"
-
+                    error = "❌ Wrong Password"
             else:
-                error = "❌ Email not registered!"
+                error = "❌ Email not registered"
 
-        elif action == 'register':
-
-            cursor.execute("SELECT * FROM users WHERE email=?", (email,))
-            existing = cursor.fetchone()
+        # REGISTER
+        elif action == "register":
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            existing = c.fetchone()
 
             if existing:
-                error = "❌ Email already registered!"
-
+                error = "❌ Email already registered"
             else:
                 name = email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
+                hashed = generate_password_hash(password)
 
-                cursor.execute(
-                    "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-                    (email, hashed_pw, name)
+                c.execute(
+                    "INSERT INTO users (email,password,name) VALUES (?,?,?)",
+                    (email, hashed, name)
                 )
 
                 conn.commit()
@@ -675,5 +671,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
