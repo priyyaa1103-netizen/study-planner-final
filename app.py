@@ -74,58 +74,31 @@ def save_reminders_file(reminders):
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
-
     if request.method == 'POST':
-
-        action = request.form.get('action')
-        email = request.form.get('email').lower().strip()
-        password = request.form.get('password')
-
-        conn = get_db_connection()
-        c = conn.cursor()
-
-        # LOGIN
-        if action == "login":
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-
-            if user:
-                if check_password_hash(user["password"], password):
+        action = request.form.get('action', 'login')
+        email = request.form['email'].lower()
+        password = request.form['password']
+        
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            error = "❌ Invalid email format!"
+        else:
+            conn = get_db_connection()
+            c = conn.cursor()
+            
+            if action == 'register':
+                c.execute("SELECT email FROM users WHERE email=?", (email,))
+                if c.fetchone():
+                    error = "❌ Email already registered!"
+                else:
+                    name = email.split('@')[0].title()
+                    hashed_pw = generate_password_hash(password)
+                    c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", (email, hashed_pw, name))
+                    conn.commit()
                     session['logged_in'] = True
-                    session['email'] = user["email"]
-                    session['name'] = user["name"]
-
+                    session['email'] = email
+                    session['name'] = name
                     conn.close()
                     return redirect('/dashboard')
-                else:
-                    error = "❌ Wrong Password"
-            else:
-                error = "❌ Email not registered"
-
-        # REGISTER
-        elif action == "register":
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            existing = c.fetchone()
-
-            if existing:
-                error = "❌ Email already registered"
-            else:
-                name = email.split('@')[0].title()
-                hashed = generate_password_hash(password)
-
-                c.execute(
-                    "INSERT INTO users (email,password,name) VALUES (?,?,?)",
-                    (email, hashed, name)
-                )
-
-                conn.commit()
-
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = name
-
-                conn.close()
-                return redirect('/dashboard')
 
         conn.close()
 
@@ -671,6 +644,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
