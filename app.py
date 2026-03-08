@@ -106,10 +106,10 @@ def login():
                     c.execute("SELECT * FROM users WHERE email=?", (email,))
                     user = dict(c.fetchone())
                     conn.close()
-                    if user and check_password_hash(user['password'], password):
+                    if user and check_password_hash(user[1], password):
                         session['logged_in'] = True
                         session['email'] = email
-                        session['name'] = user['name']
+                        session['name'] = user[2]
                         return redirect('/dashboard')
                     else:
                         error = "❌ Wrong email or password!"
@@ -658,6 +658,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
