@@ -76,25 +76,53 @@ def login():
     error = ""
 
     if request.method == 'POST':
-        email = request.form['email'].lower()
-        password = request.form['password']
+        action = request.form.get('action')
+        email = request.form['email'].lower().strip()
+        password = request.form['password'].strip()
 
         conn = get_db_connection()
         c = conn.cursor()
 
-        c.execute("SELECT * FROM users WHERE email=?", (email,))
-        user = c.fetchone()
+        # REGISTER
+        if action == 'register':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            existing = c.fetchone()
 
-        conn.close()
+            if existing:
+                error = "❌ Email already registered!"
+            else:
+                name = email.split('@')[0].title()
+                hashed_pw = generate_password_hash(password)
 
-        # correct email + password check
-        if user and check_password_hash(user['password'], password):
-            session['logged_in'] = True
-            session['email'] = user['email']
-            session['name'] = user['name']
-            return redirect('/dashboard')
-        else:
-            error = "❌ Wrong email or password!"
+                c.execute(
+                    "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+                    (email, hashed_pw, name)
+                )
+                conn.commit()
+                conn.close()
+
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
+
+                return redirect('/dashboard')
+
+        # LOGIN
+        elif action == 'login':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
+            conn.close()
+
+            if user is not None:
+                if check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = user['email']
+                    session['name'] = user['name']
+                    return redirect('/dashboard')
+                else:
+                    error = "❌ Wrong password!"
+            else:
+                error = "❌ Email not registered!"
 
     return render_login_page(error)
     
@@ -641,4 +669,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
