@@ -5,16 +5,20 @@ import os
 import json
 from datetime import datetime, timedelta
 import sqlite3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
 
-# ✅ DEPLOY-SAFE DB INITIALIZATION
+# Create necessary folders
+os.makedirs('static/uploads', exist_ok=True)
+
+# Initialize SQLite Database
 def init_db():
-    conn = sqlite3.connect('users.db', check_same_thread=False)
+    conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    
-    # Create tables
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
@@ -25,15 +29,6 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
-    
-    # ✅ AUTO CREATE TEST USER - Deploy fail ஆகாது
-    c.execute("SELECT email FROM users WHERE email='test@test.com'")
-    if not c.fetchone():
-        hashed_pw = generate_password_hash('123456', method='pbkdf2:sha256')
-        c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                 ('test@test.com', hashed_pw, 'Test User'))
-        print("✅ Test user created: test@test.com / 123456")
-    
     conn.commit()
     conn.close()
 
@@ -78,25 +73,23 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    if session.get('logged_in'):
+        return redirect('/dashboard')
+    error = ""
     if request.method == 'POST':
         action = request.form.get('action', 'login')
-        email = request.form['email'].lower().strip()
+        email = request.form['email'].lower()
         password = request.form['password']
         
-        # Database connection
-        conn = sqlite3.connect('users.db', check_same_thread=False)
-        conn.row_factory = sqlite3.Row
+        conn = get_db_connection()
         c = conn.cursor()
         
-        try:
-            if action == 'register':
-                c.execute("SELECT email FROM users WHERE email=?", (email,))
-                if c.fetchone():
-                    conn.close()
-                    return render_login_page("❌ Email already registered!")
-                
+        if action == 'register':
+            c.execute("SELECT email FROM users WHERE email=?", (email,))
+            if c.fetchone():
+                error = "❌ Email already registered!"
+            else:
                 name = email.split('@')[0].title()
-                from werkzeug.security import generate_password_hash
                 hashed_pw = generate_password_hash(password)
                 c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
                          (email, hashed_pw, name))
@@ -106,29 +99,20 @@ def login():
                 session['name'] = name
                 conn.close()
                 return redirect('/dashboard')
-            
-            elif action == 'login':
-    c.execute("SELECT * FROM users WHERE email=?", (email,))
-    user = c.fetchone()
-    if user is None:
-        error = "❌ Email not found!"
-    elif not check_password_hash(user['password'], password):
-        error = "❌ Wrong password!" 
-    else:
-        session['logged_in'] = True
-        session['email'] = email
-        session['name'] = user['name']
-        conn.close()
-        return redirect('/dashboard')
-    conn.close()
         
-        except Exception as e:
+        elif action == 'login':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
             conn.close()
-            return render_login_page("❌ Server error! Try again.")
-        finally:
-            conn.close()
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                return redirect('/dashboard')
+            else:
+                error = "❌ Wrong email or password!"
     
-    return render_login_page("")
+    return render_login_page(error)
     
 def render_login_page(error=""):
     return f'''
@@ -673,11 +657,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-
-
-
-
-
-
-
