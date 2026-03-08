@@ -72,27 +72,57 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
-@app.route('/login', methods=['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
+    error = ""
+
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        action = request.form.get('action')
+        email = request.form['email'].lower().strip()
+        password = request.form['password'].strip()
 
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conn = get_db_connection()
+        c = conn.cursor()
 
-        cursor.execute("SELECT * FROM users WHERE email=?", (email,))
-        user = cursor.fetchone()
-        conn.close()
+        # REGISTER
+        if action == 'register':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
 
-        if user and check_password_hash(user[3], password):
-            session['user_id'] = user[0]
-            session['name'] = user[1]
-            return redirect('/dashboard')
-        else:
-            return "<h2 style='color:red;text-align:center'>Invalid Email or Password</h2>"
+            if user:
+                error = "❌ Email already registered!"
+            else:
+                name = email.split('@')[0].title()
+                hashed_pw = generate_password_hash(password)
 
-    return render_template_string(LOGIN_PAGE)
+                c.execute(
+                    "INSERT INTO users (email,password,name) VALUES (?,?,?)",
+                    (email, hashed_pw, name)
+                )
+                conn.commit()
+
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
+
+                conn.close()
+                return redirect('/dashboard')
+
+        # LOGIN
+        elif action == 'login':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
+            conn.close()
+
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['email'] = user['email']
+                session['name'] = user['name']
+                return redirect('/dashboard')
+            else:
+                error = "❌ Wrong email or password!"
+
+    return render_login_page(error)
     
 def render_login_page(error=""):
     return f'''
@@ -323,7 +353,7 @@ def sem3():
     <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 3</h1>
-    <a href="/subject/java programming" class="btn">Java Programming</a>
+    <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
     <a href="/subject/tamil" class="btn">Tamil</a>
     <a href="/subject/english" class="btn">English</a>
@@ -665,7 +695,5 @@ def logout():
     return redirect('/')
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-
