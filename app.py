@@ -1,9 +1,9 @@
 from flask import Flask, request, redirect, session, render_template_string, send_from_directory
+import secrets
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
-import secrets
 from datetime import datetime, timedelta
 import sqlite3
 import smtplib
@@ -188,25 +188,37 @@ def render_login_page(error=""):
 
 @app.route('/dashboard')
 def dashboard():
+
+    if not session.get('logged_in'):
+        return redirect('/')
+
     conn = get_db_connection()
 
-goals_count = conn.execute(
-"SELECT COUNT(*) FROM goals WHERE email=?",
-(session['email'],)
-).fetchone()[0]
+    goals_count = conn.execute(
+        "SELECT COUNT(*) FROM goals WHERE email=?",
+        (session['email'],)
+    ).fetchone()[0]
 
-reminders_count = conn.execute(
-"SELECT COUNT(*) FROM reminders WHERE email=?",
-(session['email'],)
-).fetchone()[0]
+    reminders_count = conn.execute(
+        "SELECT COUNT(*) FROM reminders WHERE email=?",
+        (session['email'],)
+    ).fetchone()[0]
 
-conn.close()
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+    conn.close()
+
     # Check notifications
     notifications = check_notifications()
-    
+
+    return f"""
+    <h1>Welcome {session['name']} 🎓</h1>
+
+    <h2>Study Planner</h2>
+
+    <p>📊 Goals: {goals_count}</p>
+    <p>⏰ Reminders: {reminders_count}</p>
+
+    {notifications}
+    """    
     return f'''
     <!DOCTYPE html>
     <html>
@@ -685,6 +697,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
