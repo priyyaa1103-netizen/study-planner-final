@@ -9,6 +9,25 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import re
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
+# Google Drive auth
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+# Upload PDF to Drive
+def upload_pdf(pdf_file):
+    file = drive.CreateFile({'title': 'notes.pdf'})
+    file.SetContentFile(pdf_file)
+    file.Upload()
+    file.InsertPermission({
+        'type': 'anyone',
+        'value': 'anyone',
+        'role': 'reader'
+    })
+    return file['alternateLink']
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -176,6 +195,15 @@ def render_login_page(error=""):
     </body>
     </html>
     '''
+
+@app.route('/upload', methods=['POST'])
+def upload_notes():
+    if 'logged_in' in session:
+        pdf_file = request.files['pdf']
+        drive_link = upload_pdf(pdf_file)
+        # Save drive_link to DB or send to user
+        return drive_link
+    return "Login required"
 
 @app.route('/dashboard')
 def dashboard():
@@ -655,6 +683,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
