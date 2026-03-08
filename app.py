@@ -73,45 +73,29 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    if session.get('logged_in'):
-        return redirect('/dashboard')
     error = ""
+
     if request.method == 'POST':
-        action = request.form.get('action', 'login')
         email = request.form['email'].lower()
         password = request.form['password']
-        
+
         conn = get_db_connection()
         c = conn.cursor()
-        
-        if action == 'register':
-            c.execute("SELECT email FROM users WHERE email=?", (email,))
-            if c.fetchone():
-                error = "❌ Email already registered!"
-            else:
-                name = email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
-                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                         (email, hashed_pw, name))
-                conn.commit()
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = name
-                conn.close()
-                return redirect('/dashboard')
-        
-        elif action == 'login':
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-            conn.close()
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
-    
+
+        c.execute("SELECT * FROM users WHERE email=?", (email,))
+        user = c.fetchone()
+
+        conn.close()
+
+        # correct email + password check
+        if user and check_password_hash(user['password'], password):
+            session['logged_in'] = True
+            session['email'] = user['email']
+            session['name'] = user['name']
+            return redirect('/dashboard')
+        else:
+            error = "❌ Wrong email or password!"
+
     return render_login_page(error)
     
 def render_login_page(error=""):
@@ -657,3 +641,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
