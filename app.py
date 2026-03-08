@@ -76,6 +76,73 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
+@app.route('/subject/<subject_name>')
+def subject_notes(subject_name):
+    if not session.get('logged_in'): 
+        return redirect('/')
+
+    # ===== Semester Drive Links =====
+    semester_drive_links = {
+        "sem1": "https://drive.google.com/file/d/1vBnXL4n-MpqvB8gBZyrqheMGJxEBQWgF/view?usp=drivesdk",
+        "sem2": "https://drive.google.com/file/d/2ndsemesterLink/view?usp=sharing",
+        # Add more semester links if needed
+    }
+
+    # ===== Get semester from query parameter =====
+    semester = request.args.get('semester', 'sem1')  # default sem1
+    drive_link = semester_drive_links.get(semester)
+
+    # ===== Units HTML =====
+    units_html = ''
+    subject_folder = f"static/uploads/{subject_name}"
+    os.makedirs(subject_folder, exist_ok=True)
+
+    for i in range(1, 11):
+        unit_file = f"{subject_folder}/unit{i}.pdf"
+        upload_link = f"/upload/{subject_name}/unit{i}"
+        has_file = os.path.exists(unit_file)
+
+        units_html += f'''
+        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
+            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
+            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
+        </div>
+        '''
+
+    # ===== Drive Link HTML =====
+    drive_html = ''
+    if drive_link:
+        drive_html = f'''
+        <div style="margin-top:30px;text-align:center">
+            <a href="{drive_link}" target="_blank" style="padding:15px 30px;background:#e67e22;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600">
+            📁 Semester Drive Link
+            </a>
+        </div>
+        '''
+
+    # ===== Render final page =====
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{subject_name.replace("-"," ").title()} Notes</title>
+        <style>
+            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+            .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;z-index:1000}}
+            h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
+            .container{{max-width:1400px;margin:0 auto}}
+        </style>
+    </head>
+    <body>
+        <a href="/dashboard" class="back-btn">← Dashboard</a>
+        <h1>📚 {subject_name.replace("-"," ").title()}</h1>
+        <div class="container">{units_html}</div>
+        {drive_html}
+    </body>
+    </html>
+    '''
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
@@ -704,3 +771,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
