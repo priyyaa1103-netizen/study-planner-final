@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
+import secrets
 from datetime import datetime, timedelta
 import sqlite3
 import smtplib
@@ -10,7 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
-app.secret_key = 'study2026-super-secure-key-change-this-in-production'
+app.secret_key = secrets.token_hex(16)
 
 # Create necessary folders
 os.makedirs('static/uploads', exist_ok=True)
@@ -73,22 +74,42 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-
-    # already login இருந்தா dashboard
-    if session.get('logged_in'):
-        return redirect('/dashboard')
-
     error = ""
 
     if request.method == 'POST':
         action = request.form.get('action')
-        email = request.form['email'].lower()
-        password = request.form['password']
+        email = request.form['email'].lower().strip()
+        password = request.form['password'].strip()
 
         conn = get_db_connection()
         c = conn.cursor()
 
-        if action == 'login':
+        # REGISTER
+        if action == 'register':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
+
+            if user:
+                error = "❌ Email already registered!"
+            else:
+                name = email.split('@')[0].title()
+                hashed_pw = generate_password_hash(password)
+
+                c.execute(
+                    "INSERT INTO users (email,password,name) VALUES (?,?,?)",
+                    (email, hashed_pw, name)
+                )
+                conn.commit()
+
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
+
+                conn.close()
+                return redirect('/dashboard')
+
+        # LOGIN
+        elif action == 'login':
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
             conn.close()
@@ -167,6 +188,19 @@ def render_login_page(error=""):
 
 @app.route('/dashboard')
 def dashboard():
+    conn = get_db_connection()
+
+goals_count = conn.execute(
+"SELECT COUNT(*) FROM goals WHERE email=?",
+(session['email'],)
+).fetchone()[0]
+
+reminders_count = conn.execute(
+"SELECT COUNT(*) FROM reminders WHERE email=?",
+(session['email'],)
+).fetchone()[0]
+
+conn.close()
     if not session.get('logged_in'): 
         return redirect('/')
     
@@ -196,6 +230,10 @@ def dashboard():
             <div class="welcome-card">
                 <h1>Welcome {session['name']}! 🎓</h1>
                 <h2>Study Planner & Reminder App</h2>
+                <div style="margin-top:20px;font-size:22px">
+📊 Goals: {goals_count} <br>
+⏰ Reminders: {reminders_count}
+</div>
                 {notifications}
             </div>
             <a href="/study" class="btn">📚 Study Dashboard</a>
@@ -303,7 +341,7 @@ def sem3():
     <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 3</h1>
-    <a href="/subject/java programming" class="btn">Java Programming</a>
+    <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
     <a href="/subject/tamil" class="btn">Tamil</a>
     <a href="/subject/english" class="btn">English</a>
@@ -317,7 +355,7 @@ def sem4():
     <!DOCTYPE html><html><head><title>Semester 4</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 4</h1>
-    <a href="/subject/data structures" class="btn">Data structures</a>
+    <a href="/subject/data_structures" class="btn">Data structures</a>
     <a href="/subject/statistics" class="btn">Statistics</a>
     <a href="/subject/tamil" class="btn">Tamil</a>
     <a href="/subject/english" class="btn">English</a>
@@ -342,9 +380,9 @@ def sem5():
     <!DOCTYPE html><html><head><title>Semester 5</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 5</h1>
-    <a href="/subject/os" class="btn">Operating System</a>
+    <a href="/subject/Operating_System" class="btn">Operating System</a>
     <a href="/subject/RDBMS" class="btn">Relational database management system</a>
-    <a href="/subject/SE" class="btn">Software engineering</a>
+    <a href="/subject/Software_Engineering" class="btn">Software engineering</a>
     <a href="/subject/DMW" class="btn">Data mining and warehousing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
@@ -357,8 +395,8 @@ def sem6():
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 6</h1>
     <a href="/subject/ASP.net" class="btn">Programming in ASP.net</a>
-    <a href="/subject/DS" class="btn">Data science</a>
-    <a href="/subject/CC" class="btn">Cloud computing</a>
+    <a href="/subject/Data_Science" class="btn">Data science</a>
+    <a href="/subject/Cloud_Computing" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -403,10 +441,14 @@ def upload_unit(subject_name, unit_num):
     if request.method == 'POST':
         if 'file' in request.files:
             file = request.files['file']
-            if file.filename != '':
-                os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
-                filename = secure_filename(f"unit{unit_num}.pdf")
-                file.save(f'static/uploads/{subject_name}/{filename}')
+            if file.filename != '' and file.filename.endswith('.pdf'):
+    os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
+
+    filename = secure_filename(f"unit{unit_num}.pdf")
+    file.save(f'static/uploads/{subject_name}/{filename}')
+
+else:
+    return "<h1 style='color:red;text-align:center'>Only PDF files allowed!</h1>"
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
@@ -643,6 +685,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
