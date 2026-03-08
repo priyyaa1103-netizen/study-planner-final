@@ -8,26 +8,6 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import re
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
-
-# Google Drive auth
-gauth = GoogleAuth()
-gauth.LocalWebserverAuth()
-drive = GoogleDrive(gauth)
-
-# Upload PDF to Drive
-def upload_pdf(pdf_file):
-    file = drive.CreateFile({'title': 'notes.pdf'})
-    file.SetContentFile(pdf_file)
-    file.Upload()
-    file.InsertPermission({
-        'type': 'anyone',
-        'value': 'anyone',
-        'role': 'reader'
-    })
-    return file['alternateLink']
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -49,6 +29,11 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    c.execute("""CREATE TABLE IF NOT EXISTS drive_notes
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  subject TEXT,
+                  unit TEXT,
+                  link TEXT)""")
     conn.commit()
     conn.close()
 
@@ -99,38 +84,36 @@ def login():
         email = request.form['email'].lower()
         password = request.form['password']
         
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            error = "❌ Invalid email format!"
-        else:
-            conn = get_db_connection()
-            c = conn.cursor()
-            
-            if action == 'register':
-                c.execute("SELECT email FROM users WHERE email=?", (email,))
-                if c.fetchone():
-                    error = "❌ Email already registered!"
-                else:
-                    name = email.split('@')[0].title()
-                    hashed_pw = generate_password_hash(password)
-                    c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", (email, hashed_pw, name))
-                    conn.commit()
-                    session['logged_in'] = True
-                    session['email'] = email
-                    session['name'] = name
-                    conn.close()
-                    return redirect('/dashboard')
-            
-            elif action == 'login':
-                c.execute("SELECT * FROM users WHERE email=?", (email,))
-                user = c.fetchone()
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        if action == 'register':
+            c.execute("SELECT email FROM users WHERE email=?", (email,))
+            if c.fetchone():
+                error = "❌ Email already registered!"
+            else:
+                name = email.split('@')[0].title()
+                hashed_pw = generate_password_hash(password)
+                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                         (email, hashed_pw, name))
+                conn.commit()
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
                 conn.close()
-                if user and check_password_hash(user[1], password):
-                    session['logged_in'] = True
-                    session['email'] = email
-                    session['name'] = user[2]
-                    return redirect('/dashboard')
-                else:
-                    error = "❌ Wrong email or password!"
+                return redirect('/dashboard')
+        
+        elif action == 'login':
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            user = c.fetchone()
+            conn.close()
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                return redirect('/dashboard')
+            else:
+                error = "❌ Wrong email or password!"
     
     return render_login_page(error)
     
@@ -183,6 +166,9 @@ def render_login_page(error=""):
                 <button type="submit">Create Account</button>
             </form>
             
+            <div class="demo">
+                Demo: test@test.com / 123456
+            </div>
         </div>
         <script>
         function showTab(tab) {{
@@ -196,14 +182,49 @@ def render_login_page(error=""):
     </html>
     '''
 
-@app.route('/upload', methods=['POST'])
-def upload_notes():
-    if 'logged_in' in session:
-        pdf_file = request.files['pdf']
-        drive_link = upload_pdf(pdf_file)
-        # Save drive_link to DB or send to user
-        return drive_link
-    return "Login required"
+@app.route('/drive_upload/<subject>/<unit>', methods=['GET','POST'])
+def drive_upload(subject, unit):
+
+    if request.method == "POST":
+        link = request.form['link']
+
+        conn = sqlite3.connect("users.db")
+        c = conn.cursor()
+
+        c.execute("INSERT INTO drive_notes (subject,unit,link) VALUES (?,?,?)",
+                  (subject,unit,link))
+
+        conn.commit()
+        conn.close()
+
+        return "Drive Link Added Successfully"
+
+    return '''
+    <h2>Add Google Drive Notes</h2>
+    <form method="POST">
+    <input type="text" name="link" placeholder="Paste Google Drive Link">
+    <button type="submit">Add</button>
+    </form>
+    '''
+
+@app.route('/drive_notes/<subject>/<unit>')
+def drive_notes(subject, unit):
+
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+
+    c.execute("SELECT link FROM drive_notes WHERE subject=? AND unit=?",
+              (subject,unit))
+
+    notes = c.fetchall()
+    conn.close()
+
+    html = "<h2>Drive Notes</h2>"
+
+    for n in notes:
+        html += f'<a href="{n[0]}" target="_blank">📄 Open Drive Notes</a><br><br>'
+
+    return html
 
 @app.route('/dashboard')
 def dashboard():
@@ -683,13 +704,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-
-
-
-
-
-
-
-
-
