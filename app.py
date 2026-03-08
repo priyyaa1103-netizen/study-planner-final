@@ -323,7 +323,7 @@ def sem3():
     <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 3</h1>
-    <a href="/subject/java_programming" class="btn">Java Programming</a>
+    <a href="/subject/java programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
     <a href="/subject/tamil" class="btn">Tamil</a>
     <a href="/subject/english" class="btn">English</a>
@@ -667,3 +667,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
