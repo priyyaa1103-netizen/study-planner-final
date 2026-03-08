@@ -448,18 +448,19 @@ def subject_notes(subject_name):
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
-    if not session.get('logged_in'): return redirect('/')
-    
+    if not session.get('logged_in'):
+        return redirect('/')
+
     if request.method == 'POST':
         if 'file' in request.files:
             file = request.files['file']
-            if file.filename != '' and file.filename.endswith('.pdf'):
-    os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
 
-    filename = secure_filename(f"unit{unit_num}.pdf")
-    file.save(f'static/uploads/{subject_name}/{filename}')
-else:
-    return "<h1 style='color:red;text-align:center'>Only PDF files allowed!</h1>"
+            if file.filename != '' and file.filename.endswith('.pdf'):
+                os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
+
+                filename = secure_filename(f"unit{unit_num}.pdf")
+                file.save(f'static/uploads/{subject_name}/{filename}')
+
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
@@ -467,23 +468,37 @@ else:
                 <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
                 </div>
                 '''
+            else:
+                return "<h1 style='color:red;text-align:center'>Only PDF files allowed!</h1>"
+
         return '<h1 style="color:red;text-align:center">No file selected!</h1>'
-    
+
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    <html>
+    <head>
+    <title>Upload {subject_name.title()} Unit {unit_num}</title>
+    <style>
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
     input[type=file]{{width:500px;padding:20px;margin:30px;border-radius:15px;border:none;background:rgba(255,255,255,0.95);font-size:18px}}
     button{{padding:25px 60px;margin:30px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;cursor:pointer;font-weight:600;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:40px}}</style></head>
+    h1{{font-size:42px;margin-bottom:40px}}
+    </style>
+    </head>
     <body>
+
     <h1>📤 Upload Unit {unit_num}</h1>
+
     <form method="POST" enctype="multipart/form-data">
         <input type="file" name="file" accept=".pdf" required>
-        <br><button type="submit">✅ Upload PDF</button>
+        <br>
+        <button type="submit">✅ Upload PDF</button>
     </form>
+
     <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
-    </body></html>
+
+    </body>
+    </html>
     '''
 
 @app.route('/download/<subject_name>/<filename>')
@@ -696,4 +711,5 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
