@@ -36,90 +36,128 @@ def get_db():
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    error = ""
     if request.method == 'POST':
         action = request.form.get('action', 'login')
         email = request.form['email'].lower().strip()
         password = request.form['password']
         
-        conn = get_db()
+        conn = get_db_connection()
         c = conn.cursor()
         
         if action == 'register':
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
+                error = "❌ Email already registered!"
+            else:
+                name = email.split('@')[0].title()
+                hashed_pw = generate_password_hash(password)
+                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                         (email, hashed_pw, name))
+                conn.commit()
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
                 conn.close()
-                return render_login("❌ Email already exists!")
-            name = email.split('@')[0].title()
-            c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                     (email, generate_password_hash(password), name))
-            conn.commit()
-            session['logged_in'] = True
-            session['email'] = email
-            session['name'] = name
-            conn.close()
-            return redirect('/dashboard')
+                return redirect('/dashboard')
         
         elif action == 'login':
+            # CHECK DEMO USER FIRST
             if email == 'test@test.com' and password == '123456':
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = 'Demo User'
+                conn.close()
                 return redirect('/dashboard')
             
+            # CHECK REAL USER - ONLY ONE QUERY
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
             conn.close()
+            
+            # STRICT PASSWORD CHECK
             if user and check_password_hash(user['password'], password):
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = user['name']
                 return redirect('/dashboard')
-            return render_login("❌ Wrong credentials!")
+            else:
+                error = "❌ Wrong email or password!"
     
-    return render_login()
+    return render_login_page(error)
 
-def render_login(error=""):
-    return f'''
+def render_login_page(error=""):
+    return '''
 <!DOCTYPE html>
 <html>
-<head><title>Study Planner</title>
-<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}}
-.login-box{{background:white;padding:40px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:100%}}
-input{{width:100%;padding:15px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}}button{{width:100%;padding:15px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px}}
-.tab{{padding:15px;background:#f0f0f0;margin:5px 0;cursor:pointer;border-radius:8px;text-align:center}}.tab.active{{background:#667eea;color:white}}.error{{color:#e74c3c;padding:10px;background:#fee;border-radius:5px;margin:10px 0}}</style>
+<head>
+    <title>Study Planner</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .login-box{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}
+        .tabs{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:30px 0}
+        .tab{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}
+        .tab.active{background:#667eea;color:white}
+        input{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}
+        input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}
+        button{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}
+        button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}
+        .error{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}
+        .demo{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}
+        h1{text-align:center;margin-bottom:30px;font-size:32px;color:#333}
+    </style>
 </head>
 <body>
-<div class="login-box">
-<h2 style="text-align:center;margin-bottom:30px">🎓 Study Planner</h2>
-{f'<div class="error">{error}</div>' if error else ''}
-<div class="tab active" onclick="showTab(0)">Login</div>
-<div class="tab" onclick="showTab(1)">Register</div>
-
-<form method="POST" id="login" style="display:block">
-<input type="hidden" name="action" value="login">
-<input type="email" name="email" placeholder="Email" required>
-<input type="password" name="password" placeholder="Password" required>
-<button>Login</button>
-</form>
-
-<form method="POST" id="register" style="display:none">
-<input type="hidden" name="action" value="register">
-<input type="email" name="email" placeholder="Email" required>
-<input type="password" name="password" placeholder="Password" required>
-<button>Create Account</button>
-</form>
-
-<div style="text-align:center;margin-top:20px;font-size:14px;color:#666">Demo: test@test.com / 123456</div>
-</div>
-<script>
-function showTab(n) {{
-    document.getElementById('login').style.display = n===0?'block':'none';
-    document.getElementById('register').style.display = n===1?'block':'none';
-    document.querySelectorAll('.tab')[0].classList.toggle('active', n===0);
-    document.querySelectorAll('.tab')[1].classList.toggle('active', n===1);
-}}
-</script>
-</body></html>'''
+    <div class="login-box">
+        <h1>🎓 Study Planner</h1>
+        ''' + (f'<div class="error">{error}</div>' if error else '') + '''
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">🔐 Login</div>
+            <div class="tab" onclick="showTab('register')">➕ Register</div>
+        </div>
+        
+        <form method="POST" id="login-form">
+            <input type="hidden" name="action" value="login">
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        
+        <form method="POST" id="register-form" style="display:none">
+            <input type="hidden" name="action" value="register">
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Create Password" required>
+            <button type="submit">Create Account</button>
+        </form>
+        
+        <div class="demo">
+            Demo: test@test.com / 123456
+        </div>
+    </div>
+    
+    <script>
+    function showTab(tab) {
+        var loginForm = document.getElementById('login-form');
+        var registerForm = document.getElementById('register-form');
+        var tabs = document.querySelectorAll('.tab');
+        
+        if(tab === 'login') {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            tabs[0].classList.add('active');
+            tabs[1].classList.remove('active');
+        } else {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+            tabs[0].classList.remove('active');
+            tabs[1].classList.add('active');
+        }
+    }
+    </script>
+</body>
+</html>'''
 
 @app.route('/dashboard')
 def dashboard():
@@ -201,3 +239,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
