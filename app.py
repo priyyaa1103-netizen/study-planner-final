@@ -29,11 +29,6 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
-    c.execute("""CREATE TABLE IF NOT EXISTS drive_notes
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  subject TEXT,
-                  unit TEXT,
-                  link TEXT)""")
     conn.commit()
     conn.close()
 
@@ -76,73 +71,6 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
-@app.route('/subject/<subject_name>')
-def subject_notes(subject_name):
-    if not session.get('logged_in'): 
-        return redirect('/')
-
-    # ===== Semester Drive Links =====
-    semester_drive_links = {
-        "sem1": "https://drive.google.com/file/d/1vBnXL4n-MpqvB8gBZyrqheMGJxEBQWgF/view?usp=drivesdk",
-        "sem2": "https://drive.google.com/file/d/2ndsemesterLink/view?usp=sharing",
-        # Add more semester links if needed
-    }
-
-    # ===== Get semester from query parameter =====
-    semester = request.args.get('semester', 'sem1')  # default sem1
-    drive_link = semester_drive_links.get(semester)
-
-    # ===== Units HTML =====
-    units_html = ''
-    subject_folder = f"static/uploads/{subject_name}"
-    os.makedirs(subject_folder, exist_ok=True)
-
-    for i in range(1, 11):
-        unit_file = f"{subject_folder}/unit{i}.pdf"
-        upload_link = f"/upload/{subject_name}/unit{i}"
-        has_file = os.path.exists(unit_file)
-
-        units_html += f'''
-        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
-        </div>
-        '''
-
-    # ===== Drive Link HTML =====
-    drive_html = ''
-    if drive_link:
-        drive_html = f'''
-        <div style="margin-top:30px;text-align:center">
-            <a href="{drive_link}" target="_blank" style="padding:15px 30px;background:#e67e22;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600">
-            📁 Semester Drive Link
-            </a>
-        </div>
-        '''
-
-    # ===== Render final page =====
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{subject_name.replace("-"," ").title()} Notes</title>
-        <style>
-            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-            .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;z-index:1000}}
-            h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
-            .container{{max-width:1400px;margin:0 auto}}
-        </style>
-    </head>
-    <body>
-        <a href="/dashboard" class="back-btn">← Dashboard</a>
-        <h1>📚 {subject_name.replace("-"," ").title()}</h1>
-        <div class="container">{units_html}</div>
-        {drive_html}
-    </body>
-    </html>
-    '''
-
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
@@ -171,16 +99,22 @@ def login():
                 return redirect('/dashboard')
         
         elif action == 'login':
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-            conn.close()
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
+    c.execute("SELECT * FROM users WHERE email=?", (email,))
+    user = c.fetchone()
+    conn.close()
+    if email == 'test@test.com' and password == '123456':
+        # Demo user - auto login without DB check
+        session['logged_in'] = True
+        session['email'] = email
+        session['name'] = 'Demo User'
+        return redirect('/dashboard')
+    elif user and check_password_hash(user['password'], password):
+        session['logged_in'] = True
+        session['email'] = email
+        session['name'] = user['name']
+        return redirect('/dashboard')
+    else:
+        error = "❌ Wrong email or password!"
     
     return render_login_page(error)
     
@@ -212,7 +146,6 @@ def render_login_page(error=""):
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
             
-            <!-- TABS KEELA VARUM -->
             <div class="tabs-container">
                 <div class="tabs">
                     <div class="tab active" onclick="showTab('login')">🔐 Login</div>
@@ -220,16 +153,19 @@ def render_login_page(error=""):
                 </div>
             </div>
             
+            <!-- LOGIN FORM (default visible) -->
             <form method="POST" id="login-form">
-                <input type="hidden" name="action" value="login">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Password" required>
+                <input type="hidden" name="action" id="login-action" value="login">
+                <input type="email" name="email" id="login-email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" id="login-password" placeholder="Password" required>
                 <button type="submit">Login</button>
             </form>
+            
+            <!-- REGISTER FORM (initially hidden) -->
             <form method="POST" id="register-form" style="display:none">
-                <input type="hidden" name="action" value="register">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Create Password" required>
+                <input type="hidden" name="action" id="register-action" value="register">
+                <input type="email" name="email" id="register-email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" id="register-password" placeholder="Create Password" required>
                 <button type="submit">Create Account</button>
             </form>
             
@@ -239,59 +175,31 @@ def render_login_page(error=""):
         </div>
         <script>
         function showTab(tab) {{
-            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-            document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
-            document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
+            // Hide both forms first
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'none';
+            
+            // Show selected form
+            if (tab === 'login') {{
+                document.getElementById('login-form').style.display = 'block';
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.querySelectorAll('.tab')[1].classList.remove('active');
+            }} else {{
+                document.getElementById('register-form').style.display = 'block';
+                document.querySelectorAll('.tab')[0].classList.remove('active');
+                document.querySelectorAll('.tab')[1].classList.add('active');
+            }}
+            
+            // Clear previous inputs
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('register-email').value = '';
+            document.getElementById('register-password').value = '';
         }}
         </script>
     </body>
     </html>
     '''
-
-@app.route('/drive_upload/<subject>/<unit>', methods=['GET','POST'])
-def drive_upload(subject, unit):
-
-    if request.method == "POST":
-        link = request.form['link']
-
-        conn = sqlite3.connect("users.db")
-        c = conn.cursor()
-
-        c.execute("INSERT INTO drive_notes (subject,unit,link) VALUES (?,?,?)",
-                  (subject,unit,link))
-
-        conn.commit()
-        conn.close()
-
-        return "Drive Link Added Successfully"
-
-    return '''
-    <h2>Add Google Drive Notes</h2>
-    <form method="POST">
-    <input type="text" name="link" placeholder="Paste Google Drive Link">
-    <button type="submit">Add</button>
-    </form>
-    '''
-
-@app.route('/drive_notes/<subject>/<unit>')
-def drive_notes(subject, unit):
-
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-
-    c.execute("SELECT link FROM drive_notes WHERE subject=? AND unit=?",
-              (subject,unit))
-
-    notes = c.fetchall()
-    conn.close()
-
-    html = "<h2>Drive Notes</h2>"
-
-    for n in notes:
-        html += f'<a href="{n[0]}" target="_blank">📄 Open Drive Notes</a><br><br>'
-
-    return html
 
 @app.route('/dashboard')
 def dashboard():
@@ -771,4 +679,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
