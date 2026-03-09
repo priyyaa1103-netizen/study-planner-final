@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
-app.secret_key = 'study2026-super-secure-key-change-this-in-production'
+app.secret_key = os.environ.get('SECRET_KEY', 'study2026-super-secure-key-change-this-in-production')
 
 # Create necessary folders
 os.makedirs('static/uploads', exist_ok=True)
@@ -32,12 +32,12 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Initialize DB on startup
 init_db()
 
-# Email Configuration - UPDATE THESE WITH YOUR GMAIL
-GMAIL_USER = "your-gmail@gmail.com"  # Change this
-GMAIL_PASS = "your-16-digit-app-password"  # Gmail App Password
-
+# Email Configuration - MUST UPDATE FOR DEPLOY
+GMAIL_USER = os.environ.get('GMAIL_USER', 'your-gmail@gmail.com')
+GMAIL_PASS = os.environ.get('GMAIL_PASS', 'your-app-password')
 def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
@@ -679,3 +679,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
