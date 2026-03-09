@@ -34,60 +34,8 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    error = ""
-    if request.method == 'POST':
-        action = request.form.get('action', 'login')
-        email = request.form['email'].lower().strip()
-        password = request.form['password']
-        
-        conn = get_db_connection()
-        c = conn.cursor()
-        
-        if action == 'register':
-            c.execute("SELECT email FROM users WHERE email=?", (email,))
-            if c.fetchone():
-                error = "❌ Email already registered!"
-            else:
-                name = email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
-                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                         (email, hashed_pw, name))
-                conn.commit()
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = name
-                conn.close()
-                return redirect('/dashboard')
-        
-        elif action == 'login':
-            # CHECK DEMO USER FIRST
-            if email == 'test@test.com' and password == '123456':
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = 'Demo User'
-                conn.close()
-                return redirect('/dashboard')
-            
-            # CHECK REAL USER - ONLY ONE QUERY
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-            conn.close()
-            
-            # STRICT PASSWORD CHECK
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
-    
-    return render_login_page(error)
-
 def render_login_page(error=""):
-    return '''
+    html = '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -111,11 +59,15 @@ def render_login_page(error=""):
 <body>
     <div class="login-box">
         <h1>🎓 Study Planner</h1>
-        ''' + (f'<div class="error">{error}</div>' if error else '') + '''
-        
+    '''
+    
+    if error:
+        html += f'<div class="error">{error}</div>'
+    
+    html += '''
         <div class="tabs">
-            <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-            <div class="tab" onclick="showTab('register')">➕ Register</div>
+            <div class="tab active" onclick="showTab(0)">🔐 Login</div>
+            <div class="tab" onclick="showTab(1)">➕ Register</div>
         </div>
         
         <form method="POST" id="login-form">
@@ -132,32 +84,74 @@ def render_login_page(error=""):
             <button type="submit">Create Account</button>
         </form>
         
-        <div class="demo">
-            Demo: test@test.com / 123456
-        </div>
+        <div class="demo">Demo: test@test.com / 123456</div>
     </div>
     
     <script>
-    function showTab(tab) {
-        var loginForm = document.getElementById('login-form');
-        var registerForm = document.getElementById('register-form');
-        var tabs = document.querySelectorAll('.tab');
-        
-        if(tab === 'login') {
-            loginForm.style.display = 'block';
-            registerForm.style.display = 'none';
-            tabs[0].classList.add('active');
-            tabs[1].classList.remove('active');
-        } else {
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'block';
-            tabs[0].classList.remove('active');
-            tabs[1].classList.add('active');
-        }
+    function showTab(n) {
+        document.getElementById('login-form').style.display = n===0?'block':'none';
+        document.getElementById('register-form').style.display = n===1?'block':'none';
+        document.querySelectorAll('.tab')[0].classList.toggle('active', n===0);
+        document.querySelectorAll('.tab')[1].classList.toggle('active', n===1);
     }
     </script>
 </body>
 </html>'''
+    return html
+
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        try:
+            action = request.form.get('action', 'login')
+            email = request.form['email'].lower().strip()
+            password = request.form['password']
+            
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            
+            if action == 'register':
+                c.execute("SELECT email FROM users WHERE email=?", (email,))
+                if c.fetchone():
+                    conn.close()
+                    return render_login_page("❌ Email already registered!")
+                else:
+                    name = email.split('@')[0].title()
+                    hashed_pw = generate_password_hash(password)
+                    c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                             (email, hashed_pw, name))
+                    conn.commit()
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = name
+                    conn.close()
+                    return redirect('/dashboard')
+            
+            elif action == 'login':
+                # Demo user
+                if email == 'test@test.com' and password == '123456':
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = 'Demo User'
+                    return redirect('/dashboard')
+                
+                # Real user
+                c.execute("SELECT * FROM users WHERE email=?", (email,))
+                user = c.fetchone()
+                conn.close()
+                
+                if user and check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    return redirect('/dashboard')
+                else:
+                    return render_login_page("❌ Wrong email or password!")
+        
+        except Exception as e:
+            return render_login_page("❌ Server error! Try again.")
+    
+    return render_login_page()
 
 @app.route('/dashboard')
 def dashboard():
@@ -239,4 +233,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
