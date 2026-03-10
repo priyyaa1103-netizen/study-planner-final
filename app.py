@@ -534,37 +534,62 @@ def view_pdf(subject_name, filename):
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
     if request.method == 'POST':
-        if 'file' in request.files:
+        try:
+            if 'file' not in request.files:
+                return "No file selected!", 400
+            
             file = request.files['file']
-            if file.filename != '':
-                os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
-                filename = secure_filename(f"unit{unit_num}.pdf")
-                filepath = f'static/uploads/{subject_name}/{filename}'
-                file.save(filepath)
-                
-                return f'''
-                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
-                <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
-                <p style="font-size:24px;margin:30px 0">Unit {unit_num} uploaded! (ID: {file_id})</p>
-                <a href="/files/{file_id}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600;margin:10px">👀 View File</a>
-                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600;margin:10px">← Back</a>
-                </div>
-                '''
+            if file.filename == '':
+                return "No file selected!", 400
+            
+            # Create folder
+            os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
+            
+            # Save file
+            filename = f"unit{unit_num}.pdf"
+            filepath = f'static/uploads/{subject_name}/{filename}'
+            file.save(filepath)
+            
+            return f'''
+            <!DOCTYPE html>
+            <html><head><title>Success</title>
+            <style>body{{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:50px;text-align:center}}
+            h1{{font-size:50px;color:#2ecc71;margin-bottom:20px}}.btn{{padding:20px 40px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600;margin:10px;display:inline-block;box-shadow:0 10px 25px rgba(52,152,219,0.4)}}</style></head>
+            <body>
+            <div>
+                <h1>✅ Upload Success!</h1>
+                <p style="font-size:24px;margin:30px 0">Unit {unit_num} saved!</p>
+                <a href="/subject/{subject_name}" class="btn">📚 View Subject</a>
+                <a href="/study" class="btn" style="background:#27ae60">📁 Study Dashboard</a>
+            </div>
+            </body></html>
+            '''
+        except Exception as e:
+            return f"Upload failed: {str(e)}", 500
     
+    # Upload form
     return f'''
-    <!-- Existing upload form -->
     <!DOCTYPE html>
-    <html><head><title>Upload</title><style>/* existing styles */</style></head>
+    <html><head><title>Upload Unit {unit_num}</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:50px}}
+    .upload-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;box-shadow:0 20px 40px rgba(0,0,0,0.3);backdrop-filter:blur(15px);text-align:center;max-width:500px;width:100%}}
+    input{{width:100%;padding:20px;margin:20px 0;font-size:20px;border-radius:15px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.2)}}
+    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:24px;font-weight:600;cursor:pointer;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+    .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
     <body>
-    <h1>📤 Upload Unit {unit_num}</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".pdf" required>
-        <button type="submit">✅ Upload PDF</button>
-    </form>
-    <a href="/subject/{subject_name}">← Back</a>
+    <a href="/subject/{subject_name}" class="back-btn">← Back</a>
+    <div class="upload-box">
+        <h1 style="font-size:42px;margin-bottom:30px">📤 Upload Unit {unit_num}</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".pdf" required>
+            <button type="submit">✅ Upload PDF</button>
+        </form>
+        <p style="margin-top:30px;color:#f1c40f;font-size:16px">Only PDF files supported</p>
+    </div>
     </body></html>
     '''
 
@@ -1040,6 +1065,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
