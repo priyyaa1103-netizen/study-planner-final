@@ -322,10 +322,10 @@ def sem1():
     <!DOCTYPE html><html><head><title>Semester 1</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 1</h1>
-    <a href="/subject/maths" class="btn">Mathematics</a>
+    <a href="/subject/maths" class="btn">Mathematics-1</a>
     <a href="/subject/python" class="btn">Python</a>
-    <a href="/subject/tamil" class="btn">Tamil</a>
-    <a href="/subject/english" class="btn">English</a>
+    <a href="/subject/tamil" class="btn">Tamil-1</a>
+    <a href="/subject/english" class="btn">English-1</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -336,10 +336,10 @@ def sem2():
     <!DOCTYPE html><html><head><title>Semester 2</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 2</h1>
-    <a href="/subject/maths2" class="btn">Maths-II</a>
-    <a href="/subject/physics" class="btn">Physics-II</a>
-    <a href="/subject/tamil" class="btn">Tamil</a>
-    <a href="/subject/english" class="btn">english</a>
+    <a href="/subject/maths2" class="btn">Maths-2</a>
+    <a href="/subject/physics" class="btn">Physics-2</a>
+    <a href="/subject/tamil" class="btn">Tamil-2</a>
+    <a href="/subject/english" class="btn">english-2</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -361,10 +361,10 @@ def sem3():
     <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 3</h1>
-    <a href="/subject/java programming" class="btn">Java Programming</a>
+    <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
-    <a href="/subject/tamil" class="btn">Tamil</a>
-    <a href="/subject/english" class="btn">English</a>
+    <a href="/subject/tamil" class="btn">Tamil-3</a>
+    <a href="/subject/english" class="btn">English-3</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -375,10 +375,10 @@ def sem4():
     <!DOCTYPE html><html><head><title>Semester 4</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 4</h1>
-    <a href="/subject/data structures" class="btn">Data structures</a>
-    <a href="/subject/statistics" class="btn">Statistics</a>
-    <a href="/subject/tamil" class="btn">Tamil</a>
-    <a href="/subject/english" class="btn">English</a>
+    <a href="/subject/data_structures" class="btn">Data structures</a>
+    <a href="/subject/statistics" class="btn">Statistics-2</a>
+    <a href="/subject/tamil" class="btn">Tamil-4</a>
+    <a href="/subject/english" class="btn">English-4</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -400,9 +400,9 @@ def sem5():
     <!DOCTYPE html><html><head><title>Semester 5</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 5</h1>
-    <a href="/subject/os" class="btn">Operating System</a>
+    <a href="/subject/0perating_System" class="btn">Operating System</a>
     <a href="/subject/RDBMS" class="btn">Relational database management system</a>
-    <a href="/subject/SE" class="btn">Software engineering</a>
+    <a href="/subject/Software_Engineering" class="btn">Software engineering</a>
     <a href="/subject/DMW" class="btn">Data mining and warehousing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
@@ -415,8 +415,8 @@ def sem6():
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 6</h1>
     <a href="/subject/ASP.net" class="btn">Programming in ASP.net</a>
-    <a href="/subject/DS" class="btn">Data science</a>
-    <a href="/subject/CC" class="btn">Cloud computing</a>
+    <a href="/subject/Data_Science" class="btn">Data science</a>
+    <a href="/subject/Cloud_Computing" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -747,8 +747,8 @@ def reminders():
                                  (session['email'],)).fetchall()
     conn.close()
     
-    subjects = ['Mathematics', 'Python', 'Physics', 'Tamil', 'English', 'Java Programming', 
-                'Data Structures', 'OS', 'RDBMS', 'Statistics']
+    subjects = ['Mathematics', 'Python', 'Tamil-1', 'english-1', 'Maths-2', 'Physics', 'Tamil-2', 'English-2', 'Java Programming', 'statistics-1', 'Tamil--3', 'english-3',
+                'Data Structures', 'statistics-2', 'Tamil', 'english', 'Operating System', 'RDBMS', 'software_engineering', 'DMW', 'ASP.net', 'Data science', 'Cloud computing']
     
     reminders_html = ''
     now = datetime.now()
@@ -859,6 +859,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
