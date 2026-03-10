@@ -714,9 +714,25 @@ def reminders():
     conn = get_db_connection()
     
     if request.method == 'POST':
-        deadline = datetime.now() + timedelta(hours=int(request.form['hours']))
+        subject = request.form['subject']
+        title = request.form['title']
+        
+        # Timer parse
+        hour = int(request.form['hour'])
+        minute = int(request.form['minute'])
+        ampm = request.form['ampm']
+        
+        if ampm == 'PM' and hour != 12:
+            hour += 12
+        elif ampm == 'AM' and hour == 12:
+            hour = 0
+            
+        deadline = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if deadline < datetime.now():
+            deadline += timedelta(days=1)
+            
         conn.execute('INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)',
-                    (session['email'], request.form['title'], deadline.isoformat()))
+                    (session['email'], f"{subject}: {title}", deadline.isoformat()))
         conn.commit()
         return redirect('/reminders')
     
@@ -724,58 +740,39 @@ def reminders():
                                  (session['email'],)).fetchall()
     conn.close()
     
-    reminders_html = ''
-    now = datetime.now()
-    
-    for r in reminders_list:
-        deadline = datetime.fromisoformat(r['deadline'])
-        time_left = deadline - now
-        if time_left.total_seconds() > 0:
-            status = f"⏰ Due in {int(time_left.total_seconds()//3600)}h"
-            status_color = "orange"
-        else:
-            status = "🚨 OVERDUE"
-            status_color = "#e74c3c"
-        
-        reminders_html += f'''
-<div style="background:linear-gradient(135deg,{status_color},#333);padding:25px;margin:20px;border-radius:20px">
-  <h3>{status} <a href="/delete_reminder/{r['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete?')">🗑️</a></h3>
-  <p><strong>{r['title']}</strong></p>
-  <p>Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}</p>
-</div>
-'''
-    
     return f'''
     <!DOCTYPE html>
     <html><head><title>Reminders</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .form-box{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin:0 auto 50px;max-width:500px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-    input,select{{width:100%;padding:15px;margin:12px 0;border-radius:12px;border:none;font-size:16px}}
-    button{{width:100%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin-top:15px}}</style></head>
+    <style>/* your existing styles */</style></head>
     <body>
-    <h1 style="font-size:42px;margin-bottom:30px">⏰ Your Reminders</h1>
+    <h1 style="font-size:42px;margin-bottom:30px;text-align:center">⏰ Set Reminder</h1>
     
     <div class="form-box">
-        <h3 style="margin-bottom:25px;font-size:24px">➕ Add New Reminder</h3>
         <form method="POST">
-            <input name="title" placeholder="Reminder title (ex: Exam tomorrow)" required>
-            <select name="hours">
-                <option value="1">1 hour</option>
-                <option value="6">6 hours</option>
-                <option value="24">1 day</option>
-                <option value="48">2 days</option>
-                <option value="168">1 week</option>
-            </select>
+            <input name="subject" placeholder="📚 Subject (Maths/Python)" required>
+            <input name="title" placeholder="Reminder (Exam/Assignment)" required>
+            
+            <label>⏰ Time:</label>
+            <div style="display:flex;gap:10px">
+                <select name="hour">
+                    {''.join([f'<option value="{i}">{i}</option>' for i in range(1,13)])}
+                </select>
+                <select name="minute">
+                    {''.join([f'<option value="{i:02d}">{i:02d}</option>' for i in range(0,60,5)])}
+                </select>
+                <select name="ampm">
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                </select>
+            </div>
             <button type="submit">✅ Set Reminder</button>
         </form>
     </div>
     
-    {reminders_html or '<p style="font-size:28px">No reminders set. Add one above! 🎯</p>'}
-    
-    <a href="/dashboard" style="padding:25px 60px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block">← Dashboard</a>
+    <a href="/dashboard" style="padding:25px 60px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block;margin:50px auto">← Dashboard</a>
     </body></html>
     '''
-
+    
 @app.route('/delete_reminder/<int:id>')
 def delete_reminder(id):
     if not session.get('logged_in'): return redirect('/')
@@ -815,6 +812,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
