@@ -293,66 +293,24 @@ def check_notifications_api():
 def study():
     if not session.get('logged_in'): return redirect('/')
     
-    # Recent files preview
-    files_html = ''
-    subjects = ['maths','python','tamil','english','java_programming','data_structures','0perating_System','RDBMS']
-    
-    for subject in subjects[:4]:  # Top 4 subjects
-        subject_folder = f"static/uploads/{subject}"
-        if os.path.exists(subject_folder):
-            files = [f for f in os.listdir(subject_folder) if f.endswith('.pdf')][:2]  # Top 2 files
-            if files:
-                files_html += f'''
-                <div style="background:rgba(255,255,255,0.15);padding:25px;margin:20px;border-radius:20px">
-                    <h3 style="margin-bottom:15px">📚 {subject.replace("_"," ").title()}</h3>
-                '''
-                for file in files:
-                    files_html += f'''
-                    <div style="display:flex;align-items:center;margin:10px 0;padding:15px;background:rgba(0,0,0,0.2);border-radius:12px">
-                        <a href="/view-pdf/{subject}/{file}" target="_blank" style="color:#2ecc71;font-weight:600;font-size:16px;margin-right:15px">👁️ {file}</a>
-                        <a href="/download/{subject}/{file}" style="color:#3498db;font-size:14px">📥</a>
-                    </div>
-                    '''
-                files_html += f'<a href="/subject/{subject}" style="color:#f39c12;font-weight:600">All files →</a></div>'
-    
     return f'''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
-    <style>
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
-    .container{{max-width:1200px;margin:0 auto}}
-    h1{{font-size:42px;text-align:center;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
-    .section{{margin:50px 0}}
-    .btn{{display:inline-block;padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;font-weight:600;box-shadow:0 10px 25px rgba(80,200,120,0.4);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(80,200,120,0.6)}}
-    .files-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin:40px 0}}
-    .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;z-index:100}}
-    </style>
-    </head>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .container{{max-width:800px;margin:0 auto}}
+    h1{{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
+    .btn{{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}}
+    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
-    
     <div class="container">
         <h1>📚 Study Dashboard</h1>
-        
-        <!-- Year Navigation -->
-        <div class="section" style="text-align:center">
-            <a href="/year1" class="btn">🎓 1st Year</a>
-            <a href="/year2" class="btn">🎓 2nd Year</a>
-            <a href="/year3" class="btn">🎓 3rd Year</a>
-            <a href="/myfiles" class="btn" style="background:#e74c3c">📁 All Files</a>
-        </div>
-        
-        <!-- Recent Files Preview -->
-        <div class="section">
-            <h2 style="font-size:32px;text-align:center;margin-bottom:30px">📁 Recent Files</h2>
-            <div class="files-grid">
-                {files_html or '<p style="text-align:center;font-size:24px;color:#f1c40f;grid-column:1/-1">No files uploaded yet! Start uploading 📤</p>'}
-            </div>
-        </div>
+        <a href="/year1" class="btn">🎓 1st Year</a>
+        <a href="/year2" class="btn">🎓 2nd Year</a>
+        <a href="/year3" class="btn">🎓 3rd Year</a>
     </div>
-    </body>
-    </html>
+    </body></html>
     '''
 
 # ===== 1st YEAR =====
@@ -1068,6 +1026,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
