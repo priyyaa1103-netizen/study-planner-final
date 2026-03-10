@@ -193,42 +193,18 @@ def dashboard():
             *{{margin:0;padding:0;box-sizing:border-box}}
             body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
             .container{{max-width:1000px;margin:0 auto;text-align:center}}
-            h1{{font-size:42px;margin-bottom:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
-            h2{{font-size:24px;margin-bottom:40px;opacity:0.9}}
-            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s;position:relative;overflow:hidden}}
-            .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+            h1{{font-size:42px;margin-bottom:10px}}
+            h2{{font-size:24px;margin-bottom:40px}}
+            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+            .btn:hover{{transform:translateY(-5px)}}
             .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
-            .notification {{
-                background: rgba(231,76,60,0.95);
-                padding: 25px;
-                border-radius: 20px;
-                margin: 20px auto;
-                font-size: 22px;
-                max-width: 650px;
-                box-shadow: 0 15px 40px rgba(231,76,60,0.5);
-                cursor: pointer;
-                transition: all 0.3s;
-                border: 3px solid #c0392b;
-                animation: pulse 2s infinite;
-            }}
-            @keyframes pulse {{
-                0% {{ transform: scale(1); }}
-                50% {{ transform: scale(1.05); }}
-                100% {{ transform: scale(1); }}
-            }}
-            .notification:hover {{
-                transform: translateY(-5px) scale(1.02);
-                box-shadow: 0 25px 50px rgba(231,76,60,0.7);
-            }}
-            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px;backdrop-filter:blur(15px);box-shadow:0 20px 40px rgba(0,0,0,0.2)}}
+            .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;font-size:22px;max-width:650px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;animation:pulse 2s infinite}}
+            @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
+            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
         </style>
-        
         <script>
-        let alarmAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo');
-        
         function playAlarm() {{
-            alarmAudio.currentTime = 0;
-            alarmAudio.play().catch(e => {{
+            try {{
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -240,40 +216,7 @@ def dashboard():
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 1);
-            }});
-        }}
-        
-        function showNotification(title) {{
-            if (Notification.permission === 'granted') {{
-                new Notification('🚨 Study Alarm!', {{
-                    body: `{title} - Time to Study! ⏰`,
-                    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjUiIGZpbGw9IiM1MGM4NzgiLz4KPHRleHQgeD0iMjUiIHk9IjM0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5🔔PC90ZXh0Pgo8L3N2Zz4K'
-                }});
-            }}
-        }}
-        
-        // Notification click handler
-        document.addEventListener('click', function(e) {{
-            if (e.target.closest('.notification')) {{
-                playAlarm();
-                showNotification('Study Reminder');
-            }}
-        }});
-        
-        // Auto check every 30s
-        setInterval(() => {{
-            fetch('/check-notifications')
-                .then(r => r.text())
-                .then(html => {{
-                    if (html.includes('🚨')) {{
-                        playAlarm();
-                        showNotification('URGENT Study Reminder!');
-                    }}
-                }});
-        }}, 30000);
-        
-        if ('Notification' in window && Notification.permission === 'default') {{
-            Notification.requestPermission();
+            }} catch(e) {{}}
         }}
         </script>
     </head>
@@ -283,10 +226,7 @@ def dashboard():
                 <h1>Welcome {session['name']}! 🎓</h1>
                 <h2>Study Planner & Reminder App</h2>
             </div>
-            
-            <!-- ⭐ NOTIFICATIONS இங்க show ஆகும் -->
             {notifications}
-            
             <a href="/study" class="btn">📚 Study Dashboard</a>
             <a href="/goals" class="btn">🎯 Set Goal</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
@@ -296,7 +236,6 @@ def dashboard():
     </body>
     </html>
     '''
-
 def check_notifications():
     conn = get_db_connection()
     c = conn.cursor()
@@ -309,32 +248,15 @@ def check_notifications():
     
     notifications = ""
     for reminder in overdue:
-        # Send Gmail notification
         send_email(email, "🚨 Study Reminder - OVERDUE", 
-                  f"🚨 URGENT ALERT! 🚨
-
-"
-                  f"Reminder: '{reminder['title']}' 
-"
-                  f"⏰ Due: {reminder['deadline']}
-
-"
-                  f"📱 Open Study App now!
-"
-                  f"https://your-app-name.onrender.com/dashboard")  # Your Render URL வைங்க
+                  f"Reminder: '{reminder['title']}' was due at {reminder['deadline']}")
         
         notifications += f'''
-        <div class="notification" 
-             onclick="playAlarm(); showNotification('{reminder['title']}')">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-                <span>🚨 <strong>{reminder['title']}</strong></span>
-                <span style="cursor:pointer;font-size:28px" onclick="playAlarm();event.stopPropagation();">🔊</span>
-            </div>
-            <p style="margin:10px 0 0 0;font-size:18px">Deadline Passed! Click to play alarm</p>
+        <div class="notification" onclick="playAlarm()">
+            🚨 <strong>{reminder["title"]}</strong> - Deadline Passed! 🔊
         </div>
         '''
     
-    # Delete processed reminders (optional - avoid spam)
     c.execute("DELETE FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
               (email, now.isoformat()))
     conn.commit()
@@ -345,19 +267,16 @@ def check_notifications():
 def check_notifications_api():
     if not session.get('logged_in'):
         return ""
-    
     conn = get_db_connection()
     c = conn.cursor()
     email = session.get('email', '')
     now = datetime.now()
-    
     c.execute("SELECT COUNT(*) FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
               (email, now.isoformat()))
     count = c.fetchone()[0]
     conn.close()
-    
     if count > 0:
-        return f'<div style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;padding:15px;border-radius:15px;font-weight:600;">🚨 {count} Overdue Reminders!</div>'
+        return "🚨"
     return ""
 
 @app.route('/study')
@@ -896,5 +815,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
