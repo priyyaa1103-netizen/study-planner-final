@@ -29,6 +29,10 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, filename TEXT, 
+                  filepath TEXT, upload_date TEXT)''')
     conn.commit()
     conn.close()
 
@@ -232,6 +236,7 @@ def dashboard():
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
         </div>
     </body>
     </html>
@@ -490,37 +495,165 @@ def upload_unit(subject_name, unit_num):
             if file.filename != '':
                 os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
                 filename = secure_filename(f"unit{unit_num}.pdf")
-                file.save(f'static/uploads/{subject_name}/{filename}')
+                filepath = f'static/uploads/{subject_name}/{filename}'
+                file.save(filepath)
+                
+                # Database-ல save
+                conn = get_db_connection()
+                conn.execute('INSERT INTO files (email, subject, filename, filepath, upload_date) VALUES (?, ?, ?, ?, ?)',
+                           (session['email'], subject_name, filename, filepath, datetime.now().isoformat()))
+                file_id = conn.lastrowid
+                conn.commit()
+                conn.close()
                 
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
-                <p style="font-size:24px;margin:30px 0">{subject_name.title()} Unit {unit_num} uploaded!</p>
-                <iframe src="/view-pdf/{subject_name}/unit{unit_num}.pdf" 
-                        style="width:80%;max-width:800px;height:500px;border-radius:15px;border:3px solid #2ecc71;margin:20px 0;box-shadow:0 20px 40px rgba(0,0,0,0.3)" 
-                        title="Preview"></iframe>
-                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to Subject</a>
+                <p style="font-size:24px;margin:30px 0">Unit {unit_num} uploaded! (ID: {file_id})</p>
+                <a href="/files/{file_id}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600;margin:10px">👀 View File</a>
+                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600;margin:10px">← Back</a>
                 </div>
                 '''
-        return '<h1 style="color:red;text-align:center">No file selected!</h1>'
     
-    # Upload form
     return f'''
+    <!-- Existing upload form -->
     <!DOCTYPE html>
-    <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    input[type=file]{{width:500px;padding:20px;margin:30px;border-radius:15px;border:none;background:rgba(255,255,255,0.95);font-size:18px}}
-    button{{padding:25px 60px;margin:30px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;cursor:pointer;font-weight:600;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:40px}}</style></head>
+    <html><head><title>Upload</title><style>/* existing styles */</style></head>
     <body>
     <h1>📤 Upload Unit {unit_num}</h1>
     <form method="POST" enctype="multipart/form-data">
         <input type="file" name="file" accept=".pdf" required>
-        <br><button type="submit">✅ Upload PDF</button>
+        <button type="submit">✅ Upload PDF</button>
     </form>
-    <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
+    <a href="/subject/{subject_name}">← Back</a>
     </body></html>
     '''
+
+@app.route('/myfiles')
+def my_files():
+    if not session.get('logged_in'): return redirect('/')
+    
+    conn = get_db_connection()
+    files = conn.execute('SELECT * FROM files WHERE email=? ORDER BY upload_date DESC', 
+                        (session['email'],)).fetchall()
+    conn.close()
+    
+    files_html = ''
+    for file in files:
+        files_html += f'''
+        <div style="background:rgba(255,255,255,0.15);padding:25px;margin:20px;border-radius:20px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <h3>{file['subject']} - {file['filename']}</h3>
+                <p>Uploaded: {file['upload_date'][:16]}</p>
+            </div>
+            <div style="text-align:right">
+                <a href="/view-file/{file['id']}" target="_blank" 
+                   style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">👀 View</a>
+                <a href="/download-file/{file['id']}" 
+                   style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">📥 Download</a>
+                <a href="/delete-file/{file['id']}" onclick="return confirm('Delete this file?')"
+                   style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">🗑️ Delete</a>
+            </div>
+        </div>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>My Files</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    .container{{max-width:1000px;margin:0 auto}} .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
+    <body>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <div class="container">
+        <h1 style="text-align:center;font-size:42px;margin:60px 0 40px 0">📁 My Uploaded Files</h1>
+        {files_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No files uploaded yet!</p>'}
+    </div>
+    </body></html>
+    '''
+
+@app.route('/view-file/<int:file_id>')
+def view_file(file_id):
+    if not session.get('logged_in'): return redirect('/')
+    
+    conn = get_db_connection()
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
+                       (file_id, session['email'])).fetchone()
+    conn.close()
+    
+    if not file:
+        return "File not found!", 404
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>{file['filename']}</title>
+    <style>body{{margin:0;background:#f8f9fa;font-family:'Segoe UI',sans-serif}}
+    .header{{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;text-align:center}}
+    .container{{max-width:1200px;margin:0 auto;padding:20px;display:flex;gap:20px;flex-wrap:wrap}}
+    .pdf-viewer{{flex:3;min-width:700px}}
+    .actions{{flex:1;display:flex;flex-direction:column;gap:15px;padding:20px;background:white;border-radius:15px;box-shadow:0 10px 30px rgba(0,0,0,0.1)}}
+    .btn{{padding:15px 25px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-weight:600;text-align:center;display:block}}
+    .btn:hover{{background:#45b06a;transform:translateY(-2px)}}
+    iframe{{width:100%;height:80vh;border:none;border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,0.2)}}</style></head>
+    <body>
+    <div class="header">
+        <h1>📄 {file['filename']}</h1>
+        <p>{file['subject']} | Uploaded: {file['upload_date'][:16]}</p>
+    </div>
+    <div class="container">
+        <div class="pdf-viewer">
+            <iframe src="/serve-file/{file['id']}" title="PDF Viewer"></iframe>
+        </div>
+        <div class="actions">
+            <a href="/serve-file/{file['id']}" class="btn" target="_blank">👀 Full View</a>
+            <a href="/download-file/{file['id']}" class="btn">📥 Download</a>
+            <a href="/delete-file/{file['id']}" class="btn" style="background:#e74c3c" onclick="return confirm('Delete?')">🗑️ Delete</a>
+            <a href="/myfiles" class="btn" style="background:#3498db">📁 All Files</a>
+        </div>
+    </div>
+    </body></html>
+    '''
+
+@app.route('/serve-file/<int:file_id>')
+def serve_file(file_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
+                       (file_id, session['email'])).fetchone()
+    conn.close()
+    if file:
+        return send_from_directory(os.path.dirname(file['filepath']), 
+                                 os.path.basename(file['filepath']), 
+                                 mimetype='application/pdf')
+    return "File not found!", 404
+
+@app.route('/download-file/<int:file_id>')
+def download_file(file_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
+                       (file_id, session['email'])).fetchone()
+    conn.close()
+    if file:
+        return send_from_directory(os.path.dirname(file['filepath']), 
+                                 os.path.basename(file['filepath']), 
+                                 as_attachment=True)
+    return "File not found!", 404
+
+@app.route('/delete-file/<int:file_id>')
+def delete_file(file_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
+                       (file_id, session['email'])).fetchone()
+    if file:
+        try:
+            os.remove(file['filepath'])
+        except:
+            pass
+        conn.execute('DELETE FROM files WHERE id=?', (file_id,))
+        conn.commit()
+    conn.close()
+    return redirect('/myfiles')
     
 @app.route('/download/<subject_name>/<filename>')
 def download_file(subject_name, filename):
@@ -890,6 +1023,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
