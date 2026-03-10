@@ -289,30 +289,64 @@ def check_notifications_api():
         return "🚨"
     return ""
 
-@app.route('/study')
-def study():
+@app.route('/subject/<subject_name>')
+def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
+    
+    units_html = ''
+    subject_folder = f"static/uploads/{subject_name}"
+    os.makedirs(subject_folder, exist_ok=True)
+    
+    for i in range(1, 11):
+        unit_file = f"{subject_folder}/unit{i}.pdf"
+        upload_link = f"/upload/{subject_name}/unit{i}"
+        has_file = os.path.exists(unit_file)
+        
+        if has_file:
+            # ✅ UPLOADED FILE - PDF PREVIEW + BUTTONS
+            units_html += f'''
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.2);padding:25px;border-radius:20px;width:240px;box-shadow:0 10px 30px rgba(0,0,0,0.3);backdrop-filter:blur(10px)">
+                <h3 style="margin-bottom:15px;color:#2ecc71">📚 Unit {i} ✅</h3>
+                
+                <!-- PDF PREVIEW -->
+                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf#toolbar=0" 
+                        style="width:100%;height:180px;border:none;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.3);margin:10px 0" 
+                        title="Unit {i} PDF"></iframe>
+                
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <a href="/view-pdf/{subject_name}/unit{i}.pdf" target="_blank" 
+                       style="flex:1;padding:10px;background:#27ae60;color:white;text-decoration:none;border-radius:8px;font-size:14px;text-align:center">👁️ View</a>
+                    <a href="/download/{subject_name}/unit{i}.pdf" 
+                       style="flex:1;padding:10px;background:#3498db;color:white;text-decoration:none;border-radius:8px;font-size:14px;text-align:center">📥 Download</a>
+                </div>
+                <a href="{upload_link}" style="display:block;padding:8px;background:#e67e22;color:white;text-decoration:none;border-radius:8px;margin-top:10px;font-size:14px;text-align:center">🔄 Re-upload</a>
+            </div>
+            '''
+        else:
+            # ❌ NO FILE - UPLOAD BUTTON
+            units_html += f'''
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:240px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+                <h3 style="margin-bottom:20px">📚 Unit {i}</h3>
+                <a href="{upload_link}" style="display:block;padding:18px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;text-align:center;box-shadow:0 8px 20px rgba(52,152,219,0.4)">📤 Upload</a>
+                <p style="color:#f39c12;margin-top:15px;font-weight:500">No file uploaded</p>
+            </div>
+            '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Study Dashboard</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .container{{max-width:800px;margin:0 auto}}
-    h1{{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
-    .btn{{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}</style></head>
+    <html><head><title>{subject_name.replace("_"," ").title()}</title>
+    <style>
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
+    h1{{font-size:42px;margin:80px 0 50px 0;text-align:center;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
+    .container{{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:center;gap:20px}}
+    </style></head>
     <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <div class="container">
-        <h1>📚 Study Dashboard</h1>
-        <a href="/year1" class="btn">🎓 1st Year</a>
-        <a href="/year2" class="btn">🎓 2nd Year</a>
-        <a href="/year3" class="btn">🎓 3rd Year</a>
-    </div>
+    <a href="/study" class="back-btn">← Study Dashboard</a>
+    <h1>📚 {subject_name.replace("_"," ").title()}</h1>
+    <div class="container">{units_html}</div>
     </body></html>
     '''
-
 # ===== 1st YEAR =====
 @app.route('/year1')
 def year1():
@@ -1026,6 +1060,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
