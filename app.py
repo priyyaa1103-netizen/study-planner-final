@@ -798,7 +798,7 @@ def reminders():
                 <!-- TIME SELECTOR -->
                 <div class="time-row">
                     <select name="hour" required>
-                        {''.join([f'<option value="{i}">{i}</option>' for i in range(1,13)])}
+                        {''.join([f'<option value="{i}">{i}</option>' for i in range(0,13)])}
                     </select>
                     <select name="minute" required>
                         {''.join([f'<option value="{i:02d}">{i:02d}</option>' for i in range(0,60,5)])}
@@ -859,6 +859,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
