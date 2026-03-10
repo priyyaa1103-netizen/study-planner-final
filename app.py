@@ -748,7 +748,7 @@ def reminders():
     conn.close()
     
     subjects = ['Mathematics', 'Python', 'Tamil-1', 'english-1', 'Maths-2', 'Physics', 'Tamil-2', 'English-2', 'Java Programming', 'statistics-1', 'Tamil--3', 'english-3',
-                'Data Structures', 'statistics-2', 'Tamil', 'english', 'Operating System', 'RDBMS', 'software_engineering', 'DMW', 'ASP.net', 'Data science', 'Cloud computing']
+                'Data Structures', 'statistics-2', 'Tamil-4', 'english-4', 'Operating System', 'RDBMS', 'software_engineering', 'DMW', 'ASP.net', 'Data science', 'Cloud computing']
     
     reminders_html = ''
     now = datetime.now()
@@ -859,6 +859,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
