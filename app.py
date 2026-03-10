@@ -231,11 +231,10 @@ def dashboard():
                 <h2>Study Planner & Reminder App</h2>
             </div>
             {notifications}
-            <a href="/myfiles" class="btn">📁 My Files</a>
+            <a href="/study" class="btn">📚 Study Dashboard</a>
             <a href="/goals" class="btn">🎯 Set Goal</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/study" class="btn">📚 Study Dashboard</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
     </body>
@@ -520,11 +519,21 @@ def subject_notes(subject_name):
 
 @app.route('/view-pdf/<subject_name>/<filename>')
 def view_pdf(subject_name, filename):
-    if not session.get('logged_in'): return redirect('/')
-    try:
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    file_path = f"static/uploads/{subject_name}/{filename}"
+    
+    if os.path.exists(file_path):
         return send_from_directory(f'static/uploads/{subject_name}', filename, mimetype='application/pdf')
-    except:
-        return '<h1 style="color:red;text-align:center">PDF not found!</h1>', 404
+    else:
+        return f'''
+        <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
+        <h1 style="font-size:50px;color:#e74c3c">❌ File Not Found!</h1>
+        <p style="font-size:24px;margin:30px 0">{filename} not available</p>
+        <a href="/subject/{subject_name}" style="padding:20px 50px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:22px">← Back to Subject</a>
+        </div>
+        ''', 404
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
@@ -1059,6 +1068,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
