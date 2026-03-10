@@ -237,6 +237,7 @@ def dashboard():
             <a href="/reminders" class="btn">⏰ Reminders</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
             <a href="/myfiles" class="btn">📁 My Files</a>
+            <a href="/study" class="btn">📚 Study Dashboard</a>
         </div>
     </body>
     </html>
@@ -482,8 +483,8 @@ def view_pdf(subject_name, filename):
     if not session.get('logged_in'): return redirect('/')
     try:
         return send_from_directory(f'static/uploads/{subject_name}', filename, mimetype='application/pdf')
-    except FileNotFoundError:
-        return "PDF not found!", 404
+    except:
+        return '<h1 style="color:red;text-align:center">PDF not found!</h1>', 404
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
@@ -533,44 +534,43 @@ def upload_unit(subject_name, unit_num):
 def my_files():
     if not session.get('logged_in'): return redirect('/')
     
-    conn = get_db_connection()
-    files = conn.execute('SELECT * FROM files WHERE email=? ORDER BY upload_date DESC', 
-                        (session['email'],)).fetchall()
-    conn.close()
-    
     files_html = ''
-    for file in files:
-        files_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:25px;margin:20px;border-radius:20px;display:flex;justify-content:space-between;align-items:center">
-            <div>
-                <h3>{file['subject']} - {file['filename']}</h3>
-                <p>Uploaded: {file['upload_date'][:16]}</p>
-            </div>
-            <div style="text-align:right">
-                <a href="/view-file/{file['id']}" target="_blank" 
-                   style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">👀 View</a>
-                <a href="/download-file/{file['id']}" 
-                   style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">📥 Download</a>
-                <a href="/delete-file/{file['id']}" onclick="return confirm('Delete this file?')"
-                   style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">🗑️ Delete</a>
-            </div>
-        </div>
-        '''
+    subjects = ['maths', 'python', 'tamil', 'english', 'java programming', 'data structures']
+    
+    for subject in subjects:
+        subject_folder = f"static/uploads/{subject}"
+        if os.path.exists(subject_folder):
+            for file in os.listdir(subject_folder):
+                if file.endswith('.pdf'):
+                    file_path = f"{subject_folder}/{file}"
+                    files_html += f'''
+                    <div style="background:rgba(255,255,255,0.15);padding:25px;margin:20px;border-radius:20px;display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <h3>{subject.replace("-"," ").title()} - {file}</h3>
+                            <p>Uploaded: {datetime.fromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d %H:%M")}</p>
+                        </div>
+                        <div>
+                            <a href="/view-pdf/{subject}/{file}" target="_blank" style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">👀 View</a>
+                            <a href="/download/{subject}/{file}" style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">📥 Download</a>
+                            <a href="/delete-upload/{subject}/{file}" onclick="return confirm('Delete?')" style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;margin:5px;display:inline-block">🗑️ Delete</a>
+                        </div>
+                    </div>
+                    '''
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>My Files</title>
     <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .container{{max-width:1000px;margin:0 auto}} .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
+    .container{{max-width:1000px;margin:0 auto}} .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;z-index:1000}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
-        <h1 style="text-align:center;font-size:42px;margin:60px 0 40px 0">📁 My Uploaded Files</h1>
-        {files_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No files uploaded yet!</p>'}
+        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px 0">📁 My Uploaded Files</h1>
+        {files_html or '<p style="text-align:center;font-size:28px;color:#f1c40f;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px">No files uploaded yet! 📤</p>'}
     </div>
     </body></html>
     '''
-
+    
 @app.route('/view-file/<int:file_id>')
 def view_file(file_id):
     if not session.get('logged_in'): return redirect('/')
@@ -639,20 +639,12 @@ def download_file(file_id):
                                  as_attachment=True)
     return "File not found!", 404
 
-@app.route('/delete-file/<int:file_id>')
-def delete_file(file_id):
+@app.route('/delete-upload/<subject>/<filename>')
+def delete_upload(subject, filename):
     if not session.get('logged_in'): return redirect('/')
-    conn = get_db_connection()
-    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
-                       (file_id, session['email'])).fetchone()
-    if file:
-        try:
-            os.remove(file['filepath'])
-        except:
-            pass
-        conn.execute('DELETE FROM files WHERE id=?', (file_id,))
-        conn.commit()
-    conn.close()
+    file_path = f"static/uploads/{subject}/{filename}"
+    if os.path.exists(file_path):
+        os.remove(file_path)
     return redirect('/myfiles')
     
 @app.route('/download/<subject_name>/<filename>')
@@ -1023,6 +1015,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
