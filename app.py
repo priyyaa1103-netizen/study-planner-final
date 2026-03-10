@@ -29,6 +29,11 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS goals 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  email TEXT, subject TEXT, goal TEXT, 
+                  target_score INTEGER, progress INTEGER DEFAULT 0,
+                  max_score INTEGER DEFAULT 0)''')  # Add max_score
     conn.commit()
     conn.close()
 
@@ -372,7 +377,9 @@ def sem6():
     <a href="/subject/DS" class="btn">Data science</a>
     <a href="/subject/CC" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
-    '''@app.route('/subject/<subject_name>')
+    '''
+
+@app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     
@@ -393,31 +400,19 @@ def subject_notes(subject_name):
         </div>
         '''
     
-    # Subject name clean for quiz
-    clean_subject = subject_name.replace('-', ' ').title()
-    
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{clean_subject} Notes</title>
-    <style>
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
     .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
-    .container{{max-width:1400px;margin:0 auto}}
-    .quiz-btn{{display:block;margin:30px auto;padding:20px 50px;background:#e74c3c;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:700;text-align:center;box-shadow:0 15px 40px rgba(231,76,60,0.4);transition:all 0.3s;width:300px}}
-    .quiz-btn:hover{{transform:translateY(-5px);box-shadow:0 25px 50px rgba(231,76,60,0.6)}}
-    </style></head>
+    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {clean_subject}</h1>
-    
-    <!-- NEW QUIZ BUTTON -->
-    <a href="/subject-quiz/{subject_name}" class="quiz-btn">🧠 Take {clean_subject} Quiz</a>
-    
+    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
     <div class="container">{units_html}</div>
     </body></html>
     '''
-    
+
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
     if not session.get('logged_in'): return redirect('/')
@@ -466,21 +461,12 @@ def goals():
     
     if request.method == 'POST':
         conn = get_db_connection()
-
-        hour = request.form['hour']
-        minute = request.form['minute']
-        ampm = request.form['ampm']
-
-        study_time = f"{hour}:{minute} {ampm}"
-
-        conn.execute('''INSERT INTO goals (email, subject, goal, target_score, study_hours) 
-                       VALUES (?, ?, ?, ?, ?)''', 
+        conn.execute('''INSERT INTO goals (email, subject, goal, target_score) 
+                       VALUES (?, ?, ?, ?)''', 
                     (session['email'], 
                      request.form['subject'], 
                      request.form['goal'], 
-                     request.form['target_score'], 
-                     study_time))
-
+                     request.form['target_score']))
         conn.commit()
         conn.close()
         return redirect('/view-goals')
@@ -500,35 +486,17 @@ def goals():
             <input name="subject" placeholder="Subject (ex: Mathematics)" required>
             <input name="goal" placeholder="Goal Description" required>
             <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
-            <label style="font-size:18px;font-weight:600">⏰ Target Study Hours:</label>
-
-<div style="display:flex;gap:10px;margin:15px 0">
-    <select name="hour" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-        {''.join([f'<option value="{i}">{i}</option>' for i in range(0,13)])}
-    </select>
-
-    <select name="minute" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-    {''.join([f'<option value="{i}">{i:02}</option>' for i in range(0,61)])}
-</select>
-
-    <select name="ampm" required style="flex:1;padding:15px;border-radius:12px;border:none;font-size:16px">
-        <option value="AM">AM</option>
-        <option value="PM">PM</option>
-    </select>
-</div>
             <button type="submit">✅ Save Goal</button>
         </form>
+        <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
     </div>
     <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
     </body></html>
     '''
 
-# Add this new route after the goals section
-
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
 def quiz(goal_id):
-    if not session.get('logged_in'): 
-        return redirect('/')
+    if not session.get('logged_in'): return redirect('/')
     
     conn = get_db_connection()
     goal = conn.execute('SELECT * FROM goals WHERE id=? AND email=?', 
@@ -538,59 +506,58 @@ def quiz(goal_id):
     if not goal:
         return redirect('/view-goals')
     
-    # Subject-specific questions
+    # Simple quiz questions based on subject
+    subject = goal['subject'].lower()
     questions = {
         'mathematics': [
-            {"q": "What is the derivative of x²?", "options": ["2x", "x", "2", "x³"], "ans": 0},
-            {"q": "∫x dx =", "options": ["x²/2+C", "x²+C", "2x+C", "x+C"], "ans": 0},
-            {"q": "sin(90°) =", "options": ["0", "1", "0.5", "-1"], "ans": 1},
-            {"q": "Limit x→0 sin(x)/x =", "options": ["0", "1", "∞", "-1"], "ans": 1},
-            {"q": "Matrix determinant 2x2:", "options": ["ad-bc", "a+b+c+d", "a*d", "b*c"], "ans": 0},
-            {"q": "e^x derivative =", "options": ["e^x", "x*e^x", "e", "1"], "ans": 0},
-            {"q": "log(a*b) =", "options": ["log a + log b", "log a * log b", "log a - log b", "log a / log b"], "ans": 0},
-            {"q": "cos(0°) =", "options": ["0", "1", "-1", "0.5"], "ans": 1},
-            {"q": "Series Σ1/n diverges?", "options": ["Yes", "No", "Sometimes", "Never"], "ans": 0},
-            {"q": "Vector cross product gives:", "options": ["Scalar", "Vector", "Matrix", "Tensor"], "ans": 1}
+            {"q": "What is 15 × 4?", "options": ["50", "60", "70", "45"], "ans": "60"},
+            {"q": "Derivative of x²?", "options": ["2x", "x", "2", "x³"], "ans": "2x"},
+            {"q": "∫x dx =", "options": ["x²/2", "x²", "2x", "x/2"], "ans": "x²/2"},
+            {"q": "sin(90°) =", "options": ["0", "1", "0.5", "-1"], "ans": "1"},
+            {"q": "What is 25% of 80?", "options": ["20", "15", "25", "30"], "ans": "20"},
+            {"q": "log₁₀(100) =", "options": ["10", "2", "1", "0"], "ans": "2"},
+            {"q": "Area of circle = ?", "options": ["πr", "πr²", "2πr", "4πr"], "ans": "πr²"},
+            {"q": "1+1 =", "options": ["2", "1", "0", "11"], "ans": "2"},
+            {"q": "Pythagoras theorem?", "options": ["a²+b²=c²", "a+b=c", "a×b=c", "a-b=c"], "ans": "a²+b²=c²"},
+            {"q": "Factorial 5! =", "options": ["120", "25", "10", "50"], "ans": "120"}
         ],
         'python': [
-            {"q": "print('Hello') output?", "options": ["Hello", "Hello\
-", "H e l l o", "Error"], "ans": 1},
-            {"q": "list[1:3] slices?", "options": ["Index 1,3", "Index 1 to 2", "Index 0 to 3", "All"], "ans": 1},
-            {"q": "def func(): return 5 * 2?", "options": ["5", "10", "2", "7"], "ans": 1},
-            {"q": "'a' in 'apple'?", "options": ["True", "False", "Error", "None"], "ans": 0},
-            {"q": "len([1,2,3])?", "options": ["2", "3", "4", "1"], "ans": 1},
-            {"q": "dict['key'] = 1 type?", "options": ["list", "dict", "str", "int"], "ans": 1},
-            {"q": "for i in range(3):?", "options": ["0,1,2", "1,2,3", "0,1", "3"], "ans": 0},
-            {"q": "try: 1/0 except:", "options": ["ValueError", "ZeroDivisionError", "TypeError", "IndexError"], "ans": 1},
-            {"q": "lambda x:x*2 (3)?", "options": ["3", "6", "2", "Error"], "ans": 1},
-            {"q": "[1,2] + [3] =", "options": ["[1,2,3]", "[4]", "[1,5]", "Error"], "ans": 0}
-        ],
-        # Add more subjects as needed...
+            {"q": "print('Hello') output?", "options": ["Hello", "Hello ", "'Hello'", "Error"], "ans": "Hello"},
+            {"q": "len('abc') =", "options": ["3", "2", "abc", "Error"], "ans": "3"},
+            {"q": "1 + '1' type?", "options": ["int", "str", "Error", "float"], "ans": "Error"},
+            {"q": "[1,2,3][1] =", "options": ["1", "2", "3", "Error"], "ans": "2"},
+            {"q": "def func(): pass type?", "options": ["function", "class", "int", "str"], "ans": "function"},
+            {"q": "'hello'.upper() =", "options": ["HELLO", "hello", "Hello", "Error"], "ans": "HELLO"},
+            {"q": "range(3) length?", "options": ["3", "2", "0", "4"], "ans": "3"},
+            {"q": "True == 1 ?", "options": ["True", "False", "Error", "1"], "ans": "True"},
+            {"q": "dict.keys() returns?", "options": ["list", "dict_keys", "tuple", "str"], "ans": "dict_keys"},
+            {"q": "for i in range(5): print(i) last?", "options": ["4", "5", "0", "3"], "ans": "4"}
+        ]
     }
     
-    subject_key = goal['subject'].lower().replace(' ', '')
-    subject_questions = questions.get(subject_key, questions['python'])  # Default to python
+    # Default questions for other subjects
+    default_questions = [
+        {"q": f"What is the main topic of {subject}?", "options": ["A", "B", "C", "D"], "ans": "A"},
+        {"q": f"Basic concept #{i+1}?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"}
+        for i in range(8)
+    ]
     
-    score = session.get(f'quiz_score_{goal_id}', 0)
-    total_questions = 10
+    quiz_questions = questions.get(subject, default_questions[:10])
     
     if request.method == 'POST':
-        user_answers = []
-        correct = 0
+        score = 0
+        for i in range(10):
+            if request.form.get(f'q{i}') == quiz_questions[i]['ans']:
+                score += 1
         
-        for i in range(total_questions):
-            answer = request.form.get(f'q{i}')
-            if answer == str(subject_questions[i]['ans']):
-                correct += 1
+        # Update progress (10% per correct answer)
+        progress_increase = score * 10
+        new_progress = min(goal['progress'] + progress_increase, 100)
+        new_max_score = max(goal['max_score'], score)
         
-        score = int((correct / total_questions) * 100)
-        session[f'quiz_score_{goal_id}'] = score
-        
-        # Update progress in database (each quiz = 10% progress)
         conn = get_db_connection()
-        current_progress = conn.execute('SELECT progress FROM goals WHERE id=?', (goal_id,)).fetchone()
-        new_progress = min(100, current_progress['progress'] + 10)
-        conn.execute('UPDATE goals SET progress=? WHERE id=?', (new_progress, goal_id))
+        conn.execute('UPDATE goals SET progress=?, max_score=? WHERE id=? AND email=?',
+                    (new_progress, new_max_score, goal_id, session['email']))
         conn.commit()
         conn.close()
         
@@ -598,195 +565,50 @@ def quiz(goal_id):
         <!DOCTYPE html>
         <html><head><title>Quiz Result</title>
         <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-        .result-box{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;margin:0 auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-        .score{{font-size:80px;color:#2ecc71;margin:30px 0;font-weight:700;text-shadow:0 0 20px rgba(46,204,113,0.5)}}
-        h1{{font-size:42px;margin-bottom:30px}}</style></head>
+        .result-box{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+        .score{{font-size:48px;margin:30px 0;color:#2ecc71;font-weight:700}}</style></head>
         <body>
         <div class="result-box">
             <h1>🎉 Quiz Complete!</h1>
-            <div class="score">{score}%</div>
-            <p style="font-size:24px">Goal Progress Updated!</p>
-            <a href="/view-goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block;margin-top:30px">📊 View Progress</a>
-            <a href="/quiz/{goal_id}" style="padding:20px 50px;background:#3498db;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block;margin-top:30px;margin-left:20px">🔄 Retake Quiz</a>
+            <div class="score">Score: {score}/10</div>
+            <p style="font-size:24px">Progress increased by {progress_increase}%!</p>
+            <p style="font-size:20px">Total Progress: {new_progress}%</p>
+            <a href="/view-goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block;margin-top:30px">📊 View Goals</a>
         </div>
         </body></html>
         '''
     
-    import random
-    random.shuffle(subject_questions)
-    quiz_questions = subject_questions[:10]
-    
-    options_html = ''
+    # Show quiz form
+    questions_html = ''
     for i, q in enumerate(quiz_questions):
-        options_html += f'''
-        <div style="background:rgba(255,255,255,0.1);padding:20px;margin:15px 0;border-radius:15px">
-            <p style="font-size:20px;margin-bottom:15px;font-weight:600">Q{i+1}: {q["q"]}</p>
-            {'<br>'.join([f'<label style="display:block;margin:8px 0"><input type="radio" name="q{i}" value="{j}" required> {opt}</label>' 
-                          for j, opt in enumerate(q["options"])])}
+        options_html = ''.join([f'<label><input type="radio" name="q{i}" value="{opt}" required> {opt}</label><br>' 
+                               for opt in q['options']])
+        questions_html += f'''
+        <div style="background:rgba(255,255,255,0.1);padding:20px;margin:20px 0;border-radius:15px">
+            <p style="font-size:20px;margin-bottom:15px"><strong>Q{i+1}:</strong> {q['q']}</p>
+            {options_html}
         </div>
         '''
-    
-    progress = session.get(f'goal_progress_{goal_id}', 0)
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>{goal['subject']} Quiz</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:40px}}
-    .quiz-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:0 auto;max-width:800px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-    .progress{{width:100%;height:20px;background:rgba(255,255,255,0.2);border-radius:10px;margin:20px 0;overflow:hidden}}
-    .progress-bar{{height:100%;background:linear-gradient(90deg,#50c878,#27ae60);width:{progress}%;transition:width 0.5s;border-radius:10px}}
-    button{{width:100%;padding:25px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;font-weight:600;cursor:pointer;margin-top:30px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:20px;text-align:center}}</style></head>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
+    .quiz-container{{max-width:800px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+    input[type=radio]{{margin-right:10px;transform:scale(1.2)}} label{{display:block;margin:10px 0;font-size:18px;cursor:pointer}}</style></head>
     <body>
-    <div class="quiz-box">
-        <h1>📝 {goal['subject']} Quiz</h1>
-        <div style="text-align:center;margin-bottom:30px">
-            <div class="progress"><div class="progress-bar" data-progress="{progress}"></div></div>
-            <p style="font-size:20px">Progress: {progress}%</p>
-        </div>
-        <form method="POST">
-            {options_html}
-            <button type="submit">✅ Submit Quiz</button>
-        </form>
-        <a href="/view-goals" style="display:inline-block;margin-top:20px;color:#3498db;font-size:20px;font-weight:600">← Back to Goals</a>
-    </div>
-    </body></html>
-    '''
-
-@app.route('/subject-quiz/<subject_name>', methods=['GET', 'POST'])
-def subject_quiz(subject_name):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    clean_subject = subject_name.replace('-', ' ').lower()
-    
-    # Map subject names to quiz categories
-    subject_map = {
-        'maths': 'mathematics', 'maths2': 'mathematics', 'mathematics': 'mathematics',
-        'python': 'python', 
-        'java programming': 'java', 'java': 'java',
-        'data structures': 'python', 'os': 'python', 'rdbms': 'python',
-        'statistics': 'mathematics', 'statistics 1': 'mathematics',
-        'tamil': 'default', 'english': 'default',
-        'physics': 'mathematics', 'se': 'python', 'dmw': 'python'
-    }
-    
-    quiz_category = subject_map.get(clean_subject, 'default')
-    questions = QUIZ_QUESTIONS.get(quiz_category, QUIZ_QUESTIONS['default'])
-    
-    import random
-    random.shuffle(questions)
-    quiz_questions = questions[:10]
-    
-    if request.method == 'POST':
-        correct = 0
-        for i in range(10):
-            if request.form.get(f'q{i}') == quiz_questions[i]['ans']:
-                correct += 1
-        
-        score_percent = int((correct / 10) * 100)
-        
-        return f'''
-        <!DOCTYPE html>
-        <html><head><title>{clean_subject.title()} Quiz Result</title>
-        <style>*{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-        .result-box{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;margin:0 auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-        .score-big{{font-size:100px;font-weight:700;margin:40px 0}}
-        .score-good{{color:#2ecc71;text-shadow:0 0 30px rgba(46,204,113,0.7)}}
-        .score-bad{{color:#e74c3c;text-shadow:0 0 30px rgba(231,76,60,0.7)}}
-        .btn{{padding:20px 40px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;margin:15px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-        h1{{font-size:45px;margin-bottom:30px}}</style></head>
-        <body>
-        <div class="result-box">
-            <h1>🎯 {clean_subject.title()} Quiz</h1>
-            <div class="score-big {'score-good' if score_percent >= 60 else 'score-bad'}">{score_percent}%</div>
-            <p style="font-size:26px;margin:30px 0">You got {correct}/10 correct!</p>
-            <a href="/subject/{subject_name}" class="btn">📚 Back to Notes</a>
-            <a href="/subject-quiz/{subject_name}" class="btn" style="background:#3498db">🔄 Retake Quiz</a>
-            <a href="/view-goals" class="btn" style="background:#f39c12">📊 Check Goals</a>
-        </div>
-        </body></html>
-        '''
-    
-    # Quiz form
-    questions_html = ''
-    for i, q in enumerate(quiz_questions):
-        options_html = ''.join([f'<label style="display:block;margin:10px 0;padding:10px;background:rgba(255,255,255,0.1);border-radius:10px;font-size:18px"><input type="radio" name="q{i}" value="{opt}" required style="margin-right:15px;transform:scale(1.2)"> {opt}</label>' 
-                               for opt in q['options']])
-        questions_html += f'''
-        <div style="background:rgba(255,255,255,0.1);padding:30px;margin:25px 0;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
-            <h3 style="font-size:24px;margin-bottom:20px;font-weight:600">Q{i+1}: {q['q']}</h3>
-            {options_html}
-        </div>
-        '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{clean_subject.title()} Practice Quiz</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .quiz-container{{max-width:900px;margin:0 auto;background:rgba(255,255,255,0.15);padding:50px;border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.3);backdrop-filter:blur(20px)}}
-    button{{width:100%;padding:25px;background:#e74c3c;color:white;border:none;border-radius:20px;font-size:26px;font-weight:700;cursor:pointer;margin-top:40px;box-shadow:0 15px 40px rgba(231,76,60,0.4);transition:all 0.3s}}
-    button:hover{{transform:translateY(-5px);box-shadow:0 25px 60px rgba(231,76,60,0.6)}}
-    h1{{font-size:45px;text-align:center;margin-bottom:20px;text-shadow:0 0 20px rgba(255,255,255,0.5)}}
-    .back-btn{{position:fixed;top:25px;right:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;box-shadow:0 5px 20px rgba(243,156,18,0.4);z-index:100}}</style></head>
-    <body>
-    <a href="/subject/{subject_name}" class="back-btn">← Notes</a>
     <div class="quiz-container">
-        <h1>🧠 {clean_subject.title()} Practice Quiz</h1>
-        <p style="text-align:center;font-size:22px;margin-bottom:40px">10 Questions • No Goals Required</p>
+        <h1 style="text-align:center;font-size:42px;margin-bottom:30px">🧠 {goal['subject']} Quiz</h1>
+        <p style="text-align:center;font-size:20px;margin-bottom:40px">Complete 10 questions (1 point each = 10% progress)</p>
         <form method="POST">
             {questions_html}
-            <button type="submit">🚀 Start Quiz Challenge!</button>
+            <button type="submit" style="width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;font-weight:600;cursor:pointer;margin-top:30px;box-shadow:0 10px 30px rgba(80,200,120,0.4)">✅ Submit Quiz</button>
         </form>
+        <a href="/view-goals" style="display:block;text-align:center;margin-top:20px;color:#f1c40f;font-size:20px;font-weight:600">← Back to Goals</a>
     </div>
     </body></html>
     '''
-
-# === MODIFIED GOALS FORM (Remove timer) ===
-@app.route('/goals', methods=['GET', 'POST'])
-def goals():
-    if not session.get('logged_in'): 
-        return redirect('/')
     
-    if request.method == 'POST':
-        conn = get_db_connection()
-        conn.execute('''INSERT INTO goals (email, subject, goal, target_score, study_hours) 
-                       VALUES (?, ?, ?, ?, ?)''', 
-                    (session['email'], 
-                     request.form['subject'], 
-                     request.form['goal'], 
-                     request.form['target_score'], 
-                     "Quiz Based"))  # Default study_hours
-        conn.commit()
-        conn.close()
-        return redirect('/view-goals')
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>Set Goals</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-    input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
-    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:30px}}</style></head>
-    <body>
-    <div class="form-box">
-        <h1>🎯 Set Study Goals</h1>
-        <form method="POST">
-            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
-            <input name="goal" placeholder="Goal Description" required>
-            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
-            <p style="font-size:18px;color:#f1c40f;margin-top:20px">📝 Progress tracked via Quizzes!</p>
-            <button type="submit">✅ Save Goal</button>
-        </form>
-    </div>
-    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    </body></html>
-    '''
-
-# === UPDATED VIEW GOALS (with quiz button) ===
 @app.route('/view-goals')
 def view_goals():
     if not session.get('logged_in'): return redirect('/')
@@ -799,19 +621,29 @@ def view_goals():
     goals_html = ''
     for goal in goals:
         progress_width = goal['progress']
+        progress_color = '#2ecc71' if progress_width >= 80 else '#f39c12' if progress_width >= 50 else '#e67e22'
+        
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:25px;backdrop-filter:blur(15px);box-shadow:0 15px 35px rgba(0,0,0,0.2)">
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:25px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(15px);text-align:left">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
                 <h3 style="font-size:26px;margin:0">{goal['subject']}</h3>
-                <a href="/delete_goal/{goal['id']}" style="color:#ff4444;font-size:24px" onclick="return confirm('Delete Goal?')">🗑️</a>
+                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;text-decoration:none" onclick="return confirm('Delete Goal?')">🗑️</a>
             </div>
-            <p style="font-size:18px;margin:10px 0">{goal['goal']}</p>
-            <div style="width:100%;height:25px;background:rgba(255,255,255,0.2);border-radius:15px;overflow:hidden;margin:20px 0">
-                <div style="height:100%;background:linear-gradient(90deg,#50c878,#27ae60);width:{progress_width}%;transition:width 0.5s;border-radius:15px;box-shadow:0 0 20px rgba(80,200,120,0.5)"></div>
+            <p style="font-size:18px;margin-bottom:20px;color:#f1c40f"><strong>Goal:</strong> {goal['goal']}</p>
+            <p style="font-size:18px;margin-bottom:25px"><strong>Target Score:</strong> {goal['target_score']}</p>
+            
+            <div style="margin-bottom:20px">
+                <div style="background:#34495e;border-radius:25px;padding:3px;margin-bottom:10px">
+                    <div style="background:{progress_color};height:25px;border-radius:20px;width:{progress_width}%;transition:all 0.5s;box-shadow:0 5px 15px rgba(0,0,0,0.3)"></div>
+                </div>
+                <p style="text-align:center;font-size:20px;font-weight:600">
+                    Progress: {goal['progress']}% 
+                    ({goal['max_score']}/10 quizzes completed)
+                </p>
             </div>
-            <div style="display:flex;gap:15px;justify-content:center">
-                <a href="/quiz/{goal['id']}" style="padding:15px 30px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-weight:600">📝 Take Quiz</a>
-                <span style="padding:15px 25px;background:rgba(255,255,255,0.2);border-radius:15px;font-weight:600;color:#f1c40f">Progress: {progress_width}%</span>
+            
+            <div style="text-align:center">
+                <a href="/quiz/{goal['id']}" style="padding:15px 35px;background:#9b59b6;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;box-shadow:0 8px 25px rgba(155,89,182,0.4);margin:5px">🧠 Take Quiz</a>
             </div>
         </div>
         '''
@@ -831,7 +663,7 @@ def view_goals():
     </div>
     </body></html>
     '''
-
+    
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
@@ -940,4 +772,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
