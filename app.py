@@ -372,9 +372,7 @@ def sem6():
     <a href="/subject/DS" class="btn">Data science</a>
     <a href="/subject/CC" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
-    '''
-
-@app.route('/subject/<subject_name>')
+    '''@app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     
@@ -395,19 +393,31 @@ def subject_notes(subject_name):
         </div>
         '''
     
+    # Subject name clean for quiz
+    clean_subject = subject_name.replace('-', ' ').title()
+    
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    <html><head><title>{clean_subject} Notes</title>
+    <style>
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
     .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
+    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
+    .container{{max-width:1400px;margin:0 auto}}
+    .quiz-btn{{display:block;margin:30px auto;padding:20px 50px;background:#e74c3c;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:700;text-align:center;box-shadow:0 15px 40px rgba(231,76,60,0.4);transition:all 0.3s;width:300px}}
+    .quiz-btn:hover{{transform:translateY(-5px);box-shadow:0 25px 50px rgba(231,76,60,0.6)}}
+    </style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
+    <h1>📚 {clean_subject}</h1>
+    
+    <!-- NEW QUIZ BUTTON -->
+    <a href="/subject-quiz/{subject_name}" class="quiz-btn">🧠 Take {clean_subject} Quiz</a>
+    
     <div class="container">{units_html}</div>
     </body></html>
     '''
-
+    
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
     if not session.get('logged_in'): return redirect('/')
@@ -643,6 +653,97 @@ def quiz(goal_id):
     </body></html>
     '''
 
+@app.route('/subject-quiz/<subject_name>', methods=['GET', 'POST'])
+def subject_quiz(subject_name):
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    clean_subject = subject_name.replace('-', ' ').lower()
+    
+    # Map subject names to quiz categories
+    subject_map = {
+        'maths': 'mathematics', 'maths2': 'mathematics', 'mathematics': 'mathematics',
+        'python': 'python', 
+        'java programming': 'java', 'java': 'java',
+        'data structures': 'python', 'os': 'python', 'rdbms': 'python',
+        'statistics': 'mathematics', 'statistics 1': 'mathematics',
+        'tamil': 'default', 'english': 'default',
+        'physics': 'mathematics', 'se': 'python', 'dmw': 'python'
+    }
+    
+    quiz_category = subject_map.get(clean_subject, 'default')
+    questions = QUIZ_QUESTIONS.get(quiz_category, QUIZ_QUESTIONS['default'])
+    
+    import random
+    random.shuffle(questions)
+    quiz_questions = questions[:10]
+    
+    if request.method == 'POST':
+        correct = 0
+        for i in range(10):
+            if request.form.get(f'q{i}') == quiz_questions[i]['ans']:
+                correct += 1
+        
+        score_percent = int((correct / 10) * 100)
+        
+        return f'''
+        <!DOCTYPE html>
+        <html><head><title>{clean_subject.title()} Quiz Result</title>
+        <style>*{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+        .result-box{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;margin:0 auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+        .score-big{{font-size:100px;font-weight:700;margin:40px 0}}
+        .score-good{{color:#2ecc71;text-shadow:0 0 30px rgba(46,204,113,0.7)}}
+        .score-bad{{color:#e74c3c;text-shadow:0 0 30px rgba(231,76,60,0.7)}}
+        .btn{{padding:20px 40px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;margin:15px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+        h1{{font-size:45px;margin-bottom:30px}}</style></head>
+        <body>
+        <div class="result-box">
+            <h1>🎯 {clean_subject.title()} Quiz</h1>
+            <div class="score-big {'score-good' if score_percent >= 60 else 'score-bad'}">{score_percent}%</div>
+            <p style="font-size:26px;margin:30px 0">You got {correct}/10 correct!</p>
+            <a href="/subject/{subject_name}" class="btn">📚 Back to Notes</a>
+            <a href="/subject-quiz/{subject_name}" class="btn" style="background:#3498db">🔄 Retake Quiz</a>
+            <a href="/view-goals" class="btn" style="background:#f39c12">📊 Check Goals</a>
+        </div>
+        </body></html>
+        '''
+    
+    # Quiz form
+    questions_html = ''
+    for i, q in enumerate(quiz_questions):
+        options_html = ''.join([f'<label style="display:block;margin:10px 0;padding:10px;background:rgba(255,255,255,0.1);border-radius:10px;font-size:18px"><input type="radio" name="q{i}" value="{opt}" required style="margin-right:15px;transform:scale(1.2)"> {opt}</label>' 
+                               for opt in q['options']])
+        questions_html += f'''
+        <div style="background:rgba(255,255,255,0.1);padding:30px;margin:25px 0;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
+            <h3 style="font-size:24px;margin-bottom:20px;font-weight:600">Q{i+1}: {q['q']}</h3>
+            {options_html}
+        </div>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>{clean_subject.title()} Practice Quiz</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    .quiz-container{{max-width:900px;margin:0 auto;background:rgba(255,255,255,0.15);padding:50px;border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.3);backdrop-filter:blur(20px)}}
+    button{{width:100%;padding:25px;background:#e74c3c;color:white;border:none;border-radius:20px;font-size:26px;font-weight:700;cursor:pointer;margin-top:40px;box-shadow:0 15px 40px rgba(231,76,60,0.4);transition:all 0.3s}}
+    button:hover{{transform:translateY(-5px);box-shadow:0 25px 60px rgba(231,76,60,0.6)}}
+    h1{{font-size:45px;text-align:center;margin-bottom:20px;text-shadow:0 0 20px rgba(255,255,255,0.5)}}
+    .back-btn{{position:fixed;top:25px;right:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;box-shadow:0 5px 20px rgba(243,156,18,0.4);z-index:100}}</style></head>
+    <body>
+    <a href="/subject/{subject_name}" class="back-btn">← Notes</a>
+    <div class="quiz-container">
+        <h1>🧠 {clean_subject.title()} Practice Quiz</h1>
+        <p style="text-align:center;font-size:22px;margin-bottom:40px">10 Questions • No Goals Required</p>
+        <form method="POST">
+            {questions_html}
+            <button type="submit">🚀 Start Quiz Challenge!</button>
+        </form>
+    </div>
+    </body></html>
+    '''
+
 # === MODIFIED GOALS FORM (Remove timer) ===
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
@@ -839,3 +940,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
