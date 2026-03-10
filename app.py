@@ -24,16 +24,11 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, study_hours TEXT, 
-                  progress INTEGER DEFAULT 0)''')
+                  target_score INTEGER, progress INTEGER DEFAULT 0,
+                  max_score INTEGER DEFAULT 0)''')  # Updated here
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS goals 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, progress INTEGER DEFAULT 0,
-                  max_score INTEGER DEFAULT 0)''')  # Add max_score
     conn.commit()
     conn.close()
 
@@ -496,7 +491,8 @@ def goals():
 
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
 def quiz(goal_id):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
     conn = get_db_connection()
     goal = conn.execute('SELECT * FROM goals WHERE id=? AND email=?', 
@@ -506,43 +502,50 @@ def quiz(goal_id):
     if not goal:
         return redirect('/view-goals')
     
-    # Simple quiz questions based on subject
+    # Subject-specific questions
     subject = goal['subject'].lower()
     questions = {
         'mathematics': [
             {"q": "What is 15 × 4?", "options": ["50", "60", "70", "45"], "ans": "60"},
             {"q": "Derivative of x²?", "options": ["2x", "x", "2", "x³"], "ans": "2x"},
-            {"q": "∫x dx =", "options": ["x²/2", "x²", "2x", "x/2"], "ans": "x²/2"},
             {"q": "sin(90°) =", "options": ["0", "1", "0.5", "-1"], "ans": "1"},
             {"q": "What is 25% of 80?", "options": ["20", "15", "25", "30"], "ans": "20"},
             {"q": "log₁₀(100) =", "options": ["10", "2", "1", "0"], "ans": "2"},
             {"q": "Area of circle = ?", "options": ["πr", "πr²", "2πr", "4πr"], "ans": "πr²"},
             {"q": "1+1 =", "options": ["2", "1", "0", "11"], "ans": "2"},
             {"q": "Pythagoras theorem?", "options": ["a²+b²=c²", "a+b=c", "a×b=c", "a-b=c"], "ans": "a²+b²=c²"},
-            {"q": "Factorial 5! =", "options": ["120", "25", "10", "50"], "ans": "120"}
+            {"q": "Factorial 5! =", "options": ["120", "25", "10", "50"], "ans": "120"},
+            {"q": "√16 =", "options": ["2", "4", "8", "16"], "ans": "4"}
         ],
         'python': [
             {"q": "print('Hello') output?", "options": ["Hello", "Hello ", "'Hello'", "Error"], "ans": "Hello"},
             {"q": "len('abc') =", "options": ["3", "2", "abc", "Error"], "ans": "3"},
-            {"q": "1 + '1' type?", "options": ["int", "str", "Error", "float"], "ans": "Error"},
             {"q": "[1,2,3][1] =", "options": ["1", "2", "3", "Error"], "ans": "2"},
-            {"q": "def func(): pass type?", "options": ["function", "class", "int", "str"], "ans": "function"},
             {"q": "'hello'.upper() =", "options": ["HELLO", "hello", "Hello", "Error"], "ans": "HELLO"},
             {"q": "range(3) length?", "options": ["3", "2", "0", "4"], "ans": "3"},
             {"q": "True == 1 ?", "options": ["True", "False", "Error", "1"], "ans": "True"},
-            {"q": "dict.keys() returns?", "options": ["list", "dict_keys", "tuple", "str"], "ans": "dict_keys"},
-            {"q": "for i in range(5): print(i) last?", "options": ["4", "5", "0", "3"], "ans": "4"}
+            {"q": "for i in range(5): print(i) last?", "options": ["4", "5", "0", "3"], "ans": "4"},
+            {"q": "list[0] access?", "options": ["First item", "Last item", "Middle", "Error"], "ans": "First item"},
+            {"q": "if True: print('hi')?", "options": ["Prints hi", "No print", "Error", "Infinite"], "ans": "Prints hi"},
+            {"q": "def func(): pass?", "options": ["Function", "Class", "Variable", "Error"], "ans": "Function"}
         ]
     }
     
-    # Default questions for other subjects
+    # Default questions for other subjects (FIXED - no comprehension)
     default_questions = [
-        {"q": f"What is the main topic of {subject}?", "options": ["A", "B", "C", "D"], "ans": "A"},
-        {"q": f"Basic concept #{i+1}?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"}
-        for i in range(8)
+        {"q": "Basic concept of this subject?", "options": ["A", "B", "C", "D"], "ans": "A"},
+        {"q": "Main topic #1?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Main topic #2?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Key principle?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Basic definition?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Core concept?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Fundamental idea?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Main principle?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Key topic?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"},
+        {"q": "Basic question?", "options": ["Option1", "Option2", "Option3", "Option4"], "ans": "Option1"}
     ]
     
-    quiz_questions = questions.get(subject, default_questions[:10])
+    quiz_questions = questions.get(subject, default_questions)
     
     if request.method == 'POST':
         score = 0
@@ -550,7 +553,7 @@ def quiz(goal_id):
             if request.form.get(f'q{i}') == quiz_questions[i]['ans']:
                 score += 1
         
-        # Update progress (10% per correct answer)
+        # Update progress
         progress_increase = score * 10
         new_progress = min(goal['progress'] + progress_increase, 100)
         new_max_score = max(goal['max_score'], score)
@@ -578,27 +581,27 @@ def quiz(goal_id):
         </body></html>
         '''
     
-    # Show quiz form
+    # Quiz form
     questions_html = ''
     for i, q in enumerate(quiz_questions):
         options_html = ''.join([f'<label><input type="radio" name="q{i}" value="{opt}" required> {opt}</label><br>' 
                                for opt in q['options']])
         questions_html += f'''
         <div style="background:rgba(255,255,255,0.1);padding:20px;margin:20px 0;border-radius:15px">
-            <p style="font-size:20px;margin-bottom:15px"><strong>Q{i+1}:</strong> {q['q']}</p>
+            <p style="font-size:20px;margin-bottom:15px"><strong>Q{i+1}:</strong> {q["q"]}</p>
             {options_html}
         </div>
         '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{goal['subject']} Quiz</title>
+    <html><head><title>{goal["subject"]} Quiz</title>
     <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
     .quiz-container{{max-width:800px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
     input[type=radio]{{margin-right:10px;transform:scale(1.2)}} label{{display:block;margin:10px 0;font-size:18px;cursor:pointer}}</style></head>
     <body>
     <div class="quiz-container">
-        <h1 style="text-align:center;font-size:42px;margin-bottom:30px">🧠 {goal['subject']} Quiz</h1>
+        <h1 style="text-align:center;font-size:42px;margin-bottom:30px">🧠 {goal["subject"]} Quiz</h1>
         <p style="text-align:center;font-size:20px;margin-bottom:40px">Complete 10 questions (1 point each = 10% progress)</p>
         <form method="POST">
             {questions_html}
@@ -772,3 +775,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
