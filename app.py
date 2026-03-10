@@ -617,19 +617,6 @@ def serve_file(file_id):
                                  mimetype='application/pdf')
     return "File not found!", 404
 
-@app.route('/download-file/<int:file_id>')
-def download_file(file_id):
-    if not session.get('logged_in'): return redirect('/')
-    conn = get_db_connection()
-    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', 
-                       (file_id, session['email'])).fetchone()
-    conn.close()
-    if file:
-        return send_from_directory(os.path.dirname(file['filepath']), 
-                                 os.path.basename(file['filepath']), 
-                                 as_attachment=True)
-    return "File not found!", 404
-
 @app.route('/delete-upload/<subject>/<filename>')
 def delete_upload(subject, filename):
     if not session.get('logged_in'): return redirect('/')
@@ -1006,6 +993,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
