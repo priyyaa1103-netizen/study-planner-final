@@ -480,46 +480,40 @@ def subject_notes(subject_name):
     subject_folder = f"static/uploads/{subject_name}"
     os.makedirs(subject_folder, exist_ok=True)
     
+    print(f"Subject folder: {subject_folder}")  # Debug
+    
     for i in range(1, 11):
         unit_file = f"{subject_folder}/unit{i}.pdf"
         upload_link = f"/upload/{subject_name}/unit{i}"
         has_file = os.path.exists(unit_file)
         
+        print(f"Unit {i}: {unit_file} = {has_file}")  # Debug
+        
         if has_file:
-            # PDF VIEWER + DOWNLOAD
             units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-                <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-                
-                <!-- PDF VIEWER EMBED -->
-                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf" 
-                        style="width:100%;height:200px;border:none;border-radius:10px;background:#f8f9fa" 
-                        title="Unit {i} PDF"></iframe>
-                        
-                <a href="/download/{subject_name}/unit{i}.pdf" target="_blank" 
-                   style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px">
+                <h3 style="margin-bottom:15px">📚 Unit {i} ✅</h3>
+                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📤 Re-upload</a>
+                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf" style="width:100%;height:200px;border:none;border-radius:10px" title="Unit {i}"></iframe>
+                <a href="/download/{subject_name}/unit{i}.pdf" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📥 Download</a>
             </div>
             '''
         else:
             units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px">
                 <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-                <p style="color:#f39c12;font-weight:500">No file uploaded</p>
+                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📤 Upload</a>
+                <p style="color:#f39c12">No file</p>
             </div>
             '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} 
-    .container{{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:center}}</style></head>
+    <html><head><title>{subject_name.replace("_"," ").title()}</title>
+    <style>/* existing styles */</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
+    <h1>📚 {subject_name.replace("_"," ").title()}</h1>
     <div class="container">{units_html}</div>
     </body></html>
     '''
