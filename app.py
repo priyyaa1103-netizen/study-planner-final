@@ -231,13 +231,12 @@ def dashboard():
                 <h2>Study Planner & Reminder App</h2>
             </div>
             {notifications}
-            <a href="/study" class="btn">📚 Study Dashboard</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/goals" class="btn">🎯 Set Goal</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/logout" class="btn logout">🚪 Logout</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/study" class="btn">📚 Study Dashboard</a>
+            <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
     </body>
     </html>
@@ -328,10 +327,10 @@ def sem1():
     <!DOCTYPE html><html><head><title>Semester 1</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 1</h1>
-    <a href="/subject/maths" class="btn">Mathematics-1</a>
+    <a href="/subject/maths-1" class="btn">Mathematics-1</a>
     <a href="/subject/python" class="btn">Python</a>
-    <a href="/subject/tamil" class="btn">Tamil-1</a>
-    <a href="/subject/english" class="btn">English-1</a>
+    <a href="/subject/tamil-1" class="btn">Tamil-1</a>
+    <a href="/subject/english-1" class="btn">English-1</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -342,10 +341,10 @@ def sem2():
     <!DOCTYPE html><html><head><title>Semester 2</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 2</h1>
-    <a href="/subject/maths2" class="btn">Maths-2</a>
+    <a href="/subject/maths-2" class="btn">Maths-2</a>
     <a href="/subject/physics" class="btn">Physics-2</a>
-    <a href="/subject/tamil" class="btn">Tamil-2</a>
-    <a href="/subject/english" class="btn">english-2</a>
+    <a href="/subject/tamil-2" class="btn">Tamil-2</a>
+    <a href="/subject/english-2" class="btn">english-2</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -369,8 +368,8 @@ def sem3():
     <body><h1>📖 Semester 3</h1>
     <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
-    <a href="/subject/tamil" class="btn">Tamil-3</a>
-    <a href="/subject/english" class="btn">English-3</a>
+    <a href="/subject/tamil-3" class="btn">Tamil-3</a>
+    <a href="/subject/english-3" class="btn">English-3</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -382,9 +381,9 @@ def sem4():
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 4</h1>
     <a href="/subject/data_structures" class="btn">Data structures</a>
-    <a href="/subject/statistics" class="btn">Statistics-2</a>
-    <a href="/subject/tamil" class="btn">Tamil-4</a>
-    <a href="/subject/english" class="btn">English-4</a>
+    <a href="/subject/statistics-2" class="btn">Statistics-2</a>
+    <a href="/subject/tamil-4" class="btn">Tamil-4</a>
+    <a href="/subject/english-4" class="btn">English-4</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -499,14 +498,6 @@ def upload_unit(subject_name, unit_num):
                 filepath = f'static/uploads/{subject_name}/{filename}'
                 file.save(filepath)
                 
-                # Database-ல save
-                conn = get_db_connection()
-                conn.execute('INSERT INTO files (email, subject, filename, filepath, upload_date) VALUES (?, ?, ?, ?, ?)',
-                           (session['email'], subject_name, filename, filepath, datetime.now().isoformat()))
-                file_id = conn.lastrowid
-                conn.commit()
-                conn.close()
-                
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
@@ -535,7 +526,7 @@ def my_files():
     if not session.get('logged_in'): return redirect('/')
     
     files_html = ''
-    subjects = ['maths', 'python', 'tamil', 'english', 'java programming', 'data structures']
+    subjects = ['maths', 'python', 'tamil', 'english', 'java_programming', 'statistics-1', 'data structures', 'statistics-2', 'Operating_System', 'RDBMS']
     
     for subject in subjects:
         subject_folder = f"static/uploads/{subject}"
@@ -1015,6 +1006,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
