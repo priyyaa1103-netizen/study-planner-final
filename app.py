@@ -433,26 +433,52 @@ def subject_notes(subject_name):
         upload_link = f"/upload/{subject_name}/unit{i}"
         has_file = os.path.exists(unit_file)
         
-        units_html += f'''
-        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
-        </div>
-        '''
+        if has_file:
+            # PDF VIEWER + DOWNLOAD
+            units_html += f'''
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+                <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
+                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
+                
+                <!-- PDF VIEWER EMBED -->
+                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf" 
+                        style="width:100%;height:200px;border:none;border-radius:10px;background:#f8f9fa" 
+                        title="Unit {i} PDF"></iframe>
+                        
+                <a href="/download/{subject_name}/unit{i}.pdf" target="_blank" 
+                   style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>
+            </div>
+            '''
+        else:
+            units_html += f'''
+            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+                <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
+                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
+                <p style="color:#f39c12;font-weight:500">No file uploaded</p>
+            </div>
+            '''
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
     <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
     .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
+    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} 
+    .container{{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:center}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <h1>📚 {subject_name.replace("-"," ").title()}</h1>
     <div class="container">{units_html}</div>
     </body></html>
     '''
+
+@app.route('/view-pdf/<subject_name>/<filename>')
+def view_pdf(subject_name, filename):
+    if not session.get('logged_in'): return redirect('/')
+    try:
+        return send_from_directory(f'static/uploads/{subject_name}', filename, mimetype='application/pdf')
+    except FileNotFoundError:
+        return "PDF not found!", 404
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
@@ -465,15 +491,20 @@ def upload_unit(subject_name, unit_num):
                 os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
                 filename = secure_filename(f"unit{unit_num}.pdf")
                 file.save(f'static/uploads/{subject_name}/{filename}')
+                
                 return f'''
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
                 <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
                 <p style="font-size:24px;margin:30px 0">{subject_name.title()} Unit {unit_num} uploaded!</p>
-                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
+                <iframe src="/view-pdf/{subject_name}/unit{unit_num}.pdf" 
+                        style="width:80%;max-width:800px;height:500px;border-radius:15px;border:3px solid #2ecc71;margin:20px 0;box-shadow:0 20px 40px rgba(0,0,0,0.3)" 
+                        title="Preview"></iframe>
+                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to Subject</a>
                 </div>
                 '''
         return '<h1 style="color:red;text-align:center">No file selected!</h1>'
     
+    # Upload form
     return f'''
     <!DOCTYPE html>
     <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
@@ -490,7 +521,7 @@ def upload_unit(subject_name, unit_num):
     <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
     </body></html>
     '''
-
+    
 @app.route('/download/<subject_name>/<filename>')
 def download_file(subject_name, filename):
     return send_from_directory(f'static/uploads/{subject_name}', filename)
@@ -859,6 +890,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
