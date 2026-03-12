@@ -289,6 +289,35 @@ def check_notifications_api():
         return "🚨"
     return ""
 
+@app.route('/study')
+def study():
+    if not session.get('logged_in'): return redirect('/')
+    
+    return '''
+    <!DOCTYPE html>
+    <html><head><title>Study Dashboard</title>
+    <meta charset="UTF-8">
+    <style>
+    body{font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
+    .container{max-width:800px;margin:0 auto}
+    h1{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}
+    .btn{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}
+    .btn:hover{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}
+    .back-btn{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}
+    </style>
+    </head>
+    <body>
+    <a href="/dashboard" class="back-btn">&larr; Dashboard</a>
+    <div class="container">
+        <h1>&#x1F4DA; Study Dashboard</h1>
+        <a href="/year1" class="btn">&#x1F3A3; 1st Year</a>
+        <a href="/year2" class="btn">&#x1F3A3; 2nd Year</a>
+        <a href="/year3" class="btn">&#x1F3A3; 3rd Year</a>
+    </div>
+    </body>
+    </html>
+    '''
+    
 @app.route('/subject/<subject_name>')
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
@@ -429,6 +458,10 @@ def sem6():
     <a href="/subject/Cloud_Computing" class="btn">Cloud computing</a>
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
+
+@app.route('/download/<subject_name>/<filename>')
+def download_file(subject_name, filename):
+    return send_from_directory(f'static/uploads/{subject_name}', filename, as_attachment=True)
 
 @app.route('/view-pdf/<subject_name>/<filename>')
 def view_pdf(subject_name, filename):
@@ -942,6 +975,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
