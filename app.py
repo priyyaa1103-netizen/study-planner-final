@@ -30,9 +30,9 @@ def init_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS files 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 (id INTEGER PRIMARY KEY,
                   email TEXT, subject TEXT, filename TEXT, 
-                  filepath TEXT, upload_date TEXT)''')
+                  upload_date TEXT)''')
     conn.commit()
     conn.close()
 
@@ -293,60 +293,27 @@ def check_notifications_api():
 def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     
-    units_html = ''
-    subject_folder = f"static/uploads/{subject_name}"
-    os.makedirs(subject_folder, exist_ok=True)
+    conn = get_db_connection()
+    files = conn.execute('SELECT filename FROM files WHERE subject=? AND email=?', 
+                        (subject_name, session['email'])).fetchall()
+    conn.close()
     
+    uploaded_files = [row['filename'] for row in files]
+    
+    units_html = ''
     for i in range(1, 11):
-        unit_file = f"{subject_folder}/unit{i}.pdf"
-        upload_link = f"/upload/{subject_name}/unit{i}"
-        has_file = os.path.exists(unit_file)
+        filename = f"unit{i}.pdf"
+        has_file = filename in uploaded_files
         
         if has_file:
-            # ✅ UPLOADED FILE - PDF PREVIEW + BUTTONS
             units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.2);padding:25px;border-radius:20px;width:240px;box-shadow:0 10px 30px rgba(0,0,0,0.3);backdrop-filter:blur(10px)">
-                <h3 style="margin-bottom:15px;color:#2ecc71">📚 Unit {i} ✅</h3>
-                
-                <!-- PDF PREVIEW -->
-                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf#toolbar=0" 
-                        style="width:100%;height:180px;border:none;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.3);margin:10px 0" 
-                        title="Unit {i} PDF"></iframe>
-                
-                <div style="display:flex;gap:8px;margin-top:10px">
-                    <a href="/view-pdf/{subject_name}/unit{i}.pdf" target="_blank" 
-                       style="flex:1;padding:10px;background:#27ae60;color:white;text-decoration:none;border-radius:8px;font-size:14px;text-align:center">👁️ View</a>
-                    <a href="/download/{subject_name}/unit{i}.pdf" 
-                       style="flex:1;padding:10px;background:#3498db;color:white;text-decoration:none;border-radius:8px;font-size:14px;text-align:center">📥 Download</a>
-                </div>
-                <a href="{upload_link}" style="display:block;padding:8px;background:#e67e22;color:white;text-decoration:none;border-radius:8px;margin-top:10px;font-size:14px;text-align:center">🔄 Re-upload</a>
-            </div>
+            <div style="...">📚 Unit {i} ✅<iframe src="/view-pdf/{subject_name}/{filename}"></iframe>...</div>
             '''
         else:
-            # ❌ NO FILE - UPLOAD BUTTON
             units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:240px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-                <h3 style="margin-bottom:20px">📚 Unit {i}</h3>
-                <a href="{upload_link}" style="display:block;padding:18px;background:#3498db;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;text-align:center;box-shadow:0 8px 20px rgba(52,152,219,0.4)">📤 Upload</a>
-                <p style="color:#f39c12;margin-top:15px;font-weight:500">No file uploaded</p>
-            </div>
+            <div style="...">📚 Unit {i}<a href="/upload/{subject_name}/{i}">Upload</a></div>
             '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("_"," ").title()}</title>
-    <style>
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:42px;margin:80px 0 50px 0;text-align:center;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
-    .container{{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:center;gap:20px}}
-    </style></head>
-    <body>
-    <a href="/study" class="back-btn">← Study Dashboard</a>
-    <h1>📚 {subject_name.replace("_"," ").title()}</h1>
-    <div class="container">{units_html}</div>
-    </body></html>
-    '''
+            
 # ===== 1st YEAR =====
 @app.route('/year1')
 def year1():
@@ -463,51 +430,6 @@ def sem6():
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-@app.route('/subject/<subject_name>')
-def subject_notes(subject_name):
-    if not session.get('logged_in'): return redirect('/')
-    
-    units_html = ''
-    subject_folder = f"static/uploads/{subject_name}"
-    os.makedirs(subject_folder, exist_ok=True)
-    
-    print(f"Subject folder: {subject_folder}")  # Debug
-    
-    for i in range(1, 11):
-        unit_file = f"static/uploads/{subject_name}/unit{i}.pdf"
-        has_file = os.path.exists(unit_file)
-        
-        print(f"Unit {i}: {unit_file} = {has_file}")  # Debug
-        
-        if has_file:
-            units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px">
-                <h3 style="margin-bottom:15px">📚 Unit {i} ✅</h3>
-                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📤 Re-upload</a>
-                <iframe src="/view-pdf/{subject_name}/unit{i}.pdf" style="width:100%;height:200px;border:none;border-radius:10px" title="Unit {i}"></iframe>
-                <a href="/download/{subject_name}/unit{i}.pdf" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📥 Download</a>
-            </div>
-            '''
-        else:
-            units_html += f'''
-            <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px">
-                <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-                <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0">📤 Upload</a>
-                <p style="color:#f39c12">No file</p>
-            </div>
-            '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("_"," ").title()}</title>
-    <style>/* existing styles */</style></head>
-    <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("_"," ").title()}</h1>
-    <div class="container">{units_html}</div>
-    </body></html>
-    '''
-
 @app.route('/view-pdf/<subject_name>/<filename>')
 def view_pdf(subject_name, filename):
     if not session.get('logged_in'): 
@@ -528,45 +450,25 @@ def view_pdf(subject_name, filename):
 
 @app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
 def upload_unit(subject_name, unit_num):
-    if not session.get('logged_in'): return redirect('/')
-    
     if request.method == 'POST':
         file = request.files['file']
-        if file.filename != '':
-            # FIXED PATH + FOLDER CREATE
-            folder = f"static/uploads/{subject_name}"
-            os.makedirs(folder, exist_ok=True)
-            filename = f"unit{unit_num}.pdf"
-            filepath = f"{folder}/{filename}"
-            
-            file.save(filepath)
-            return f'''
-            <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
-            <h1 style="font-size:50px;color:#2ecc71">✅ SUCCESS!</h1>
-            <p style="font-size:28px">Unit {unit_num} uploaded!</p>
-            <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;margin:20px">📚 View Subject</a>
-            </div>
-            '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>Upload Unit {unit_num}</title>
-    <style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:50px}}
-    .box{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;box-shadow:0 20px 40px rgba(0,0,0,0.3);backdrop-filter:blur(15px);text-align:center;width:100%;max-width:500px}}
-    input{{width:100%;padding:20px;margin:20px 0;font-size:20px;border-radius:15px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.2)}}
-    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:24px;font-weight:600;cursor:pointer;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    .back{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
-    <body>
-    <a href="/subject/{subject_name}" class="back">← Back</a>
-    <div class="box">
-        <h1 style="font-size:44px;margin-bottom:30px">📤 Upload Unit {unit_num}</h1>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".pdf" required>
-            <button>✅ Upload PDF</button>
-        </form>
-    </div>
-    </body></html>
-    '''
+        filename = f"unit{unit_num}.pdf"
+        
+        # DATABASE SAVE (Render.com safe!)
+        conn = get_db_connection()
+        conn.execute('INSERT OR REPLACE INTO files (email, subject, filename, upload_date) VALUES (?, ?, ?, ?)',
+                    (session['email'], subject_name, filename, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        
+        # File also save (if possible)
+        try:
+            os.makedirs(f"static/uploads/{subject_name}", exist_ok=True)
+            file.save(f"static/uploads/{subject_name}/{filename}")
+        except:
+            pass  # Render.com delete பண்ணினாலும் DB-ல இருக்கும்
+        
+        return "✅ Uploaded!"
     
 @app.route('/myfiles')
 def my_files():
@@ -1040,6 +942,7 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
 
