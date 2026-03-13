@@ -293,13 +293,13 @@ def view_pdf(subject, filename):
 
 # ===== MY FILES PAGE (COMPLETE VERSION) =====
 @app.route('/myfiles')
-def myfiles():
+def myfiles_page():  # Function name change pannirukken
     if not session.get('logged_in'): 
         return redirect('/')
     
     files_html = ''
-    # Simple folder check
     upload_base = 'static/uploads'
+    
     if os.path.exists(upload_base):
         for subject in os.listdir(upload_base):
             subject_path = os.path.join(upload_base, subject)
@@ -307,15 +307,12 @@ def myfiles():
                 for filename in os.listdir(subject_path):
                     if filename.endswith('.pdf'):
                         files_html += f'''
-                        <div style="background:#fff;color:#333;padding:25px;margin:20px;border-radius:20px">
+                        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px">
                             <h3>{subject.replace('-',' ').title()} → {filename}</h3>
-                            <div style="margin-top:15px">
-                                <a href="/view-pdf/{subject}/{filename}" target="_blank" 
-                                   style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin-right:10px">👀 View</a>
-                                <a href="/download/{subject}/{filename}" 
-                                   style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-right:10px">📥 Download</a>
-                                <a href="/delete-file/{subject}/{filename}" onclick="return confirm('Delete {filename}?')" 
-                                   style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px">🗑️ Delete</a>
+                            <div>
+                                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin-right:10px">👀 View</a>
+                                <a href="/download/{subject}/{filename}" style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-right:10px">📥 Download</a>
+                                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete {filename}?')" style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px">🗑️ Delete</a>
                             </div>
                         </div>
                         '''
@@ -323,43 +320,27 @@ def myfiles():
     return f'''
     <!DOCTYPE html>
     <html><head><title>My Files</title>
-    <style>
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
-    .container{{max-width:1000px;margin:0 auto}}
-    .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}
-    h1{{text-align:center;font-size:42px;margin:80px 0 40px}}
-    </style></head>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:1000px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
-        <h1>📁 My Files</h1>
-        {files_html or "<h2 style='text-align:center;color:#f1c40f'>No files uploaded yet!</h2>"}
-    </div></body></html>
+        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
+        {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
+    </div>
+    </body></html>
     '''
     
-@app.route('/delete-file/<subject>/<filename>')
-def delete_file(subject, filename):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+@app.route('/delete/<subject>/<filename>')
+def delete(subject, filename):
+    if not session.get('logged_in'): return redirect('/')
     file_path = f"static/uploads/{subject}/{filename}"
-    try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except:
-        pass  # Silent fail OK
-    
+    if os.path.exists(file_path): os.remove(file_path)
     return redirect('/myfiles')
 
 @app.route('/download/<subject>/<filename>')
 def download(subject, filename):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    try:
-        return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
-    except:
-        return "File not found", 404
+    if not session.get('logged_in'): return redirect('/')
+    return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
 
 # ============= GOALS & QUIZ =============
 @app.route('/goals', methods=['GET', 'POST'])
@@ -515,6 +496,7 @@ def myfiles():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
