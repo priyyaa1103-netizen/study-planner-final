@@ -342,8 +342,8 @@ def sem1():
     <body><h1>📖 Semester 1</h1>
     <a href="/subject/maths" class="btn">Mathematics-1</a>
     <a href="/subject/python" class="btn">Python</a>
-    <a href="/subject/tamil" class="btn">Tamil-1</a>
-    <a href="/subject/english" class="btn">English-1</a>
+    <a href="/subject/tamil-1" class="btn">Tamil-1</a>
+    <a href="/subject/english-1" class="btn">English-1</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -356,8 +356,8 @@ def sem2():
     <body><h1>📖 Semester 2</h1>
     <a href="/subject/maths2" class="btn">Maths-2</a>
     <a href="/subject/physics" class="btn">Physics-2</a>
-    <a href="/subject/tamil" class="btn">Tamil-2</a>
-    <a href="/subject/english" class="btn">english-2</a>
+    <a href="/subject/tamil-2" class="btn">Tamil-2</a>
+    <a href="/subject/english-2" class="btn">english-2</a>
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -381,8 +381,8 @@ def sem3():
     <body><h1>📖 Semester 3</h1>
     <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
-    <a href="/subject/tamil" class="btn">Tamil-3</a>
-    <a href="/subject/english" class="btn">English-3</a>
+    <a href="/subject/tamil-3" class="btn">Tamil-3</a>
+    <a href="/subject/english-3" class="btn">English-3</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -395,8 +395,8 @@ def sem4():
     <body><h1>📖 Semester 4</h1>
     <a href="/subject/data_structures" class="btn">Data structures</a>
     <a href="/subject/statistics" class="btn">Statistics-2</a>
-    <a href="/subject/tamil" class="btn">Tamil-4</a>
-    <a href="/subject/english" class="btn">English-4</a>
+    <a href="/subject/tamil-4" class="btn">Tamil-4</a>
+    <a href="/subject/english-4" class="btn">English-4</a>
     <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
@@ -941,5 +941,6 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
 
