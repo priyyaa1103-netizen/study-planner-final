@@ -167,23 +167,64 @@ def dashboard():
 # ============= STUDY NAVIGATION =============
 @app.route('/study')
 def study():
-    if not session.get('logged_in'): return redirect('/')
-    return '''
-    <!DOCTYPE html><html><head><title>Study</title>
-    <style>body{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;text-align:center}
-    .container{max-width:800px;margin:0 auto}
-    h1{font-size:48px;margin-bottom:60px}
-    .btn{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}
-    .btn:hover{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}
-    .back{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600}</style>
-    </head><body>
-    <a href="/dashboard" class="back">← Dashboard</a>
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    # Files count per subject
+    subjects_data = {
+        'Year 1': ['maths-1', 'python', 'tamil-1', 'english-1'],
+        'Year 2': ['java_programming', 'statistics-1', 'data_structures', 'statistics-2'],
+        'Year 3': ['0perating_System', 'RDBMS', 'Software_Engineering', 'DMW']
+    }
+    
+    # Count uploaded files
+    file_counts = {}
+    upload_base = 'static/uploads'
+    if os.path.exists(upload_base):
+        for subject in os.listdir(upload_base):
+            subject_path = os.path.join(upload_base, subject)
+            if os.path.isdir(subject_path):
+                pdf_count = len([f for f in os.listdir(subject_path) if f.endswith('.pdf')])
+                file_counts[subject] = pdf_count
+    
+    # Build HTML with file counts
+    years_html = ''
+    for year, subjects in subjects_data.items():
+        subjects_html = ''
+        total_files = 0
+        for subject in subjects:
+            count = file_counts.get(subject, 0)
+            total_files += count
+            status = "✅" if count > 0 else "📤"
+            subjects_html += f'<span style="display:block;margin:5px">{status} {subject.replace("-"," ").title()} ({count} files)</span>'
+        
+        years_html += f'''
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
+            <h3 style="margin-bottom:15px;font-size:28px">{year} - Total: {total_files} files</h3>
+            <div style="font-size:18px;color:#f1c40f">{subjects_html}</div>
+        </div>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Study Dashboard</title>
+    <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .container{{max-width:1000px;margin:0 auto}}
+    h1{{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}
+    </style>
+    </head>
+    <body>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
         <h1>📚 Study Dashboard</h1>
-        <a href="/year1" class="btn">1st Year 🎓</a>
-        <a href="/year2" class="btn">2nd Year 🎓</a>
-        <a href="/year3" class="btn">3rd Year 🎓</a>
-    </div></body></html>
+        <p style="font-size:24px;margin-bottom:40px">Your uploaded files status:</p>
+        {years_html}
+        <a href="/myfiles" style="display:inline-block;padding:20px 50px;margin:30px;background:#e74c3c;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">📁 View All Files</a>
+    </div>
+    </body></html>
     '''
 
 # Year 1,2,3 + Semesters (shortened for space - add similar routes)
@@ -496,6 +537,7 @@ def myfiles():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
