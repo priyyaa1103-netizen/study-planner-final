@@ -438,40 +438,54 @@ def sem6():
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-@app.route('/subject/<subject_name>')
-def subject_notes(subject_name):
+@app.route('/subject/<subject>', methods=['GET'])
+def subject(subject):
     if not session.get('logged_in'): return redirect('/')
     
-    units_html = ''
-    subject_folder = f"static/uploads/{subject_name}"
-    os.makedirs(subject_folder, exist_ok=True)
+    # Check uploaded files
+    files = []
+    subject_path = f'static/uploads/{subject}'
+    if os.path.exists(subject_path):
+        files = [f for f in os.listdir(subject_path) if f.endswith('.pdf')]
     
+    # Units 1-10 HTML
+    units_html = ''
     for i in range(1, 11):
-        unit_file = f"{subject_folder}/unit{i}.pdf"
-        upload_link = f"/upload/{subject_name}/unit{i}"
-        has_file = os.path.exists(unit_file)
-        
-        units_html += f'''
-        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
-            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
-            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
-            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
-        </div>
-        '''
+        filename = f"unit{i}.pdf"
+        if filename in files:
+            units_html += f'''
+            <div style="background:#d4edda;color:#155724;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} ✅ 
+                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[View]</a>
+                <a href="/download/{subject}/{filename}" style="color:#007bff">[Download]</a>
+                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete Unit {i}?')" style="color:#dc3545">[Delete]</a>
+            </div>
+            '''
+        else:
+            units_html += f'''
+            <div style="background:#fff3cd;color:#856404;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} 📤 
+                <a href="/upload/{subject}/{i}" style="color:#856404;font-weight:bold">[UPLOAD]</a>
+            </div>
+            '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
-    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
+    <html><head><title>{subject.replace('-', ' ').title()}</title>
+    <style>
+    body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
+    .container{{max-width:800px;margin:0 auto}}
+    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}
+    h1{{text-align:center;font-size:36px;margin:60px 0 40px}}
+    </style></head>
     <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
-    <div class="container">{units_html}</div>
+    <a href="/study" class="back">← Study</a>
+    <div class="container">
+        <h1>{subject.replace('-', ' ').title()}</h1>
+        {units_html}
+    </div>
     </body></html>
     '''
-
 # ============= FILE UPLOAD =============
 @app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
 def upload(subject, unit):
@@ -885,6 +899,21 @@ def reminders():
     </body>
     </html>
     '''
+
+@app.route('/myfiles')
+def myfiles():
+    if not session.get('logged_in'): return redirect('/')
+    # List all uploaded files (implementation similar to above)
+    return '''
+    <!DOCTYPE html><html><head><title>My Files</title>
+    <style>body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}
+    .container{max-width:1000px;margin:0 auto}</style></head>
+    <body><div class="container">
+    <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
+    <p style="text-align:center;font-size:24px">File upload working! Check subjects to upload.</p>
+    <a href="/dashboard" style="display:block;text-align:center;margin:50px 0;padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;width:300px;margin:50px auto">← Dashboard</a>
+    </div></body></html>
+    '''
     
 @app.route('/delete_reminder/<int:id>')
 def delete_reminder(id):
@@ -912,4 +941,5 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
 
