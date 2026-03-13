@@ -29,6 +29,10 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, filename TEXT, 
+                  upload_date TEXT)''')
     conn.commit()
     conn.close()
 
@@ -231,6 +235,7 @@ def dashboard():
             <a href="/goals" class="btn">🎯 Set Goal</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/myfiles" class="btn">📁 Files</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
     </body>
@@ -288,20 +293,33 @@ def check_notifications_api():
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
-    return f'''
+    return '''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block;box-shadow:0 10px 25px rgba(80,200,120,0.4);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(80,200,120,0.6)}}
-    h1{{font-size:38px;margin-bottom:50px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}</style></head>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}
+    .container{max-width:800px;width:100%}
+    h1{font-size:48px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}
+    .year-btn{display:block;width:100%;max-width:500px;margin:30px auto;padding:30px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;text-decoration:none;border-radius:25px;font-size:28px;font-weight:600;box-shadow:0 20px 40px rgba(80,200,120,0.4);transition:all 0.4s ease;transform:translateY(0)}
+    .year-btn:hover{transform:translateY(-10px);box-shadow:0 30px 60px rgba(80,200,120,0.6)}
+    .back-btn{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000;animation:fadeInLeft 0.8s ease}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+    </style>
+    </head>
     <body>
-    <h1>📚 Study Dashboard</h1>
-    <a href="/year1" class="btn">🎓 1st Year</a>
-    <a href="/year2" class="btn">🎓 2nd Year</a>
-    <a href="/year3" class="btn">🎓 3rd Year</a>
-    <br><a href="/dashboard" class="btn" style="background:#f39c12;margin-top:30px">← Back to Dashboard</a>
-    </body></html>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <div class="container">
+        <h1>📚 Study Dashboard</h1>
+        
+        <a href="/year1" class="year-btn">🎓 1st Year</a>
+        <a href="/year2" class="year-btn">🎓 2nd Year</a>
+        <a href="/year3" class="year-btn">🎓 3rd Year</a>
+        
+    </div>
+    </body>
+    </html>
     '''
 
 # ===== 1st YEAR =====
@@ -454,46 +472,94 @@ def subject_notes(subject_name):
     </body></html>
     '''
 
-@app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
-def upload_unit(subject_name, unit_num):
+# ============= FILE UPLOAD =============
+@app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
+def upload(subject, unit):
     if not session.get('logged_in'): return redirect('/')
     
     if request.method == 'POST':
-        if 'file' in request.files:
-            file = request.files['file']
-            if file.filename != '':
-                os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
-                filename = secure_filename(f"unit{unit_num}.pdf")
-                file.save(f'static/uploads/{subject_name}/{filename}')
-                return f'''
-                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
-                <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
-                <p style="font-size:24px;margin:30px 0">{subject_name.title()} Unit {unit_num} uploaded!</p>
-                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
-                </div>
-                '''
-        return '<h1 style="color:red;text-align:center">No file selected!</h1>'
+        file = request.files['file']
+        if file:
+            filename = f"unit{unit}.pdf"
+            os.makedirs(f'static/uploads/{subject}', exist_ok=True)
+            file.save(f'static/uploads/{subject}/{filename}')
+            return f'<h1 style="text-align:center;font-size:50px;color:#28a745;margin-top:100px">✅ Unit {unit} Uploaded!</h1><script>setTimeout(()=>location.href="/subject/{subject}", 1500)</script>'
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    input[type=file]{{width:500px;padding:20px;margin:30px;border-radius:15px;border:none;background:rgba(255,255,255,0.95);font-size:18px}}
-    button{{padding:25px 60px;margin:30px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;cursor:pointer;font-weight:600;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:40px}}</style></head>
+    <html><head><title>Upload Unit {unit}</title>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI'}}
+    .form{{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.3)}}
+    input[type=file]{{width:100%;padding:15px;margin:20px 0;border-radius:12px;background:#fff}}
+    button{{width:100%;padding:20px;background:#28a745;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}}</style></head>
     <body>
-    <h1>📤 Upload Unit {unit_num}</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".pdf" required>
-        <br><button type="submit">✅ Upload PDF</button>
-    </form>
-    <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
+    <div class="form">
+        <h1 style="font-size:40px;margin-bottom:30px">📤 Upload Unit {unit}</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".pdf" required>
+            <button>Upload PDF</button>
+        </form>
+        <a href="/subject/{subject}" style="display:inline-block;margin-top:20px;color:#f1c40f">← Back to {subject.replace('-', ' ').title()}</a>
+    </div>
     </body></html>
     '''
+    
+@app.route('/view-pdf/<subject>/<filename>')
+def view_pdf(subject, filename):
+    if not session.get('logged_in'): return redirect('/')
+    return send_from_directory(f'static/uploads/{subject}', filename, mimetype='application/pdf')
 
-@app.route('/download/<subject_name>/<filename>')
-def download_file(subject_name, filename):
-    return send_from_directory(f'static/uploads/{subject_name}', filename)
+# ===== MY FILES PAGE (COMPLETE VERSION) =====
+@app.route('/myfiles')
+def myfiles_page():  # Function name change pannirukken
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    files_html = ''
+    upload_base = 'static/uploads'
+    
+    if os.path.exists(upload_base):
+        for subject in os.listdir(upload_base):
+            subject_path = os.path.join(upload_base, subject)
+            if os.path.isdir(subject_path):
+                for filename in os.listdir(subject_path):
+                    if filename.endswith('.pdf'):
+                        files_html += f'''
+                        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px">
+                            <h3>{subject.replace('-',' ').title()} → {filename}</h3>
+                            <div>
+                                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin-right:10px">👀 View</a>
+                                <a href="/download/{subject}/{filename}" style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-right:10px">📥 Download</a>
+                                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete {filename}?')" style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px">🗑️ Delete</a>
+                            </div>
+                        </div>
+                        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>My Files</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:1000px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
+    <body>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <div class="container">
+        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
+        {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
+    </div>
+    </body></html>
+    '''
+    
+@app.route('/delete/<subject>/<filename>')
+def delete(subject, filename):
+    if not session.get('logged_in'): return redirect('/')
+    file_path = f"static/uploads/{subject}/{filename}"
+    if os.path.exists(file_path): os.remove(file_path)
+    return redirect('/myfiles')
+
+@app.route('/download/<subject>/<filename>')
+def download(subject, filename):
+    if not session.get('logged_in'): return redirect('/')
+    return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
+
 
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
@@ -838,19 +904,6 @@ def delete_goal(id):
     conn.close()
     return redirect('/view-goals')
 
-@app.route('/delete_file/<int:id>')
-def delete_file(id):
-    if not session.get('logged_in'): return redirect('/')
-    conn = sqlite3.connect('users.db')
-    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', (id, session['email'])).fetchone()
-    if file:
-        import os
-        os.remove(f'static/uploads/{file[2]}/{file[3]}')
-    conn.execute('DELETE FROM files WHERE id=?', (id,))
-    conn.commit()
-    conn.close()
-    return redirect(request.referrer or '/dashboard')
-
 @app.route('/logout')
 def logout():
     session.clear()
@@ -859,3 +912,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
