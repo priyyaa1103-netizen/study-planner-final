@@ -173,21 +173,26 @@ def study():
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
     <style>
-    body{{font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .container{{max-width:800px;margin:0 auto}}
-    h1{{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
-    .btn{{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}
+    .container{max-width:800px;width:100%}
+    h1{font-size:48px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}
+    .year-btn{display:block;width:100%;max-width:500px;margin:30px auto;padding:30px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;text-decoration:none;border-radius:25px;font-size:28px;font-weight:600;box-shadow:0 20px 40px rgba(80,200,120,0.4);transition:all 0.4s ease;transform:translateY(0)}
+    .year-btn:hover{transform:translateY(-10px);box-shadow:0 30px 60px rgba(80,200,120,0.6)}
+    .back-btn{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000;animation:fadeInLeft 0.8s ease}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
     </style>
     </head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
         <h1>📚 Study Dashboard</h1>
-        <a href="/year1" class="btn">🎓 1st Year</a>
-        <a href="/year2" class="btn">🎓 2nd Year</a>
-        <a href="/year3" class="btn">🎓 3rd Year</a>
+        
+        <a href="/year1" class="year-btn">🎓 1st Year</a>
+        <a href="/year2" class="year-btn">🎓 2nd Year</a>
+        <a href="/year3" class="year-btn">🎓 3rd Year</a>
+        
     </div>
     </body>
     </html>
@@ -195,21 +200,44 @@ def study():
     
 # Year 1,2,3 + Semesters (shortened for space - add similar routes)
 @app.route('/year1')
-def year1(): return year_page("1st Year", "/sem1", "/sem2")
-@app.route('/year2')
-def year2(): return year_page("2nd Year", "/sem3", "/sem4") 
-@app.route('/year3')
-def year3(): return year_page("3rd Year", "/sem5", "/sem6")
-
-def year_page(title, sem1, sem2):
+def year1():
     if not session.get('logged_in'): return redirect('/')
+    return year_page_template("1st Year", "/sem1", "/sem2")
+
+@app.route('/year2')
+def year2():
+    if not session.get('logged_in'): return redirect('/')
+    return year_page_template("2nd Year", "/sem3", "/sem4")
+
+@app.route('/year3')
+def year3():
+    if not session.get('logged_in'): return redirect('/')
+    return year_page_template("3rd Year", "/sem5", "/sem6")
+
+def year_page_template(title, sem1, sem2):
     return f'''
-    <!DOCTYPE html><html><head><title>{title}</title>
-    <style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
-    <body><h1>📚 {title}</h1>
-    <a href="{sem1}" class="btn">Semester 1</a><a href="{sem2}" class="btn">Semester 2</a>
-    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <!DOCTYPE html>
+    <html><head><title>{title}</title>
+    <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}}
+    .container{{max-width:600px;width:100%}}
+    h1{{font-size:42px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}}
+    .sem-btn{{display:block;width:100%;max-width:400px;margin:30px auto;padding:25px;background:linear-gradient(135deg,#f39c12,#e67e22);color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(243,156,18,0.4);transition:all 0.4s ease;transform:translateY(0)}}
+    .sem-btn:hover{{transform:translateY(-8px);box-shadow:0 25px 50px rgba(243,156,18,0.6)}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}
+    @keyframes fadeInUp{{from{{opacity:0;transform:translateY(30px)}}to{{opacity:1;transform:translateY(0)}}}}
+    </style>
+    </head>
+    <body>
+    <a href="/study" class="back-btn">← Study</a>
+    <div class="container">
+        <h1>📚 {title}</h1>
+        <a href="{sem1}" class="sem-btn">📖 Semester 1</a>
+        <a href="{sem2}" class="sem-btn">📖 Semester 2</a>
+    </div>
+    </body>
+    </html>
     '''
 
 @app.route('/sem1')
@@ -523,6 +551,7 @@ def myfiles():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
