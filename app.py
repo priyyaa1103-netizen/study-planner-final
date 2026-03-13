@@ -297,53 +297,45 @@ def myfiles():
     if not session.get('logged_in'): 
         return redirect('/')
     
-    # Folder ல இருந்து files list பண்ணலாம் (database safe)
     files_html = ''
-    subjects = ['maths-1', 'python', 'tamil-1', 'english-1', 'maths-2', 'physics']  # உங்க subjects
-    
-    for subject in subjects:
-        subject_path = f"static/uploads/{subject}"
-        if os.path.exists(subject_path):
-            for filename in os.listdir(subject_path):
-                if filename.endswith('.pdf'):
-                    files_html += f'''
-                    <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px">
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <div>
-                                <h3 style="margin:0;font-size:22px">{subject.replace('-',' ').title()} → {filename}</h3>
-                                <p style="margin:5px 0;color:#f1c40f">📁 static/uploads/{subject}/{filename}</p>
-                            </div>
-                            <div style="display:flex;gap:10px">
+    # Simple folder check
+    upload_base = 'static/uploads'
+    if os.path.exists(upload_base):
+        for subject in os.listdir(upload_base):
+            subject_path = os.path.join(upload_base, subject)
+            if os.path.isdir(subject_path):
+                for filename in os.listdir(subject_path):
+                    if filename.endswith('.pdf'):
+                        files_html += f'''
+                        <div style="background:#fff;color:#333;padding:25px;margin:20px;border-radius:20px">
+                            <h3>{subject.replace('-',' ').title()} → {filename}</h3>
+                            <div style="margin-top:15px">
                                 <a href="/view-pdf/{subject}/{filename}" target="_blank" 
-                                   style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px">👀 View</a>
+                                   style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin-right:10px">👀 View</a>
                                 <a href="/download/{subject}/{filename}" 
-                                   style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px">📥 Download</a>
+                                   style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-right:10px">📥 Download</a>
                                 <a href="/delete-file/{subject}/{filename}" onclick="return confirm('Delete {filename}?')" 
                                    style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px">🗑️ Delete</a>
                             </div>
                         </div>
-                    </div>
-                    '''
+                        '''
     
-    return '''
+    return f'''
     <!DOCTYPE html>
     <html><head><title>My Files</title>
     <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}
-    .container{max-width:1000px;margin:0 auto}
-    .back-btn{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;z-index:1000}
-    h1{text-align:center;font-size:42px;margin:80px 0 40px 0}
-    .no-files{text-align:center;font-size:28px;color:#f1c40f;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px;margin:50px 0}
-    </style>
-    </head>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
+    .container{{max-width:1000px;margin:0 auto}}
+    .back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}
+    h1{{text-align:center;font-size:42px;margin:80px 0 40px}}
+    </style></head>
     <body>
-        <a href="/dashboard" class="back-btn">← Dashboard</a>
-        <div class="container">
-            <h1>📁 My Uploaded Files</h1>
-            ''' + (files_html or '<div class="no-files">No files uploaded yet! 📤<br><br>Subject pagesல upload பண்ணுங்க</div>') + '''
-        </div>
-    </body></html>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <div class="container">
+        <h1>📁 My Files</h1>
+        {files_html or "<h2 style='text-align:center;color:#f1c40f'>No files uploaded yet!</h2>"}
+    </div></body></html>
     '''
     
 @app.route('/delete-file/<subject>/<filename>')
@@ -352,8 +344,11 @@ def delete_file(subject, filename):
         return redirect('/')
     
     file_path = f"static/uploads/{subject}/{filename}"
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except:
+        pass  # Silent fail OK
     
     return redirect('/myfiles')
 
@@ -361,7 +356,10 @@ def delete_file(subject, filename):
 def download(subject, filename):
     if not session.get('logged_in'): 
         return redirect('/')
-    return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
+    try:
+        return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
+    except:
+        return "File not found", 404
 
 # ============= GOALS & QUIZ =============
 @app.route('/goals', methods=['GET', 'POST'])
@@ -517,5 +515,6 @@ def myfiles():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
