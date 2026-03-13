@@ -165,54 +165,19 @@ def dashboard():
     '''
 
 # ============= STUDY NAVIGATION =============
+
 @app.route('/study')
 def study():
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    # Files count per subject
-    subjects_data = {
-        'Year 1': ['maths-1', 'python', 'tamil-1', 'english-1'],
-        'Year 2': ['java_programming', 'statistics-1', 'data_structures', 'statistics-2'],
-        'Year 3': ['0perating_System', 'RDBMS', 'Software_Engineering', 'DMW']
-    }
-    
-    # Count uploaded files
-    file_counts = {}
-    upload_base = 'static/uploads'
-    if os.path.exists(upload_base):
-        for subject in os.listdir(upload_base):
-            subject_path = os.path.join(upload_base, subject)
-            if os.path.isdir(subject_path):
-                pdf_count = len([f for f in os.listdir(subject_path) if f.endswith('.pdf')])
-                file_counts[subject] = pdf_count
-    
-    # Build HTML with file counts
-    years_html = ''
-    for year, subjects in subjects_data.items():
-        subjects_html = ''
-        total_files = 0
-        for subject in subjects:
-            count = file_counts.get(subject, 0)
-            total_files += count
-            status = "✅" if count > 0 else "📤"
-            subjects_html += f'<span style="display:block;margin:5px">{status} {subject.replace("-"," ").title()} ({count} files)</span>'
-        
-        years_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
-            <h3 style="margin-bottom:15px;font-size:28px">{year} - Total: {total_files} files</h3>
-            <div style="font-size:18px;color:#f1c40f">{subjects_html}</div>
-        </div>
-        '''
-    
-    return f'''
+    if not session.get('logged_in'): return redirect('/')
+    return '''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
     <style>
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .container{{max-width:1000px;margin:0 auto}}
+    body{{font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .container{{max-width:800px;margin:0 auto}}
     h1{{font-size:48px;margin-bottom:60px;text-shadow:0 3px 15px rgba(0,0,0,0.3)}}
+    .btn{{display:inline-block;padding:25px 50px;margin:20px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(80,200,120,0.4);transition:all 0.3s}}
+    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 45px rgba(80,200,120,0.6)}}
     .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}
     </style>
     </head>
@@ -220,13 +185,14 @@ def study():
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
         <h1>📚 Study Dashboard</h1>
-        <p style="font-size:24px;margin-bottom:40px">Your uploaded files status:</p>
-        {years_html}
-        <a href="/myfiles" style="display:inline-block;padding:20px 50px;margin:30px;background:#e74c3c;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">📁 View All Files</a>
+        <a href="/year1" class="btn">🎓 1st Year</a>
+        <a href="/year2" class="btn">🎓 2nd Year</a>
+        <a href="/year3" class="btn">🎓 3rd Year</a>
     </div>
-    </body></html>
+    </body>
+    </html>
     '''
-
+    
 # Year 1,2,3 + Semesters (shortened for space - add similar routes)
 @app.route('/year1')
 def year1(): return year_page("1st Year", "/sem1", "/sem2")
@@ -266,67 +232,87 @@ def subjects_page(title, subjects):
     <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-@app.route('/subject/<subject>')
+@app.route('/subject/<subject>', methods=['GET'])
 def subject(subject):
     if not session.get('logged_in'): return redirect('/')
-    conn = get_db()
-    files = conn.execute('SELECT filename FROM files WHERE subject=? AND email=?', 
-                        (subject, session['email'])).fetchall()
-    conn.close()
     
-    uploaded = [row['filename'] for row in files]
-    units = ''
+    # Check uploaded files
+    files = []
+    subject_path = f'static/uploads/{subject}'
+    if os.path.exists(subject_path):
+        files = [f for f in os.listdir(subject_path) if f.endswith('.pdf')]
     
+    # Units 1-10 HTML
+    units_html = ''
     for i in range(1, 11):
         filename = f"unit{i}.pdf"
-        if filename in uploaded:
-            units += f'<div style="background:rgba(0,255,0,0.2);padding:20px;margin:10px;border-radius:15px">📚 Unit {i} ✅ <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:white">View</a></div>'
+        if filename in files:
+            units_html += f'''
+            <div style="background:#d4edda;color:#155724;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} ✅ 
+                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[View]</a>
+                <a href="/download/{subject}/{filename}" style="color:#007bff">[Download]</a>
+                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete Unit {i}?')" style="color:#dc3545">[Delete]</a>
+            </div>
+            '''
         else:
-            units += f'<div style="background:rgba(255,255,0,0.2);padding:20px;margin:10px;border-radius:15px">📚 Unit {i} <a href="/upload/{subject}/{i}" style="color:black;font-weight:bold">Upload PDF</a></div>'
+            units_html += f'''
+            <div style="background:#fff3cd;color:#856404;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} 📤 
+                <a href="/upload/{subject}/{i}" style="color:#856404;font-weight:bold">[UPLOAD]</a>
+            </div>
+            '''
     
     return f'''
-    <!DOCTYPE html><html><head><title>{subject.replace("-", " ").title()}</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}.container{{max-width:800px;margin:0 auto}}.back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}</style></head>
-    <body><a href="/study" class="back">← Back</a>
-    <div class="container"><h1 style="text-align:center;font-size:40px;margin:60px 0 40px">{subject.replace("-", " ").title()}</h1>
-    {units}</div></body></html>
+    <!DOCTYPE html>
+    <html><head><title>{subject.replace('-', ' ').title()}</title>
+    <style>
+    body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
+    .container{{max-width:800px;margin:0 auto}}
+    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}
+    h1{{text-align:center;font-size:36px;margin:60px 0 40px}}
+    </style></head>
+    <body>
+    <a href="/study" class="back">← Study</a>
+    <div class="container">
+        <h1>{subject.replace('-', ' ').title()}</h1>
+        {units_html}
+    </div>
+    </body></html>
     '''
 
 # ============= FILE UPLOAD =============
 @app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
 def upload(subject, unit):
     if not session.get('logged_in'): return redirect('/')
+    
     if request.method == 'POST':
         file = request.files['file']
         if file:
             filename = f"unit{unit}.pdf"
             os.makedirs(f'static/uploads/{subject}', exist_ok=True)
-            filepath = f'static/uploads/{subject}/{filename}'
-            file.save(filepath)
-            
-            conn = get_db()
-            conn.execute('INSERT OR REPLACE INTO files (email, subject, filename, upload_date) VALUES (?, ?, ?, ?)',
-                        (session['email'], subject, filename, datetime.now().isoformat()))
-            conn.commit()
-            conn.close()
-            return '<h1 style="text-align:center;font-size:50px;margin-top:100px;color:#2ecc71">✅ Uploaded Successfully!</h1><script>setTimeout(() => location.href=`/subject/${subject}`, 2000)</script>'
+            file.save(f'static/uploads/{subject}/{filename}')
+            return f'<h1 style="text-align:center;font-size:50px;color:#28a745;margin-top:100px">✅ Unit {unit} Uploaded!</h1><script>setTimeout(()=>location.href="/subject/{subject}", 1500)</script>'
     
-    return '''
-    <!DOCTYPE html><html><head><title>Upload</title>
-    <style>body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI'}
-    .form{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.3)}
-    input[type=file]{width:100%;padding:15px;margin:20px 0;border-radius:12px;background:#fff}
-    button{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}</style></head>
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Upload Unit {unit}</title>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI'}}
+    .form{{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.3)}}
+    input[type=file]{{width:100%;padding:15px;margin:20px 0;border-radius:12px;background:#fff}}
+    button{{width:100%;padding:20px;background:#28a745;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}}</style></head>
     <body>
     <div class="form">
-        <h1 style="font-size:40px;margin-bottom:30px">📤 Upload Unit PDF</h1>
+        <h1 style="font-size:40px;margin-bottom:30px">📤 Upload Unit {unit}</h1>
         <form method="POST" enctype="multipart/form-data">
             <input type="file" name="file" accept=".pdf" required>
             <button>Upload PDF</button>
         </form>
-    </div></body></html>
+        <a href="/subject/{subject}" style="display:inline-block;margin-top:20px;color:#f1c40f">← Back to {subject.replace('-', ' ').title()}</a>
+    </div>
+    </body></html>
     '''
-
+    
 @app.route('/view-pdf/<subject>/<filename>')
 def view_pdf(subject, filename):
     if not session.get('logged_in'): return redirect('/')
@@ -537,6 +523,7 @@ def myfiles():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
