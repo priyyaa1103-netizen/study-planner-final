@@ -1,16 +1,21 @@
-from flask import Flask, request, redirect, session, send_from_directory
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import json
+from datetime import datetime, timedelta
 import sqlite3
-from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
-app.secret_key = 'study2026-super-secure-key-change-in-prod'
+app.secret_key = 'study2026-super-secure-key-change-this-in-production'
 
-# Folders create pannunga
+# Create necessary folders
 os.makedirs('static/uploads', exist_ok=True)
 
+# Initialize SQLite Database
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -20,13 +25,13 @@ def init_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
                   target_score INTEGER, progress INTEGER DEFAULT 0,
-                  max_score INTEGER DEFAULT 0)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                  max_score INTEGER DEFAULT 0)''')  # Updated here
+    c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, subject TEXT, filename TEXT, 
-                  upload_date TEXT)''')
+                  email TEXT, title TEXT, deadline TEXT)''')
     conn.commit()
     conn.close()
+
 init_db()
 
 # Email Configuration - UPDATE THESE WITH YOUR GMAIL
@@ -50,7 +55,7 @@ def send_email(to_email, subject, body):
     except:
         return False
 
-def get_db():
+def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
     return conn
@@ -66,7 +71,6 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
-# ============= LOGIN/REGISTER =============
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
@@ -75,13 +79,13 @@ def login():
         email = request.form['email'].lower()
         password = request.form['password']
         
-        conn = get_db()
+        conn = get_db_connection()
         c = conn.cursor()
         
         if action == 'register':
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
-                error = "❌ Email already exists!"
+                error = "❌ Email already registered!"
             else:
                 name = email.split('@')[0].title()
                 hashed_pw = generate_password_hash(password)
@@ -104,85 +108,101 @@ def login():
                 session['name'] = user['name']
                 return redirect('/dashboard')
             else:
-                error = "❌ Wrong email/password!"
+                error = "❌ Wrong email or password!"
     
-    return '''
+    return render_login_page(error)
+    
+def render_login_page(error=""):
+    return f'''
     <!DOCTYPE html>
     <html>
-    <head><title>Study Planner</title>
-    <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
-    .box{background:white;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:100%}
-    .tabs{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin-bottom:30px}
-    .tab{padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;flex:1}
-    .tab.active{background:#667eea;color:white}
-    input{width:100%;padding:15px;margin:10px 0;border:2px solid #e1e5e9;border-radius:12px;font-size:16px;box-sizing:border-box}
-    input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}
-    button{width:100%;padding:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s}
-    button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}
-    .error{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}
-    h1{text-align:center;margin-bottom:30px;font-size:32px;color:#333}
-    .demo{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}
-    </style>
+    <head>
+        <title>Study Planner & Reminder App</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}}
+            .tabs{{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:30px 0}}
+            .tab{{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}}
+            .tab.active{{background:#667eea;color:white}}
+            input{{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}}
+            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}
+            button{{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}}
+            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+            .error{{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}}
+            .demo{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}}
+            h1{{text-align:center;margin-bottom:30px;font-size:32px;color:#333}}
+            .tabs-container{{margin:25px 0}}
+        </style>
     </head>
     <body>
-        <div class="box">
+        <div class="login-box">
             <h1>🎓 Study Planner</h1>
-            ''' + (f'<div class="error">{error}</div>' if error else '') + '''
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-                <div class="tab" onclick="showTab('register')">➕ Register</div>
+            {f'<div class="error">{error}</div>' if error else ''}
+            
+            <!-- TABS KEELA VARUM -->
+            <div class="tabs-container">
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('login')">🔐 Login</div>
+                    <div class="tab" onclick="showTab('register')">➕ Register</div>
+                </div>
             </div>
+            
             <form method="POST" id="login-form">
                 <input type="hidden" name="action" value="login">
                 <input type="email" name="email" placeholder="your-email@gmail.com" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <button>Login</button>
+                <button type="submit">Login</button>
             </form>
             <form method="POST" id="register-form" style="display:none">
                 <input type="hidden" name="action" value="register">
                 <input type="email" name="email" placeholder="your-email@gmail.com" required>
                 <input type="password" name="password" placeholder="Create Password" required>
-                <button>Create Account</button>
+                <button type="submit">Create Account</button>
             </form>
-            <div class="demo">Demo: test@test.com / 123456</div>
+            
+            <div class="demo">
+                Demo: test@test.com / 123456
+            </div>
         </div>
         <script>
-        function showTab(tab) {
+        function showTab(tab) {{
             document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
             document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
             document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
             document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
-        }
+        }}
         </script>
-    </body></html>
+    </body>
+    </html>
     '''
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
-
-# ============= DASHBOARD =============
 @app.route('/dashboard')
 def dashboard():
-    if not session.get('logged_in'): return redirect('/')
-    return '''
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    notifications = check_notifications()
+    
+    return f'''
     <!DOCTYPE html>
-    <html><head><title>Dashboard</title>
-    <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}
-    .container{max-width:1000px;margin:0 auto;text-align:center}
-    h1{font-size:42px;margin-bottom:10px}
-    h2{font-size:24px;margin-bottom:40px}
-    .btn{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}
-    .btn:hover{transform:translateY(-5px)}
-    .btn.logout{background:linear-gradient(135deg,#e74c3c,#c0392b)}
-    .welcome{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}
-    </style>
-    <script>
+    <html>
+    <head>
+        <title>Dashboard - Study Planner</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+            .container{{max-width:1000px;margin:0 auto;text-align:center}}
+            h1{{font-size:42px;margin-bottom:10px}}
+            h2{{font-size:24px;margin-bottom:40px}}
+            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+            .btn:hover{{transform:translateY(-5px)}}
+            .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
+            .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;font-size:22px;max-width:650px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;animation:pulse 2s infinite}}
+            @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
+            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
+        </style>
+        <script>
         function playAlarm() {{
             try {{
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -198,22 +218,24 @@ def dashboard():
                 oscillator.stop(audioContext.currentTime + 1);
             }} catch(e) {{}}
         }}
-        </script></head>
+        </script>
+    </head>
     <body>
-    <div class="container">
-        <div class="welcome">
-            <h1>Welcome ''' + session['name'] + '''! 🎓</h1>
-            <h2>Study Planner App</h2>
+        <div class="container">
+            <div class="welcome-card">
+                <h1>Welcome {session['name']}! 🎓</h1>
+                <h2>Study Planner & Reminder App</h2>
+            </div>
+            {notifications}
+            <a href="/study" class="btn">📚 Study Dashboard</a>
+            <a href="/goals" class="btn">🎯 Set Goal</a>
+            <a href="/view-goals" class="btn">📊 View Goals</a>
+            <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
-        <a href="/study" class="btn">📚 Study Dashboard</a>
-        <a href="/goals" class="btn">🎯 Goals</a>
-        <a href="/view-goals" class="btn">📊 Progress</a>
-        <a href="/reminders" class="btn">⏰ Reminders</a>
-        <a href="/myfiles" class="btn">📁 Files</a>
-        <a href="/logout" class="btn logout">🚪 Logout</a>
-    </div></body></html>
+    </body>
+    </html>
     '''
-
 def check_notifications():
     conn = get_db_connection()
     c = conn.cursor()
@@ -263,38 +285,23 @@ def check_notifications_api():
         return "🚨"
     return ""
 
-# ============= STUDY NAVIGATION =============
-
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
-    <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}
-    .container{max-width:800px;width:100%}
-    h1{font-size:48px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}
-    .year-btn{display:block;width:100%;max-width:500px;margin:30px auto;padding:30px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;text-decoration:none;border-radius:25px;font-size:28px;font-weight:600;box-shadow:0 20px 40px rgba(80,200,120,0.4);transition:all 0.4s ease;transform:translateY(0)}
-    .year-btn:hover{transform:translateY(-10px);box-shadow:0 30px 60px rgba(80,200,120,0.6)}
-    .back-btn{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000;animation:fadeInLeft 0.8s ease}
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
-    </style>
-    </head>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:20px 40px;margin:15px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-size:20px;display:inline-block;box-shadow:0 10px 25px rgba(80,200,120,0.4);transition:all 0.3s}}
+    .btn:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(80,200,120,0.6)}}
+    h1{{font-size:38px;margin-bottom:50px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}</style></head>
     <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <div class="container">
-        <h1>📚 Study Dashboard</h1>
-        
-        <a href="/year1" class="year-btn">🎓 1st Year</a>
-        <a href="/year2" class="year-btn">🎓 2nd Year</a>
-        <a href="/year3" class="year-btn">🎓 3rd Year</a>
-        
-    </div>
-    </body>
-    </html>
+    <h1>📚 Study Dashboard</h1>
+    <a href="/year1" class="btn">🎓 1st Year</a>
+    <a href="/year2" class="btn">🎓 2nd Year</a>
+    <a href="/year3" class="btn">🎓 3rd Year</a>
+    <br><a href="/dashboard" class="btn" style="background:#f39c12;margin-top:30px">← Back to Dashboard</a>
+    </body></html>
     '''
 
 # ===== 1st YEAR =====
@@ -413,246 +420,119 @@ def sem6():
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-    
-def year_page_template(title, sem1, sem2):
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{title}</title>
-    <style>
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}}
-    .container{{max-width:600px;width:100%}}
-    h1{{font-size:42px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}}
-    .sem-btn{{display:block;width:100%;max-width:400px;margin:30px auto;padding:25px;background:linear-gradient(135deg,#f39c12,#e67e22);color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;box-shadow:0 15px 35px rgba(243,156,18,0.4);transition:all 0.4s ease;transform:translateY(0)}}
-    .sem-btn:hover{{transform:translateY(-8px);box-shadow:0 25px 50px rgba(243,156,18,0.6)}}
-    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000}}
-    @keyframes fadeInUp{{from{{opacity:0;transform:translateY(30px)}}to{{opacity:1;transform:translateY(0)}}}}
-    </style>
-    </head>
-    <body>
-    <a href="/study" class="back-btn">← Study</a>
-    <div class="container">
-        <h1>📚 {title}</h1>
-        <a href="{sem1}" class="sem-btn">📖 Semester 1</a>
-        <a href="{sem2}" class="sem-btn">📖 Semester 2</a>
-    </div>
-    </body>
-    </html>
-    '''
-
-def subjects_page(title, subjects):
-    if not session.get('logged_in'): return redirect('/')
-    btns = ''.join([f'<a href="/subject/{slug}" class="btn">{name}</a>' for slug, name in subjects])
-    return f'''
-    <!DOCTYPE html><html><head><title>{title}</title>
-    <style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
-    <body><h1>📖 {title}</h1>{btns}
-    <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
-    '''
-
-@app.route('/subject/<subject>', methods=['GET'])
-def subject(subject):
+@app.route('/subject/<subject_name>')
+def subject_notes(subject_name):
     if not session.get('logged_in'): return redirect('/')
     
-    # Check uploaded files
-    files = []
-    subject_path = f'static/uploads/{subject}'
-    if os.path.exists(subject_path):
-        files = [f for f in os.listdir(subject_path) if f.endswith('.pdf')]
-    
-    # Units 1-10 HTML
     units_html = ''
+    subject_folder = f"static/uploads/{subject_name}"
+    os.makedirs(subject_folder, exist_ok=True)
+    
     for i in range(1, 11):
-        filename = f"unit{i}.pdf"
-        if filename in files:
-            units_html += f'''
-            <div style="background:#d4edda;color:#155724;padding:15px;margin:10px;border-radius:10px">
-                📚 Unit {i} ✅ 
-                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[View]</a>
-                <a href="/download/{subject}/{filename}" style="color:#007bff">[Download]</a>
-                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete Unit {i}?')" style="color:#dc3545">[Delete]</a>
-            </div>
-            '''
-        else:
-            units_html += f'''
-            <div style="background:#fff3cd;color:#856404;padding:15px;margin:10px;border-radius:10px">
-                📚 Unit {i} 📤 
-                <a href="/upload/{subject}/{i}" style="color:#856404;font-weight:bold">[UPLOAD]</a>
-            </div>
-            '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>{subject.replace('-', ' ').title()}</title>
-    <style>
-    body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
-    .container{{max-width:800px;margin:0 auto}}
-    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}
-    h1{{text-align:center;font-size:36px;margin:60px 0 40px}}
-    </style></head>
-    <body>
-    <a href="/study" class="back">← Study</a>
-    <div class="container">
-        <h1>{subject.replace('-', ' ').title()}</h1>
-        {units_html}
-    </div>
-    </body></html>
-    '''
-
-# ============= FILE UPLOAD =============
-@app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
-def upload(subject, unit):
-    if not session.get('logged_in'): return redirect('/')
-    
-    if request.method == 'POST':
-        file = request.files['file']
-        if file:
-            filename = f"unit{unit}.pdf"
-            os.makedirs(f'static/uploads/{subject}', exist_ok=True)
-            file.save(f'static/uploads/{subject}/{filename}')
-            return f'<h1 style="text-align:center;font-size:50px;color:#28a745;margin-top:100px">✅ Unit {unit} Uploaded!</h1><script>setTimeout(()=>location.href="/subject/{subject}", 1500)</script>'
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>Upload Unit {unit}</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI'}}
-    .form{{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.3)}}
-    input[type=file]{{width:100%;padding:15px;margin:20px 0;border-radius:12px;background:#fff}}
-    button{{width:100%;padding:20px;background:#28a745;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}}</style></head>
-    <body>
-    <div class="form">
-        <h1 style="font-size:40px;margin-bottom:30px">📤 Upload Unit {unit}</h1>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".pdf" required>
-            <button>Upload PDF</button>
-        </form>
-        <a href="/subject/{subject}" style="display:inline-block;margin-top:20px;color:#f1c40f">← Back to {subject.replace('-', ' ').title()}</a>
-    </div>
-    </body></html>
-    '''
-    
-@app.route('/view-pdf/<subject>/<filename>')
-def view_pdf(subject, filename):
-    if not session.get('logged_in'): return redirect('/')
-    return send_from_directory(f'static/uploads/{subject}', filename, mimetype='application/pdf')
-
-# ===== MY FILES PAGE (COMPLETE VERSION) =====
-@app.route('/myfiles')
-def myfiles_page():  # Function name change pannirukken
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    files_html = ''
-    upload_base = 'static/uploads'
-    
-    if os.path.exists(upload_base):
-        for subject in os.listdir(upload_base):
-            subject_path = os.path.join(upload_base, subject)
-            if os.path.isdir(subject_path):
-                for filename in os.listdir(subject_path):
-                    if filename.endswith('.pdf'):
-                        files_html += f'''
-                        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px">
-                            <h3>{subject.replace('-',' ').title()} → {filename}</h3>
-                            <div>
-                                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="padding:10px 20px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin-right:10px">👀 View</a>
-                                <a href="/download/{subject}/{filename}" style="padding:10px 20px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-right:10px">📥 Download</a>
-                                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete {filename}?')" style="padding:10px 20px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px">🗑️ Delete</a>
-                            </div>
-                        </div>
-                        '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>My Files</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:1000px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
-    <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <div class="container">
-        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
-        {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
-    </div>
-    </body></html>
-    '''
-    
-@app.route('/delete/<subject>/<filename>')
-def delete(subject, filename):
-    if not session.get('logged_in'): return redirect('/')
-    file_path = f"static/uploads/{subject}/{filename}"
-    if os.path.exists(file_path): os.remove(file_path)
-    return redirect('/myfiles')
-
-@app.route('/download/<subject>/<filename>')
-def download(subject, filename):
-    if not session.get('logged_in'): return redirect('/')
-    return send_from_directory(f'static/uploads/{subject}', filename, as_attachment=True)
-
-# ============= GOALS & QUIZ =============
-@app.route('/goals', methods=['GET', 'POST'])
-def goals():
-    if not session.get('logged_in'): return redirect('/')
-    if request.method == 'POST':
-        conn = get_db()
-        conn.execute('INSERT INTO goals (email, subject, goal, target_score) VALUES (?, ?, ?, ?)',
-                    (session['email'], request.form['subject'], 
-                     request.form['goal'], request.form['target_score']))
-        conn.commit()
-        conn.close()
-        return redirect('/view-goals')
-    
-    return '''
-    <!DOCTYPE html><html><head><title>Goals</title>
-    <style>body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI';text-align:center}
-    .form{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:0 auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
-    input{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}
-    button{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px}</style></head>
-    <body>
-    <div class="form">
-        <h1 style="font-size:42px;margin-bottom:30px">🎯 Set Study Goals</h1>
-        <form method="POST">
-            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
-            <input name="goal" placeholder="Goal Description" required>
-            <input name="target_score" type="number" placeholder="Target Score (90)" required>
-            <button>✅ Save Goal</button>
-        </form>
-    </div>
-    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    </body></html>
-    '''
-
-@app.route('/view-goals')
-def view_goals():
-    if not session.get('logged_in'): return redirect('/')
-    conn = get_db()
-    goals = conn.execute('SELECT * FROM goals WHERE email=?', (session['email'],)).fetchall()
-    conn.close()
-    
-    goals_html = ''
-    for goal in goals:
-        quiz_btn = f'<a href="/quiz/{goal["id"]}" style="padding:12px 25px;background:#e74c3c;color:white;text-decoration:none;border-radius:10px;font-weight:600">🧠 Take Quiz</a>'
-        goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
-            <h3 style="font-size:28px;margin-bottom:10px">{goal["subject"]}</h3>
-            <p style="font-size:18px;margin-bottom:15px">{goal["goal"]}</p>
-            <div style="font-size:24px;margin-bottom:20px">
-                Progress: <span style="color:#2ecc71;font-size:28px;font-weight:700">{goal["progress"]}%</span>
-                | Target: {goal["target_score"]}
-            </div>
-            {quiz_btn}
+        unit_file = f"{subject_folder}/unit{i}.pdf"
+        upload_link = f"/upload/{subject_name}/unit{i}"
+        has_file = os.path.exists(unit_file)
+        
+        units_html += f'''
+        <div style="display:inline-block;margin:15px;background:rgba(255,255,255,0.15);padding:25px;border-radius:20px;width:220px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)">
+            <h3 style="margin-bottom:15px">📚 Unit {i}</h3>
+            <a href="{upload_link}" style="display:block;padding:12px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📤 Upload</a>
+            {f'<a href="/download/{subject_name}/unit{i}.pdf" target="_blank" style="display:block;padding:12px;background:#27ae60;color:white;text-decoration:none;border-radius:10px;margin:8px 0;font-weight:500">📥 Download</a>' if has_file else '<p style="color:#f39c12;font-weight:500">No file uploaded</p>'}
         </div>
         '''
     
     return f'''
-    <!DOCTYPE html><html><head><title>Goals</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
-    .container{{max-width:900px;margin:0 auto}}.back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
+    <!DOCTYPE html>
+    <html><head><title>{subject_name.replace("-"," ").title()} Notes</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px;font-weight:600;box-shadow:0 5px 15px rgba(243,156,18,0.4);z-index:1000}}
+    h1{{font-size:40px;margin:60px 0 40px 0;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.3)}} .container{{max-width:1400px;margin:0 auto}}</style></head>
     <body>
-    <a href="/dashboard" class="back">← Dashboard</a>
-    <div class="container">
-        <h1 style="text-align:center;font-size:42px;margin:80px 0 50px">📊 Your Study Goals</h1>
-        {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px">No goals set! <a href="/goals" style="color:#fff;font-weight:600">Set goals →</a></p>'}
-    </div></body></html>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <h1>📚 {subject_name.replace("-"," ").title()}</h1>
+    <div class="container">{units_html}</div>
+    </body></html>
+    '''
+
+@app.route('/upload/<subject_name>/<unit_num>', methods=['GET', 'POST'])
+def upload_unit(subject_name, unit_num):
+    if not session.get('logged_in'): return redirect('/')
+    
+    if request.method == 'POST':
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename != '':
+                os.makedirs(f'static/uploads/{subject_name}', exist_ok=True)
+                filename = secure_filename(f"unit{unit_num}.pdf")
+                file.save(f'static/uploads/{subject_name}/{filename}')
+                return f'''
+                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:50px;text-align:center">
+                <h1 style="font-size:50px;color:#2ecc71">✅ Success!</h1>
+                <p style="font-size:24px;margin:30px 0">{subject_name.title()} Unit {unit_num} uploaded!</p>
+                <a href="/subject/{subject_name}" style="padding:20px 50px;background:#27ae60;color:white;text-decoration:none;border-radius:15px;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
+                </div>
+                '''
+        return '<h1 style="color:red;text-align:center">No file selected!</h1>'
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Upload {subject_name.title()} Unit {unit_num}</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    input[type=file]{{width:500px;padding:20px;margin:30px;border-radius:15px;border:none;background:rgba(255,255,255,0.95);font-size:18px}}
+    button{{padding:25px 60px;margin:30px;background:#50c878;color:white;border:none;border-radius:20px;font-size:24px;cursor:pointer;font-weight:600;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+    h1{{font-size:42px;margin-bottom:40px}}</style></head>
+    <body>
+    <h1>📤 Upload Unit {unit_num}</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".pdf" required>
+        <br><button type="submit">✅ Upload PDF</button>
+    </form>
+    <a href="/subject/{subject_name}" style="color:#3498db;font-size:22px;font-weight:600">← Back to {subject_name.title()}</a>
+    </body></html>
+    '''
+
+@app.route('/download/<subject_name>/<filename>')
+def download_file(subject_name, filename):
+    return send_from_directory(f'static/uploads/{subject_name}', filename)
+
+@app.route('/goals', methods=['GET', 'POST'])
+def goals():
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    if request.method == 'POST':
+        conn = get_db_connection()
+        conn.execute('''INSERT INTO goals (email, subject, goal, target_score) 
+                       VALUES (?, ?, ?, ?)''', 
+                    (session['email'], 
+                     request.form['subject'], 
+                     request.form['goal'], 
+                     request.form['target_score']))
+        conn.commit()
+        conn.close()
+        return redirect('/view-goals')
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Set Goals</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
+    input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
+    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
+    h1{{font-size:42px;margin-bottom:30px}}</style></head>
+    <body>
+    <div class="form-box">
+        <h1>🎯 Set Study Goals</h1>
+        <form method="POST">
+            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
+            <input name="goal" placeholder="Goal Description" required>
+            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
+            <button type="submit">✅ Save Goal</button>
+        </form>
+        <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
+    </div>
+    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
+    </body></html>
     '''
 
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
@@ -778,21 +658,61 @@ def quiz(goal_id):
     </body></html>
     '''
     
-@app.route('/myfiles')
-def myfiles():
+@app.route('/view-goals')
+def view_goals():
     if not session.get('logged_in'): return redirect('/')
-    # List all uploaded files (implementation similar to above)
-    return '''
-    <!DOCTYPE html><html><head><title>My Files</title>
-    <style>body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}
-    .container{max-width:1000px;margin:0 auto}</style></head>
-    <body><div class="container">
-    <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
-    <p style="text-align:center;font-size:24px">File upload working! Check subjects to upload.</p>
-    <a href="/dashboard" style="display:block;text-align:center;margin:50px 0;padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;width:300px;margin:50px auto">← Dashboard</a>
-    </div></body></html>
+    
+    conn = get_db_connection()
+    goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY id DESC', 
+                        (session['email'],)).fetchall()
+    conn.close()
+    
+    goals_html = ''
+    for goal in goals:
+        progress_width = goal['progress']
+        progress_color = '#2ecc71' if progress_width >= 80 else '#f39c12' if progress_width >= 50 else '#e67e22'
+        
+        goals_html += f'''
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:25px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(15px);text-align:left">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+                <h3 style="font-size:26px;margin:0">{goal['subject']}</h3>
+                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;text-decoration:none" onclick="return confirm('Delete Goal?')">🗑️</a>
+            </div>
+            <p style="font-size:18px;margin-bottom:20px;color:#f1c40f"><strong>Goal:</strong> {goal['goal']}</p>
+            <p style="font-size:18px;margin-bottom:25px"><strong>Target Score:</strong> {goal['target_score']}</p>
+            
+            <div style="margin-bottom:20px">
+                <div style="background:#34495e;border-radius:25px;padding:3px;margin-bottom:10px">
+                    <div style="background:{progress_color};height:25px;border-radius:20px;width:{progress_width}%;transition:all 0.5s;box-shadow:0 5px 15px rgba(0,0,0,0.3)"></div>
+                </div>
+                <p style="text-align:center;font-size:20px;font-weight:600">
+                    Progress: {goal['progress']}% 
+                    ({goal['max_score']}/10 quizzes completed)
+                </p>
+            </div>
+            
+            <div style="text-align:center">
+                <a href="/quiz/{goal['id']}" style="padding:15px 35px;background:#9b59b6;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;box-shadow:0 8px 25px rgba(155,89,182,0.4);margin:5px">🧠 Take Quiz</a>
+            </div>
+        </div>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Your Goals</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
+    .container{{max-width:900px;margin:0 auto}}</style></head>
+    <body>
+    <div class="container">
+        <h1 style="font-size:42px;text-align:center;margin-bottom:50px">📊 Your Goals</h1>
+        {goals_html or '<div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px"><p>No goals set yet!</p><a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">🎯 Set goals now!</a></div>'}
+        <div style="text-align:center;margin-top:50px">
+            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
+        </div>
+    </div>
+    </body></html>
     '''
-
+    
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
@@ -918,13 +838,24 @@ def delete_goal(id):
     conn.close()
     return redirect('/view-goals')
 
+@app.route('/delete_file/<int:id>')
+def delete_file(id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = sqlite3.connect('users.db')
+    file = conn.execute('SELECT * FROM files WHERE id=? AND email=?', (id, session['email'])).fetchone()
+    if file:
+        import os
+        os.remove(f'static/uploads/{file[2]}/{file[3]}')
+    conn.execute('DELETE FROM files WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or '/dashboard')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-
-
-
-
-
-
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
