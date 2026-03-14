@@ -449,7 +449,7 @@ def subject(subject):
     
     # Units 1-10 HTML
     units_html = ''
-    for i in range(1, 11):
+    for i in range(1, 6):
         filename = f"unit{i}.pdf"
         if filename in files:
             units_html += f'''
