@@ -21,7 +21,8 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''') 
-    c.execute("DELETE FROM users WHERE email='test@gmail.com'")
+    c.execute("SELECT email FROM users WHERE email='test@gmail.com'")
+    if not c.fetchone():
     c.execute("INSERT INTO users VALUES ('Test User', 'test@gmail.com', '123456')")
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -90,36 +91,33 @@ def login():
         email = request.form['email'].lower().strip()
         password = request.form['password'].strip()
         
-        print(f"DEBUG: Checking - Name:{name}, Email:{email}, Pass:{password}")  # Console la varum
-        
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE name=? AND email=?", (name, email))
         user = c.fetchone()
-        
-        print(f"DEBUG: Database user: {user}")  # Console la varum
-        
         conn.close()
         
-        # EXACT MATCH CHECK
-        if user and user[2] == password:  # password = column 3 (index 2)
+        if user and user[2] == password:
             session['logged_in'] = True
             session['email'] = email
             session['name'] = name
-            print("✅ LOGIN SUCCESS!")
             return redirect('/dashboard')
         else:
-            print("❌ LOGIN FAILED!")
             return '''
-            <h1 style="color:red;text-align:center;font-size:50px;margin-top:100px">❌ WRONG DETAILS</h1>
-            <p style="text-align:center;font-size:20px">Name: Test User<br>Email: test@gmail.com<br>Password: 123456</p>
-            <a href="/" style="display:block;text-align:center;margin-top:30px;font-size:24px;color:blue">← Try Again</a>
+            <!DOCTYPE html>
+            <html><head><title>Login Failed</title>
+            <style>body{{background:#f8d7da;color:#721c24;font-family:'Segoe UI';text-align:center;padding:100px;min-height:100vh;display:flex;align-items:center;justify-content:center}}h1{{font-size:48px;margin-bottom:20px}}a{{color:#721c24;font-size:18px;text-decoration:none;padding:15px 30px;background:white;border-radius:10px;display:inline-block}}</style></head>
+            <body>
+                <h1>❌ Wrong Details!</h1>
+                <p style="font-size:20px">Name: Test User<br>Email: test@gmail.com<br>Password: 123456</p>
+                <a href="/">← Try Again</a>
+            </body></html>
             '''
     
     return '''
     <!DOCTYPE html>
-    <html><head><title>Login</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);max-width:420px;width:100%;text-align:center}h1{font-size:38px;margin-bottom:40px;color:#333}input{width:100%;padding:20px;margin:12px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:16px;box-sizing:border-box;transition:all 0.3s}input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}button{width:100%;padding:22px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:25px;transition:all 0.3s}button:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}label{display:block;margin:10px 0 4px;font-weight:600;color:#555;font-size:16px;text-align:left}.demo{margin-top:30px;padding:20px;background:#f8f9fa;border-radius:12px;border-left:5px solid #28a745}.demo h3{margin-bottom:15px;color:#155724}.demo p{font-size:16px;margin:5px 0;color:#333}</style></head>
+    <html><head><title>Study Login</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}.box{{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);max-width:420px;width:100%;text-align:center}}h1{{font-size:38px;margin-bottom:40px;color:#333}}input{{width:100%;padding:20px;margin:12px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:16px;box-sizing:border-box;transition:all 0.3s}}input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}button{{width:100%;padding:22px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:25px;transition:all 0.3s}}button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}}label{{display:block;margin:10px 0 4px;font-weight:600;color:#555;font-size:16px;text-align:left}}.demo{{margin-top:30px;padding:20px;background:#f8f9fa;border-radius:12px;border-left:5px solid #28a745}}.demo h3{{margin-bottom:15px;color:#155724}}.demo p{{font-size:16px;margin:5px 0;color:#333}}</style></head>
     <body>
     <div class="box">
         <h1>🔐 Study Login</h1>
@@ -133,7 +131,7 @@ def login():
             <button>Login</button>
         </form>
         <div class="demo">
-            <h3>✅ Test Credentials:</h3>
+            <h3>✅ Use Exactly:</h3>
             <p><strong>Name:</strong> Test User</p>
             <p><strong>Email:</strong> test@gmail.com</p>
             <p><strong>Password:</strong> 123456</p>
