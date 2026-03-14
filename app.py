@@ -79,7 +79,7 @@ def save_reminders_file(reminders):
 def login():
     error = ""
     if request.method == 'POST':
-        action = request.form.get('action', 'login')
+        action = request.form.get('action')
         email = request.form['email'].lower().strip()
         password = request.form['password'].strip()
         name = request.form.get('name', '').strip()
@@ -88,34 +88,33 @@ def login():
         c = conn.cursor()
         
         if action == 'register':
-            # Check if email exists
+            # Email already exists check
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
-                error = "❌ Email already registered!"
+                error = "❌ Email already registered! Different email use pannunga."
             else:
-                # Name from input or email
                 full_name = name if name else email.split('@')[0].title()
                 hashed_pw = generate_password_hash(password)
                 c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
                          (email, hashed_pw, full_name))
                 conn.commit()
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = full_name
                 conn.close()
-                return redirect('/dashboard')
+                error = f"✅ {full_name} registered! Ippo login pannunga."
         
         elif action == 'login':
+            # STRICT Email + Password check
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
             conn.close()
+            
+            # WRONG = Error, CORRECT = Dashboard
             if user and check_password_hash(user['password'], password):
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = user['name']
                 return redirect('/dashboard')
             else:
-                error = "❌ Wrong Email or Password!"
+                error = "❌ Wrong Email or Password! Correct ah podunga."
     
     return render_login_page(error)
 
@@ -124,59 +123,56 @@ def render_login_page(error=""):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Study Planner - Real Login</title>
+        <title>Study Planner Login</title>
         <style>
         *{{margin:0;padding:0;box-sizing:border-box}}
         body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-        .login-box{{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);width:100%;max-width:450px}}
+        .login-box{{background:white;color:#333;padding:60px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);width:100%;max-width:420px}}
         .tabs{{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:20px 0}}
-        .tab{{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}}
+        .tab{{flex:1;padding:15px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s}}
         .tab.active{{background:#667eea;color:white}}
-        input{{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}}
+        input{{width:100%;padding:18px;margin:8px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:10px;box-sizing:border-box;transition:all 0.3s}}
         input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}
-        button{{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}}
+        button{{width:100%;padding:18px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
         button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-        .error{{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}}
-        .demo{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}}
+        .error,.success{{padding:15px;border-radius:10px;margin:15px 0;font-weight:500}}
+        .error{{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}}
+        .success{{background:#d4edda;color:#155724;border:1px solid #c3e6cb}}
         h1{{text-align:center;margin-bottom:30px;font-size:32px;color:#333}}
-        label{{display:block;margin:5px 0 2px 0;font-weight:500;color:#555}}
+        label{{display:block;margin:5px 0 2px;font-weight:500;color:#555;font-size:14px}}
         </style>
     </head>
     <body>
         <div class="login-box">
-            <h1>🎓 Study Planner</h1>
-            {f'<div class="error">{error}</div>' if error else ''}
+            <h1>🔐 Study Login</h1>
+            {f'<div class="{"success" if "✅" in error else "error"}">{error}</div>' if error else ''}
             
             <div class="tabs">
-                <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-                <div class="tab" onclick="showTab('register')">➕ Register</div>
+                <div class="tab active" onclick="showTab('login')">Login</div>
+                <div class="tab" onclick="showTab('register')">Register</div>
             </div>
             
-            <!-- LOGIN FORM -->
+            <!-- SIMPLE LOGIN FORM -->
             <form method="POST" id="login-form">
                 <input type="hidden" name="action" value="login">
                 <label>Email ID</label>
-                <input type="email" name="email" placeholder="your-real@gmail.com" required>
+                <input type="email" name="email" placeholder="yourname@gmail.com" required>
                 <label>Password</label>
-                <input type="password" name="password" placeholder="Your password" required>
+                <input type="password" name="password" placeholder="Enter password" required>
                 <button type="submit">Login</button>
             </form>
             
-            <!-- REGISTER FORM -->
+            <!-- SIMPLE REGISTER FORM -->
             <form method="POST" id="register-form" style="display:none">
                 <input type="hidden" name="action" value="register">
-                <label>Full Name</label>
-                <input type="text" name="name" placeholder="Your Full Name">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Your full name">
                 <label>Email ID</label>
-                <input type="email" name="email" placeholder="your-real@gmail.com" required>
+                <input type="email" name="email" placeholder="yourname@gmail.com" required>
                 <label>Password</label>
-                <input type="password" name="password" placeholder="Create strong password" required>
-                <button type="submit">Create Account</button>
+                <input type="password" name="password" placeholder="Create password" required>
+                <button type="submit">Register</button>
             </form>
-            
-            <div class="demo">
-                <strong>Demo:</strong> test@gmail.com / 123456
-            </div>
         </div>
         
         <script>
@@ -190,7 +186,7 @@ def render_login_page(error=""):
     </body>
     </html>
     '''
-
+    
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'): 
