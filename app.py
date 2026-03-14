@@ -235,7 +235,6 @@ def dashboard():
             <a href="/goals" class="btn">🎯 Set Goal</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 Files</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
     </body>
