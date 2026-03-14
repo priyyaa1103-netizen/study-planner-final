@@ -60,10 +60,13 @@ def send_email(to_email, subject, body):
         return False
 
 def get_db_connection():
-    conn = sqlite3.connect('users.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
+    try:
+       conn = sqlite3.connect('users.db')
+       conn.row_factory = sqlite3.Row
+       return conn
+    except:
+       return None
+        
 def load_reminders_file():
     try:
         with open('static/reminders.json', 'r') as f:
@@ -77,112 +80,104 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    error = ""
     if request.method == 'POST':
         action = request.form.get('action')
-        email = request.form['email'].lower().strip()
-        password = request.form['password'].strip()
-        name = request.form.get('name', '').strip()
+        email = request.form['email'].lower()
+        password = request.form['password']
         
-        conn = get_db()
+        conn = sqlite3.connect('users.db')
         c = conn.cursor()
         
         if action == 'register':
-            # Email already exists check
             c.execute("SELECT email FROM users WHERE email=?", (email,))
             if c.fetchone():
-                error = "❌ Email already registered! Different email use pannunga."
-            else:
-                full_name = name if name else email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
-                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                         (email, hashed_pw, full_name))
-                conn.commit()
                 conn.close()
-                error = f"✅ {full_name} registered! Ippo login pannunga."
+                return '''
+                <h1 style="color:red;text-align:center">❌ Email already exists!</h1>
+                <a href="/">Back</a>
+                '''
+            else:
+                name = request.form['name']
+                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                         (email, password, name))  # Simple password (no hash for test)
+                conn.commit()
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = name
+                conn.close()
+                return redirect('/dashboard')
         
         elif action == 'login':
-            # STRICT Email + Password check
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
             conn.close()
             
-            # WRONG = Error, CORRECT = Dashboard
-            if user and check_password_hash(user['password'], password):
+            if user and user[1] == password:  # Simple password check
                 session['logged_in'] = True
                 session['email'] = email
-                session['name'] = user['name']
+                session['name'] = user[2]
                 return redirect('/dashboard')
             else:
-                error = "❌ Wrong Email or Password! Correct ah podunga."
+                conn.close()
+                return '''
+                <h1 style="color:red;text-align:center">❌ Wrong Email or Password!</h1>
+                <a href="/">Back</a>
+                '''
     
-    return render_login_page(error)
-
-def render_login_page(error=""):
-    return f'''
+    return '''
     <!DOCTYPE html>
     <html>
-    <head>
-        <title>Study Planner Login</title>
-        <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-        .login-box{{background:white;color:#333;padding:60px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);width:100%;max-width:420px}}
-        .tabs{{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:20px 0}}
-        .tab{{flex:1;padding:15px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s}}
-        .tab.active{{background:#667eea;color:white}}
-        input{{width:100%;padding:18px;margin:8px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:10px;box-sizing:border-box;transition:all 0.3s}}
-        input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}
-        button{{width:100%;padding:18px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
-        button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-        .error,.success{{padding:15px;border-radius:10px;margin:15px 0;font-weight:500}}
-        .error{{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}}
-        .success{{background:#d4edda;color:#155724;border:1px solid #c3e6cb}}
-        h1{{text-align:center;margin-bottom:30px;font-size:32px;color:#333}}
-        label{{display:block;margin:5px 0 2px;font-weight:500;color:#555;font-size:14px}}
-        </style>
+    <head><title>Login</title>
+    <style>
+    body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-family:'Segoe UI';min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .box{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:100%}
+    input{width:100%;padding:15px;margin:10px 0;border:2px solid #ddd;border-radius:10px;font-size:16px;box-sizing:border-box}
+    input:focus{border-color:#667eea;outline:none}
+    button{width:100%;padding:15px;background:#667eea;color:white;border:none;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;margin:10px 0}
+    button:hover{background:#5a67d8}
+    .tabs{display:flex;background:#f0f0f0;border-radius:10px;overflow:hidden;margin-bottom:20px}
+    .tab{flex:1;padding:15px;text-align:center;cursor:pointer;font-weight:600}
+    .tab.active{background:#667eea;color:white}
+    label{display:block;margin:5px 0 2px;font-weight:500}
+    h1{text-align:center;margin-bottom:30px;font-size:28px}
+    </style>
     </head>
     <body>
-        <div class="login-box">
-            <h1>🔐 Study Login</h1>
-            {f'<div class="{"success" if "✅" in error else "error"}">{error}</div>' if error else ''}
-            
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('login')">Login</div>
-                <div class="tab" onclick="showTab('register')">Register</div>
-            </div>
-            
-            <!-- SIMPLE LOGIN FORM -->
-            <form method="POST" id="login-form">
-                <input type="hidden" name="action" value="login">
-                <label>Email ID</label>
-                <input type="email" name="email" placeholder="yourname@gmail.com" required>
-                <label>Password</label>
-                <input type="password" name="password" placeholder="Enter password" required>
-                <button type="submit">Login</button>
-            </form>
-            
-            <!-- SIMPLE REGISTER FORM -->
-            <form method="POST" id="register-form" style="display:none">
-                <input type="hidden" name="action" value="register">
-                <label>Name</label>
-                <input type="text" name="name" placeholder="Your full name">
-                <label>Email ID</label>
-                <input type="email" name="email" placeholder="yourname@gmail.com" required>
-                <label>Password</label>
-                <input type="password" name="password" placeholder="Create password" required>
-                <button type="submit">Register</button>
-            </form>
+    <div class="box">
+        <h1>🔐 Study Login</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">Login</div>
+            <div class="tab" onclick="showTab('register')">Register</div>
         </div>
         
-        <script>
-        function showTab(tab) {{
-            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-            document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
-            document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
-        }}
-        </script>
+        <form method="POST" id="login-form">
+            <input type="hidden" name="action" value="login">
+            <label>Email ID</label>
+            <input type="email" name="email" placeholder="yourname@gmail.com" required>
+            <label>Password</label>
+            <input type="password" name="password" placeholder="password" required>
+            <button>Login</button>
+        </form>
+        
+        <form method="POST" id="register-form" style="display:none">
+            <input type="hidden" name="action" value="register">
+            <label>Name</label>
+            <input type="text" name="name" placeholder="Your name" required>
+            <label>Email ID</label>
+            <input type="email" name="email" placeholder="yourname@gmail.com" required>
+            <label>Password</label>
+            <input type="password" name="password" placeholder="password" required>
+            <button>Register</button>
+        </form>
+    </div>
+    <script>
+    function showTab(tab) {
+        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+        document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
+        document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
+    }
+    </script>
     </body>
     </html>
     '''
