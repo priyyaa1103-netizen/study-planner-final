@@ -20,7 +20,9 @@ def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
+                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''') 
+    c.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", 
+                 ('test@gmail.com', '123456', 'Test User'))
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
@@ -35,6 +37,7 @@ def init_db():
                   upload_date TEXT)''')
     conn.commit()
     conn.close()
+    print("✅ User added!")
 
 init_db()
 
@@ -81,105 +84,67 @@ def save_reminders_file(reminders):
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        action = request.form.get('action')
-        email = request.form['email'].lower()
-        password = request.form['password']
+        name = request.form['name'].strip()
+        email = request.form['email'].lower().strip()
+        password = request.form['password'].strip()
         
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE email=? AND name=?", (email, name))
+        user = c.fetchone()
+        conn.close()
         
-        if action == 'register':
-            c.execute("SELECT email FROM users WHERE email=?", (email,))
-            if c.fetchone():
-                conn.close()
-                return '''
-                <h1 style="color:red;text-align:center">❌ Email already exists!</h1>
-                <a href="/">Back</a>
-                '''
-            else:
-                name = request.form['name']
-                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                         (email, password, name))  # Simple password (no hash for test)
-                conn.commit()
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = name
-                conn.close()
-                return redirect('/dashboard')
-        
-        elif action == 'login':
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
-            conn.close()
-            
-            if user and user[1] == password:  # Simple password check
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user[2]
-                return redirect('/dashboard')
-            else:
-                conn.close()
-                return '''
-                <h1 style="color:red;text-align:center">❌ Wrong Email or Password!</h1>
-                <a href="/">Back</a>
-                '''
+        # STRICT CHECK - Name + Email + Password exact match
+        if user and user[1] == password:
+            session['logged_in'] = True
+            session['email'] = email
+            session['name'] = name
+            return redirect('/dashboard')
+        else:
+            return '''
+            <!DOCTYPE html>
+            <html><head><title>Login Failed</title>
+            <style>body{background:#f8d7da;color:#721c24;font-family:'Segoe UI';text-align:center;padding:100px;min-height:100vh;display:flex;align-items:center;justify-content:center}h1{font-size:48px;margin-bottom:20px}a{color:#721c24;font-size:18px;text-decoration:none;padding:15px 30px;background:white;border-radius:10px;display:inline-block}</style></head>
+            <body>
+                <h1>❌ Wrong Details!</h1>
+                <p style="font-size:20px">Name, Email or Password wrong!</p>
+                <a href="/">← Try Again</a>
+            </body></html>
+            '''
     
     return '''
     <!DOCTYPE html>
     <html>
-    <head><title>Login</title>
+    <head><title>Study Login</title>
     <style>
-    body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-family:'Segoe UI';min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-    .box{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:100%}
-    input{width:100%;padding:15px;margin:10px 0;border:2px solid #ddd;border-radius:10px;font-size:16px;box-sizing:border-box}
-    input:focus{border-color:#667eea;outline:none}
-    button{width:100%;padding:15px;background:#667eea;color:white;border:none;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;margin:10px 0}
-    button:hover{background:#5a67d8}
-    .tabs{display:flex;background:#f0f0f0;border-radius:10px;overflow:hidden;margin-bottom:20px}
-    .tab{flex:1;padding:15px;text-align:center;cursor:pointer;font-weight:600}
-    .tab.active{background:#667eea;color:white}
-    label{display:block;margin:5px 0 2px;font-weight:500}
-    h1{text-align:center;margin-bottom:30px;font-size:28px}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .box{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);max-width:420px;width:100%;text-align:center}
+    h1{font-size:38px;margin-bottom:40px;color:#333}
+    input{width:100%;padding:20px;margin:12px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:16px;box-sizing:border-box;transition:all 0.3s}
+    input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}
+    button{width:100%;padding:22px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:25px;transition:all 0.3s}
+    button:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}
+    label{display:block;margin:10px 0 4px;font-weight:600;color:#555;font-size:16px;text-align:left}
     </style>
     </head>
     <body>
     <div class="box">
         <h1>🔐 Study Login</h1>
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('login')">Login</div>
-            <div class="tab" onclick="showTab('register')">Register</div>
-        </div>
-        
-        <form method="POST" id="login-form">
-            <input type="hidden" name="action" value="login">
+        <form method="POST">
+            <label>Name</label>
+            <input type="text" name="name" placeholder="Your full name" required>
+            
             <label>Email ID</label>
             <input type="email" name="email" placeholder="yourname@gmail.com" required>
+            
             <label>Password</label>
-            <input type="password" name="password" placeholder="password" required>
+            <input type="password" name="password" placeholder="Enter password" required>
+            
             <button>Login</button>
         </form>
-        
-        <form method="POST" id="register-form" style="display:none">
-            <input type="hidden" name="action" value="register">
-            <label>Name</label>
-            <input type="text" name="name" placeholder="Your name" required>
-            <label>Email ID</label>
-            <input type="email" name="email" placeholder="yourname@gmail.com" required>
-            <label>Password</label>
-            <input type="password" name="password" placeholder="password" required>
-            <button>Register</button>
-        </form>
     </div>
-    <script>
-    function showTab(tab) {
-        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-        document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
-        document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
-    }
-    </script>
-    </body>
-    </html>
+    </body></html>
     '''
     
 @app.route('/dashboard')
