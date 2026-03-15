@@ -100,24 +100,29 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    error = ""
     if request.method == 'POST':
         email = request.form['email'].lower().strip()
         password = request.form['password']
+        
+        print(f"Login attempt: {email}")  # Debug line
         
         conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
         conn.close()
         
+        print(f"User found: {user}")  # Debug line
+        
         if user and check_password_hash(user['password'], password):
             session['logged_in'] = True
             session['email'] = email
             session['name'] = user['name']
+            print("✅ Login SUCCESS!")
             return redirect('/dashboard')
         else:
-            error = "❌ Email or Password is incorrect!"
+            print("❌ Login FAILED!")
+            return render_login_page("❌ Email or Password incorrect!")
     
-    return render_login_page(error)
+    return render_login_page()
 
 def render_login_page(error=""):
     return f'''
