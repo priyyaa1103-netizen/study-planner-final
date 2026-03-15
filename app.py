@@ -212,23 +212,36 @@ def dashboard():
     name = session.get('name', 'User')
     notifications = ""
     
-    # ✅ Alarm notifications
+    # ✅ Email + Sound notifications
     try:
         conn = get_db_connection()
         reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
+        conn.close()
         
         now = datetime.now()
         for r in reminders:
             try:
-                deadline = datetime.strptime(r['deadline'], '%Y-%m-%d %H:%M:%S')
-                time_diff = deadline - now
+                # Parse saved time format
+                deadline_str = r['deadline']
+                deadline_time = datetime.strptime(deadline_str, '%Y-%m-%d %I:%M %p')
+                
+                time_diff = deadline_time - now
                 total_mins = int(time_diff.total_seconds() / 60)
                 
-                if total_mins <= 5 and total_mins > 0:  # 5 mins warning
+                # ✅ 5 mins warning - EMAIL + SOUND
+                if 0 < total_mins <= 5:
+                    # Send email
+                    send_email(email, f"🚨 {r['title']} - {total_mins} mins left!", 
+                              f"Hi {name},
+
+{r['title']} due in {total_mins} minutes!
+
+Study Planner")
+                    
                     notifications += f'''
                     <div class="notification" onclick="playAlarm()">
                         <div style="font-size:28px">🚨 {r['title']}</div>
-                        <div style="font-size:22px;color:#ffd700">Due in {total_mins} mins!</div>
+                        <div style="font-size:22px;color:#ffd700">Due in {total_mins} mins! 📧</div>
                     </div>
                     '''
                 elif total_mins <= 0:  # Overdue
@@ -239,7 +252,6 @@ def dashboard():
                     '''
             except:
                 pass
-        conn.close()
     except:
         pass
     
@@ -247,25 +259,19 @@ def dashboard():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Dashboard - Study Planner</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
-            .container{{max-width:900px;margin:0 auto;text-align:center}}
-            h1{{font-size:42px;margin-bottom:10px}}
-            h2{{font-size:24px;margin-bottom:40px}}
-            .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-            .btn:hover{{transform:translateY(-5px)}}
-            .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
-            .notification{{background:rgba(231,76,60,0.9);padding:20px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);border:2px solid #ff6b6b}}
-            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
-        </style>
+        <title>Dashboard</title>
+        <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto;text-align:center}}.btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}.btn:hover{{transform:translateY(-5px)}}.notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}@keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}.welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
+        <script>
+        function playAlarm() {{
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo');
+            audio.play();
+        }}
+        </script>
     </head>
     <body>
         <div class="container">
             <div class="welcome-card">
-                <h1>🎓 Welcome {name}!</h1>
-                <h2>Your Study Hub</h2>
+                <h1 style="font-size:42px">🎓 Welcome {name}!</h1>
             </div>
             
             {notifications}
@@ -275,7 +281,7 @@ def dashboard():
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
             <a href="/myfiles" class="btn">📁 My Files</a>
-            <a href="/logout" class="btn logout">🚪 Logout</a>
+            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
         </div>
     </body>
     </html>
@@ -798,15 +804,16 @@ def reminders():
     if request.method == 'POST':
         conn = get_db_connection()
         title = request.form['title']
-        time_input = request.form['deadline']  # "20:35"
+        time_input = request.form['deadline']  # "21:05"
         
         # Today + time
         today = datetime.now().strftime('%Y-%m-%d')
         full_time = f"{today} {time_input}:00"
         deadline = datetime.strptime(full_time, '%Y-%m-%d %H:%M:%S')
         
+        # ✅ Save as readable format
         conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (email, title, deadline.strftime('%Y-%m-%d %H:%M:%S')))
+                    (email, title, deadline.strftime('%Y-%m-%d %I:%M %p')))
         conn.commit()
         conn.close()
         return redirect('/reminders')
@@ -820,32 +827,16 @@ def reminders():
     
     for r in reminders:
         try:
-            deadline = datetime.strptime(r['deadline'], '%Y-%m-%d %H:%M:%S')
-            
-            # ✅ 12-hour format: 20:35 → 08:35 PM
-            display_time = deadline.strftime('%I:%M %p')
-            
-            time_diff = deadline - now
-            total_mins = max(0, int(time_diff.total_seconds() / 60))
-            
-            if total_mins == 0:
-                status = "🚨 NOW!"
-            elif total_mins < 60:
-                status = f"{total_mins} mins"
-            else:
-                hours = total_mins // 60
-                mins = total_mins % 60
-                status = f"{hours}h {mins}m"
-            
+            # ✅ 12-hour display: "09:05 PM"
+            display_time = r['deadline'].split()[-1]  # Get time part
             reminders_html += f'''
             <div style="background:rgba(255,255,255,0.12);padding:25px;margin:15px;border-radius:20px;border-left:5px solid #f1c40f">
                 <div style="font-size:28px;font-weight:600">{r['title']}</div>
                 <div style="font-size:22px;color:#f1c40f">🕐 {display_time}</div>
-                <div style="font-size:20px;color:#2ed573">Due in {status}</div>
             </div>
             '''
         except:
-            reminders_html += f'<div style="padding:20px;margin:15px;background:rgba(255,255,255,0.1);border-radius:15px">{r["title"]}</div>'
+            reminders_html += f'<div>{r["title"]}</div>'
     
     return f'''
     <!DOCTYPE html>
@@ -857,12 +848,12 @@ def reminders():
             <h1 style="font-size:42px;margin-bottom:30px">⏰ Reminders</h1>
             <div class="form-box">
                 <form method="POST">
-                    <input name="title" placeholder="Task (ex: Maths)" required>
+                    <input name="title" placeholder="Task (Maths)" required>
                     <input name="deadline" type="time" required>
                     <button>✅ Add Reminder</button>
                 </form>
             </div>
-            {reminders_html or '<p style="font-size:28px;padding:40px;background:rgba(255,255,255,0.1);border-radius:20px">No reminders</p>'}
+            {reminders_html}
         </div>
     </body></html>
     '''
