@@ -89,45 +89,56 @@ def login_register():
             name = request.form.get('name', '').strip()
             action = request.form.get('action', 'login')
             
-            print(f"DEBUG: action={action}, email={email}")  # Debug
+            print(f"🔍 DEBUG: action={action}, email={email}, password_len={len(password) if password else 0}")
             
             conn = get_db_connection()
             
             if action == 'register':
                 # Check if user exists
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                print(f"🔍 User exists? {user is not None}")
+                
                 if user:
                     conn.close()
                     return render_login_page("❌ Email already registered!")
                 
                 # Create new user
                 hashed_pw = generate_password_hash(password)
+                print(f"🔐 Hash created: {hashed_pw[:20]}...")
                 conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
                             (email, hashed_pw, name))
                 conn.commit()
                 conn.close()
+                print(f"✅ User CREATED: {email}")
                 return render_login_page("✅ Account created! Please login.")
                 
             else:  # login
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                print(f"🔍 User found: {user['email'] if user else 'None'}")
+                
+                if user:
+                    print(f"🔍 Password check: {check_password_hash(user['password'], password)}")
+                    print(f"🔍 Stored hash: {user['password'][:20]}...")
+                    print(f"🔍 Input password len: {len(password)}")
+                
                 conn.close()
                 
                 if user and check_password_hash(user['password'], password):
                     session['logged_in'] = True
                     session['email'] = email
                     session['name'] = user['name']
-                    print(f"✅ Login SUCCESS: {email}")
+                    print(f"✅ LOGIN SUCCESS: {email}")
                     return redirect('/dashboard')
                 else:
-                    print(f"❌ Login FAILED: {email}")
-                    return render_login_page("❌ Wrong email or password!")
+                    print(f"❌ LOGIN FAILED: {email}")
+                    return render_login_page("❌ Wrong email or password! Check console logs.")
                     
         except Exception as e:
-            print(f"ERROR: {e}")
-            return render_login_page("❌ Something went wrong!")
+            print(f"💥 ERROR: {e}")
+            return render_login_page(f"❌ Error: {str(e)}")
     
     return render_login_page()
-
+    
 def render_login_page(error=""):
     error_html = f'<div class="error">{error}</div>' if error else ''
     return f'''
