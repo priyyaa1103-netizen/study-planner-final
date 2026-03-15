@@ -8,6 +8,13 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import requests
+from urllib.parse import urlencode
+
+# ===== உங்க Google credentials =====
+GOOGLE_CLIENT_ID = "443460939889-qm93e4877opr63d9kktm9lssta81h7md.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_REDIRECT_URI = "https://your-render-app.onrender.com/google-callback"  # உங்க Render URL
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -173,6 +180,47 @@ def render_login_page(error=""):
     </body>
     </html>
     '''
+
+@app.route('/google-login')
+def google_login():
+    google_url = "https://accounts.google.com/o/oauth2/auth"
+    params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': GOOGLE_REDIRECT_URI,
+        'scope': 'openid email profile',
+        'response_type': 'code',
+        'access_type': 'offline'
+    }
+    url = f"{google_url}?{urlencode(params)}"
+    return redirect(url)
+
+@app.route('/google-callback')
+def google_callback():
+    code = request.args.get('code')
+    if not code:
+        return "Google login failed!", 400
+    
+    # Token exchange
+    token_data = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'client_secret': GOOGLE_CLIENT_SECRET,
+        'code': code,
+        'grant_type': 'authorization_code',
+        'redirect_uri': GOOGLE_REDIRECT_URI
+    }
+    token_response = requests.post('https://oauth2.googleapis.com/token', data=token_data)
+    token = token_response.json()
+    
+    # User info
+    headers = {'Authorization': f'Bearer {token["access_token"]}'}
+    user_info = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers).json()
+    
+    # Login
+    session['logged_in'] = True
+    session['email'] = user_info['email']
+    session['name'] = user_info['name']
+    
+    return redirect('/dashboard')
     
 @app.route('/dashboard')
 def dashboard():
