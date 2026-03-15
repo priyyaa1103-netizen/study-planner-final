@@ -275,20 +275,14 @@ def check_notifications():
     
     notifications = ""
     for reminder in overdue:
-        body = f"""
-Hello {session['name']},
+    email = session['email']
 
-This is your Study Planner Reminder.
-
-Subject: {reminder['title']}
-Deadline: {reminder['deadline']}
-
-Please complete your study.
-
-Study Planner App
-"""
-
-send_email(email, "🚨 Study Reminder", body)
+    notifications += f'''
+    <div class="alert alert-danger">
+    Reminder {reminder['title']} overdue
+    </div>
+    '''
+    send_email(email, "🚨 Study Reminder", body)
         
         notifications += f'''
         <div style="background:linear-gradient(135deg,#e74c3c,#c0392b);padding:30px;margin:30px auto;border-radius:25px;max-width:600px;text-align:center;box-shadow:0 20px 40px rgba(231,76,60,0.4);cursor:pointer;animation:pulse 2s infinite;border:4px solid #ff6b6b" onclick="playAlarm()">
