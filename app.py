@@ -212,46 +212,19 @@ def dashboard():
     name = session.get('name', 'User')
     notifications = ""
     
-    # ✅ Email + Sound notifications
     try:
         conn = get_db_connection()
         reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
         conn.close()
         
-        now = datetime.now()
         for r in reminders:
-            try:
-                # Parse saved time format
-                deadline_str = r['deadline']
-                deadline_time = datetime.strptime(deadline_str, '%Y-%m-%d %I:%M %p')
-                
-                time_diff = deadline_time - now
-                total_mins = int(time_diff.total_seconds() / 60)
-                
-                # ✅ 5 mins warning - EMAIL + SOUND
-                if 0 < total_mins <= 5:
-                    # Send email
-                    send_email(email, f"🚨 {r['title']} - {total_mins} mins left!", 
-                              f"Hi {name},
-
-{r['title']} due in {total_mins} minutes!
-
-Study Planner")
-                    
-                    notifications += f'''
-                    <div class="notification" onclick="playAlarm()">
-                        <div style="font-size:28px">🚨 {r['title']}</div>
-                        <div style="font-size:22px;color:#ffd700">Due in {total_mins} mins! 📧</div>
-                    </div>
-                    '''
-                elif total_mins <= 0:  # Overdue
-                    notifications += f'''
-                    <div class="notification" onclick="playAlarm()">
-                        <div style="font-size:28px">🚨 {r['title']} OVERDUE!</div>
-                    </div>
-                    '''
-            except:
-                pass
+            # Simple notification - no complex parsing
+            notifications += f'''
+            <div class="notification" onclick="playAlarm()">
+                <div style="font-size:28px">⏰ {r['title']}</div>
+                <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
+            </div>
+            '''
     except:
         pass
     
@@ -259,12 +232,30 @@ Study Planner")
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Dashboard</title>
-        <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto;text-align:center}}.btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}.btn:hover{{transform:translateY(-5px)}}.notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}@keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}.welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
+        <title>Dashboard - Study Planner</title>
+        <style>*{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+        .container{{max-width:900px;margin:0 auto;text-align:center}}
+        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+        .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+        .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}
+        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
+        .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
         <script>
         function playAlarm() {{
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo');
-            audio.play();
+            try {{
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1);
+            }} catch(e) {{}}
         }}
         </script>
     </head>
@@ -272,6 +263,7 @@ Study Planner")
         <div class="container">
             <div class="welcome-card">
                 <h1 style="font-size:42px">🎓 Welcome {name}!</h1>
+                <h2 style="font-size:24px;margin-bottom:30px">Study Planner</h2>
             </div>
             
             {notifications}
