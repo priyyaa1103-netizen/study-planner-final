@@ -212,53 +212,74 @@ def dashboard():
     name = session.get('name', 'User')
     notifications = ""
     
+    # ✅ Automatic Email + Visual notification
     try:
         conn = get_db_connection()
         reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
         conn.close()
         
+        now = datetime.now()
         for r in reminders:
-            # Simple notification - no complex parsing
-            notifications += f'''
-            <div class="notification" onclick="playAlarm()">
-                <div style="font-size:28px">⏰ {r['title']}</div>
-                <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
-            </div>
-            '''
+            try:
+                # Parse time from stored format
+                deadline_str = r['deadline']  # "2026-03-15 09:05 PM"
+                deadline = datetime.strptime(deadline_str, '%Y-%m-%d %I:%M %p')
+                
+                time_diff = deadline - now
+                total_mins = int(time_diff.total_seconds() / 60)
+                
+                # ✅ 5 mins warning - SEND EMAIL AUTOMATICALLY
+                if 0 < total_mins <= 5:
+                    body = f"""
+Hi {name},
+
+🚨 REMINDER: {r['title']}
+Time: {deadline.strftime('%I:%M %p')}
+Remaining: {total_mins} minutes
+
+Study hard! 📚
+
+Study Planner App
+                    """.strip()
+                    
+                    send_email(email, f"🚨 {r['title']} - {total_mins} mins left!", body)
+                    
+                    notifications += f'''
+                    <div class="notification">
+                        <div style="font-size:28px">🚨 {r['title']}</div>
+                        <div style="font-size:22px;color:#ffd700">✅ Email sent! ({total_mins} mins left)</div>
+                    </div>
+                    '''
+                elif total_mins <= 0:
+                    notifications += f'''
+                    <div class="notification" style="background:rgba(255,107,107,0.95)">
+                        <div style="font-size:28px">⏰ {r['title']} OVERDUE!</div>
+                    </div>
+                    '''
+                else:
+                    notifications += f'''
+                    <div class="info-notification">
+                        <div style="font-size:24px">{r['title']}</div>
+                        <div style="font-size:20px">{r['deadline']}</div>
+                    </div>
+                    '''
+            except:
+                notifications += f'<div class="notification">{r["title"]} - {r["deadline"]}</div>'
     except:
         pass
     
     return f'''
     <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Dashboard - Study Planner</title>
-        <style>*{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-        .container{{max-width:900px;margin:0 auto;text-align:center}}
-        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-        .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-        .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}
-        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
-        .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
-        <script>
-        function playAlarm() {{
-            try {{
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 1);
-            }} catch(e) {{}}
-        }}
-        </script>
-    </head>
+    <html><head><title>Dashboard</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
+    .container{{max-width:900px;margin:0 auto;text-align:center}}
+    .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3)}}
+    .btn:hover{{transform:translateY(-5px)}}
+    .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);border:3px solid #ff6b6b;animation:pulse 2s infinite}}
+    .info-notification{{background:rgba(52,152,219,0.3);padding:20px;border-radius:15px;margin:15px auto;max-width:500px;border-left:4px solid #3498db}}
+    @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.03);}}100%{{transform:scale(1);}}}}
+    .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style></head>
     <body>
         <div class="container">
             <div class="welcome-card">
@@ -268,12 +289,14 @@ def dashboard():
             
             {notifications}
             
-            <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goals</a>
-            <a href="/view-goals" class="btn">📊 View Goals</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
-            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+            <div style="margin:40px 0">
+                <a href="/study" class="btn">📚 Study Dashboard</a>
+                <a href="/goals" class="btn">🎯 Set Goals</a>
+                <a href="/view-goals" class="btn">📊 View Goals</a><br>
+                <a href="/reminders" class="btn">⏰ Reminders</a>
+                <a href="/myfiles" class="btn">📁 My Files</a>
+                <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+            </div>
         </div>
     </body>
     </html>
