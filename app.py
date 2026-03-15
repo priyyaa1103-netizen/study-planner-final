@@ -208,45 +208,34 @@ def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
     
-    # ✅ Notifications check inline (no separate function)
     notifications = ""
     email = session.get('email', '')
     name = session.get('name', 'User')
     
+    # Simple notification check
     try:
         conn = get_db_connection()
         c = conn.cursor()
         now = datetime.now()
+        c.execute("SELECT * FROM reminders WHERE email=?", (email,))
+        reminders = c.fetchall()
         
-        # Check overdue reminders
-        c.execute("SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
-                  (email, now.isoformat()))
-        overdue = c.fetchall()
-        
-        for reminder in overdue:
-            # Send email notification
-            body = f"""
-Hello {name},
-
-🚨 REMINDER: {reminder['title']}
-Deadline: {reminder['deadline']}
-
-Please complete your study session!
-
-Study Planner App
-            """
-            send_email(email, "🚨 Study Reminder - Action Required!", body)
+        for reminder in reminders:
+            deadline = datetime.fromisoformat(reminder['deadline'].replace('Z', '+00:00'))
+            time_left = deadline - now
+            hours_left = int(time_left.total_seconds() / 3600)
             
-            # Add HTML notification
             notifications += f'''
-            <div class="notification" onclick="playAlarm()">
-                <div style="font-size:28px;margin-bottom:10px">🚨 {reminder['title']}</div>
-                <div style="font-size:20px;color:#ffd700">Deadline Passed!</div>
+            <div class="notification">
+                <div style="font-size:24px">⏰ {reminder['title']}</div>
+                <div style="font-size:20px;color:#ffd700">
+                    {"Due Now!" if hours_left <= 0 else f"Due in {hours_left}h"}
+                </div>
             </div>
             '''
         conn.close()
-    except Exception as e:
-        print(f"Notification error: {e}")
+    except:
+        pass
     
     return f'''
     <!DOCTYPE html>
@@ -255,64 +244,25 @@ Study Planner App
         <title>Dashboard - Study Planner</title>
         <style>
             *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-            .container{{max-width:1000px;margin:0 auto;text-align:center}}
-            h1{{font-size:42px;margin-bottom:10px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
-            h2{{font-size:24px;margin-bottom:40px;opacity:0.9}}
-            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s;transform:translateY(0)}}
-            .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
+            .container{{max-width:900px;margin:0 auto;text-align:center}}
+            h1{{font-size:42px;margin-bottom:10px}}
+            h2{{font-size:24px;margin-bottom:40px}}
+            .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+            .btn:hover{{transform:translateY(-5px)}}
             .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
-            .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;font-size:22px;max-width:650px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;animation:pulse 2s infinite;border:3px solid #ff6b6b}}
-            @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
-            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2)}}
-            .stats{{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin:40px 0}}
-            .stat-card{{background:rgba(255,255,255,0.1);padding:25px;border-radius:20px;min-width:200px;flex:1;max-width:250px}}
+            .notification{{background:rgba(231,76,60,0.9);padding:20px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);border:2px solid #ff6b6b}}
+            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
         </style>
-        <script>
-        function playAlarm() {{
-            try {{
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 1);
-            }} catch(e) {{}}
-        }}
-        </script>
     </head>
     <body>
         <div class="container">
             <div class="welcome-card">
                 <h1>🎓 Welcome {name}!</h1>
-                <h2>Study Planner & Reminder App</h2>
+                <h2>Your Study Hub</h2>
             </div>
             
             {notifications}
-            
-            <div class="stats">
-                <div class="stat-card">
-                    <h3 style="font-size:32px;color:#00d4aa">📚 Study</h3>
-                    <p>Subject Materials</p>
-                </div>
-                <div class="stat-card">
-                    <h3 style="font-size:32px;color:#f39c12">🎯 Goals</h3>
-                    <p>Track Progress</p>
-                </div>
-                <div class="stat-card">
-                    <h3 style="font-size:32px;color:#9b59b6">⏰ Reminders</h3>
-                    <p>Never Miss Deadlines</p>
-                </div>
-                <div class="stat-card">
-                    <h3 style="font-size:32px;color:#3498db">📁 Files</h3>
-                    <p>Your Uploads</p>
-                </div>
-            </div>
             
             <a href="/study" class="btn">📚 Study Dashboard</a>
             <a href="/goals" class="btn">🎯 Set Goals</a>
@@ -324,7 +274,7 @@ Study Planner App
     </body>
     </html>
     '''
-
+    
 @app.route('/check-notifications')
 def check_notifications_api():
     if not session.get('logged_in'):
@@ -834,109 +784,67 @@ def view_goals():
     
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
-    conn = get_db_connection()
+    email = session.get('email', '')
     
     if request.method == 'POST':
-        subject = request.form['subject']
-        
-        # Time parser (hour:minute AM/PM)
-        hour = int(request.form['hour'])
-        minute = int(request.form['minute'])
-        ampm = request.form['ampm']
-        
-        # Convert 12-hour to 24-hour
-        if ampm == 'PM' and hour != 12:
-            hour += 12
-        elif ampm == 'AM' and hour == 12:
-            hour = 0
-            
-        deadline = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
-        if deadline < datetime.now():
-            deadline += timedelta(days=1)
-            
-        # Subject மட்டும் save ஆகும்
-        conn.execute('INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)',
-                    (session['email'], subject, deadline.isoformat()))
+        conn = get_db_connection()
+        deadline_str = request.form['deadline'] + ':00'  # Add seconds
+        conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
+                    (email, request.form['title'], deadline_str))
         conn.commit()
+        conn.close()
         return redirect('/reminders')
     
-    reminders_list = conn.execute('SELECT * FROM reminders WHERE email=? ORDER BY deadline', 
-                                 (session['email'],)).fetchall()
+    # Show reminders with correct time
+    conn = get_db_connection()
+    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline", (email,)).fetchall()
     conn.close()
-    
-    subjects = ['Mathematics', 'Python', 'Tamil-1', 'english-1', 'Maths-2', 'Physics', 'Tamil-2', 'English-2', 'Java Programming', 'statistics-1', 'Tamil--3', 'english-3',
-                'Data Structures', 'statistics-2', 'Tamil-4', 'english-4', 'Operating System', 'RDBMS', 'software_engineering', 'DMW', 'ASP.net', 'Data science', 'Cloud computing']
     
     reminders_html = ''
     now = datetime.now()
-    for r in reminders_list:
+    
+    for r in reminders:
         deadline = datetime.fromisoformat(r['deadline'])
         time_left = deadline - now
-        if time_left.total_seconds() > 0:
-            status = f"⏰ Due in {int(time_left.total_seconds()//3600)}h"
-            status_color = "#f39c12"
-        else:
-            status = "🚨 OVERDUE"
-            status_color = "#e74c3c"
+        hours_left = max(0, int(time_left.total_seconds() / 3600))
+        mins_left = max(0, int(time_left.total_seconds() / 60) % 60)
         
-        deadline_time = deadline.strftime('%I:%M %p')
+        status = "Due Now!" if time_left.total_seconds() < 0 else f"Due in {hours_left}h {mins_left}m"
         reminders_html += f'''
-        <div style="background:linear-gradient(135deg,{status_color},#333);padding:25px;margin:20px;border-radius:20px">
-            <h3 style="margin:0 0 10px 0">{r['title']}</h3>
-            <p style="color:#ffd700;font-size:18px;margin:0">{status} | {deadline_time}</p>
-            <a href="/delete_reminder/{r['id']}" style="float:right;color:#ff4444;font-size:24px" onclick="return confirm('Delete?')">🗑️</a>
+        <div style="background:rgba(255,255,255,0.1);padding:20px;margin:15px;border-radius:15px">
+            <div style="font-size:24px">{r['title']}</div>
+            <div style="color:#f1c40f">{r['deadline']} - {status}</div>
         </div>
         '''
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>Reminders</title>
-    <style>
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .form-box{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin:0 auto 50px;max-width:500px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-    input,select{{width:100%;padding:15px;margin:12px 0;border-radius:12px;border:none;font-size:16px;background:rgba(255,255,255,0.9)}}
-    button{{width:100%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin-top:15px}}
-    .time-row{{display:flex;gap:10px;align-items:center}}
-    .time-row select{{flex:1}}
-    </style>
-    </head>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}} 
+    .container{{max-width:600px;margin:0 auto}}.form{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
+    input{{width:100%;padding:15px;margin:15px 0;border-radius:12px;border:none;font-size:16px}}
+    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}}
+    </style></head>
     <body>
-        <h1 style="font-size:42px;margin-bottom:30px">⏰ Your Reminders</h1>
+    <div class="container">
+        <h1 style="text-align:center;font-size:40px;margin-bottom:30px">⏰ Reminders</h1>
         
-        <!-- SUBJECT + TIME ONLY (NO TITLE FIELD) -->
-        <div class="form-box">
-            <h3 style="margin-bottom:25px;font-size:24px">➕ Add New Reminder</h3>
+        <div class="form">
             <form method="POST">
-                <select name="subject" required>
-                    <option value="">📚 Select Subject</option>
-                    {''.join([f'<option value="{sub}">{sub}</option>' for sub in subjects])}
-                </select>
-                
-                <!-- TIME SELECTOR -->
-                <div class="time-row">
-                    <select name="hour" required>
-                        {''.join([f'<option value="{i}">{i}</option>' for i in range(0,13)])}
-                    </select>
-                    <select name="minute" required>
-                        {''.join([f'<option value="{i:02d}">{i:02d}</option>' for i in range(0,60,5)])}
-                    </select>
-                    <select name="ampm" required>
-                        <option value="AM">AM</option>
-                        <option value="PM">PM</option>
-                    </select>
-                </div>
-                <button type="submit">✅ Set Reminder</button>
+                <input name="title" placeholder="Reminder Title" required>
+                <input name="deadline" type="datetime-local" required>
+                <button>Add Reminder</button>
             </form>
         </div>
         
-        <!-- SUBJECT NAMES LIST -->
-        {reminders_html or '<p style="font-size:28px;color:#f1c40f">No reminders set! 🎯</p>'}
+        {reminders_html or '<p style="text-align:center;font-size:24px">No reminders set</p>'}
         
-        <a href="/dashboard" style="padding:25px 60px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block;margin-top:50px">← Dashboard</a>
-    </body>
-    </html>
+        <a href="/dashboard" style="display:block;margin:40px auto;padding:20px 40px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:20px;width:300px;text-align:center">← Dashboard</a>
+    </div>
+    </body></html>
     '''
 
 @app.route('/myfiles')
