@@ -120,16 +120,16 @@ def login_register():
     return render_login_page()
 
 def render_login_page(error=""):
-    return f'''
+    return '''
     <!DOCTYPE html>
     <html>
     <head><title>Study Planner</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center}} .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}} input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px}} button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0}} .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0}} .tabs{{display:flex;margin-bottom:20px}} .tab{{flex:1;padding:15px;background:#f8fafc;cursor:pointer;border:none;font-weight:600}} .tab.active{{background:#667eea;color:white}}</style>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center} .login-box{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center} input{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px} button{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0} .error{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0} .tabs{display:flex;margin-bottom:20px} .tab{flex:1;padding:15px;background:#f8fafc;cursor:pointer;border:none;font-weight:600} .tab.active{background:#667eea;color:white}}</style>
     </head>
     <body>
     <div class="login-box">
         <h1 style="font-size:40px;margin-bottom:20px">🎓 Study Planner</h1>
-        {f'<div class="error">{error}</div>' if error else ''}
+        ''' + (f'<div class="error">{error}</div>' if error else '') + '''
         
         <div class="tabs">
             <button class="tab active" onclick="showTab('login')">Login</button>
