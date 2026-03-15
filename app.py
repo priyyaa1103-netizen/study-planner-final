@@ -212,7 +212,45 @@ def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
     
-    notifications = check_notifications()
+    # ✅ Notifications check inline (no separate function)
+    notifications = ""
+    email = session.get('email', '')
+    name = session.get('name', 'User')
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        now = datetime.now()
+        
+        # Check overdue reminders
+        c.execute("SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
+                  (email, now.isoformat()))
+        overdue = c.fetchall()
+        
+        for reminder in overdue:
+            # Send email notification
+            body = f"""
+Hello {name},
+
+🚨 REMINDER: {reminder['title']}
+Deadline: {reminder['deadline']}
+
+Please complete your study session!
+
+Study Planner App
+            """
+            send_email(email, "🚨 Study Reminder - Action Required!", body)
+            
+            # Add HTML notification
+            notifications += f'''
+            <div class="notification" onclick="playAlarm()">
+                <div style="font-size:28px;margin-bottom:10px">🚨 {reminder['title']}</div>
+                <div style="font-size:20px;color:#ffd700">Deadline Passed!</div>
+            </div>
+            '''
+        conn.close()
+    except Exception as e:
+        print(f"Notification error: {e}")
     
     return f'''
     <!DOCTYPE html>
@@ -223,14 +261,16 @@ def dashboard():
             *{{margin:0;padding:0;box-sizing:border-box}}
             body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
             .container{{max-width:1000px;margin:0 auto;text-align:center}}
-            h1{{font-size:42px;margin-bottom:10px}}
-            h2{{font-size:24px;margin-bottom:40px}}
-            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-            .btn:hover{{transform:translateY(-5px)}}
+            h1{{font-size:42px;margin-bottom:10px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
+            h2{{font-size:24px;margin-bottom:40px;opacity:0.9}}
+            .btn{{display:inline-block;padding:22px 45px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s;transform:translateY(0)}}
+            .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
             .btn.logout{{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
-            .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;font-size:22px;max-width:650px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;animation:pulse 2s infinite}}
+            .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;font-size:22px;max-width:650px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;animation:pulse 2s infinite;border:3px solid #ff6b6b}}
             @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
-            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}
+            .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2)}}
+            .stats{{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin:40px 0}}
+            .stat-card{{background:rgba(255,255,255,0.1);padding:25px;border-radius:20px;min-width:200px;flex:1;max-width:250px}}
         </style>
         <script>
         function playAlarm() {{
@@ -253,58 +293,41 @@ def dashboard():
     <body>
         <div class="container">
             <div class="welcome-card">
-                <h1>Welcome {session['name']}! 🎓</h1>
+                <h1>🎓 Welcome {name}!</h1>
                 <h2>Study Planner & Reminder App</h2>
             </div>
+            
             {notifications}
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 style="font-size:32px;color:#00d4aa">📚 Study</h3>
+                    <p>Subject Materials</p>
+                </div>
+                <div class="stat-card">
+                    <h3 style="font-size:32px;color:#f39c12">🎯 Goals</h3>
+                    <p>Track Progress</p>
+                </div>
+                <div class="stat-card">
+                    <h3 style="font-size:32px;color:#9b59b6">⏰ Reminders</h3>
+                    <p>Never Miss Deadlines</p>
+                </div>
+                <div class="stat-card">
+                    <h3 style="font-size:32px;color:#3498db">📁 Files</h3>
+                    <p>Your Uploads</p>
+                </div>
+            </div>
+            
             <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goal</a>
+            <a href="/goals" class="btn">🎯 Set Goals</a>
             <a href="/view-goals" class="btn">📊 View Goals</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/logout" class="btn logout">🚪 Logout</a>
         </div>
     </body>
     </html>
     '''
-def check_notifications():
-    conn = get_db_connection()
-    c = conn.cursor()
-    email = session.get('email', '')
-    now = datetime.now()
-    
-    c.execute("SELECT * FROM reminders WHERE email=? AND datetime(deadline) <= datetime(?)", 
-              (email, now.isoformat()))
-    overdue = c.fetchall()
-    
-    notifications = ""
-for reminder in overdue:
-    email = session['email']
-
-    body = f"""
-Hello {session['name']},
-
-This is your Study Planner Reminder.
-
-Subject: {reminder['title']}
-Deadline: {reminder['deadline']}
-
-Please complete your study.
-
-Study Planner App
-"""
-
-    send_email(email, "🚨 Study Reminder", body)
-
-    notifications += f'''
-    <div style="background:linear-gradient(135deg,#e74c3c,#c0392b);padding:30px;margin:30px auto;border-radius:25px;max-width:600px;text-align:center;box-shadow:0 20px 40px rgba(231,76,60,0.4);cursor:pointer;animation:pulse 2s infinite;border:4px solid #ff6b6b" onclick="playAlarm()">
-        <div style="font-size:28px;margin-bottom:15px">🚨 REMINDER</div>
-        <div style="font-size:24px;font-weight:600;color:#ffd700">{reminder['title']}</div>
-        <div style="font-size:20px;margin-top:10px;color:#fff">Deadline Passed! 🔊</div>
-    </div>
-    '''
-    
-    conn.close()
-    return notifications
 
 @app.route('/check-notifications')
 def check_notifications_api():
