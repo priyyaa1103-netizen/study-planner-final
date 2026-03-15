@@ -8,14 +8,17 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import secrets
+from dotenv import load_dotenv
 
-GMAIL_USER = os.getenv("jaseypriya@gmail.com")
-GMAIL_PASS = os.getenv("jywj tirp ycxn uwas")
+load_dotenv()  # .env file load
 
 app = Flask(__name__)
-app.secret_key = 'study2026-super-secure-key-change-this-in-production'
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(16))
 
-# Create necessary folders
+GMAIL_USER = os.getenv("GMAIL_USER") 
+GMAIL_PASS = os.getenv("GMAIL_PASS")
+
 os.makedirs('static/uploads', exist_ok=True)
 
 # Initialize SQLite Database
