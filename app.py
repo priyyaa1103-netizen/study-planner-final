@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 # ===== உங்க Google credentials =====
 GOOGLE_CLIENT_ID = "443460939889-qm93e4877opr63d9kktm9lssta81h7md.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "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"
-GOOGLE_REDIRECT_URI = "https://your-render-app.onrender.com/google-callback"  # உங்க Render URL
+GOOGLE_REDIRECT_URI = "https://study-planner-final-6k41.onrender.com/google-callback"  # உங்க Render URL
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
