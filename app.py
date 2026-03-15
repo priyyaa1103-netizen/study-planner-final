@@ -8,15 +8,9 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import requests
-from urllib.parse import urlencode
 
-# ===== உங்க Google credentials =====
-GOOGLE_CLIENT_ID = os.getenv("443460939889-qt7mis062pglnmnaq0soihmpl3i61trr.apps.googleusercontent.com")
-GOOGLE_CLIENT_SECRET = os.getenv("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","redirect_uris")
-GOOGLE_REDIRECT_URI = "https://study-planner-final-6k41.onrender.com/google-callback"  # உங்க Render URL
-GMAIL_USER = os.getenv('GMAIL_USER')
-GMAIL_PASS = os.getenv('GMAIL_PASS')
+GMAIL_USER = os.getenv("jaseypriya@gmail.com")
+GMAIL_PASS = os.getenv("jywj tirp ycxn uwas")
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -210,14 +204,6 @@ def render_login_page(error=""):
     </html>
     '''
     
-@app.route('/google-login')
-def google_login():
-    return redirect('/')  # Back to login
-
-@app.route('/google-callback') 
-def google_callback():
-    return redirect('/')  # Back to login
-    
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'): 
@@ -289,8 +275,20 @@ def check_notifications():
     
     notifications = ""
     for reminder in overdue:
-        send_email(email, "🚨 Study Reminder - OVERDUE", 
-                  f"Your reminder '{reminder['title']}' was due at {reminder['deadline']}")
+        body = f"""
+Hello {session['name']},
+
+This is your Study Planner Reminder.
+
+Subject: {reminder['title']}
+Deadline: {reminder['deadline']}
+
+Please complete your study.
+
+Study Planner App
+"""
+
+send_email(email, "🚨 Study Reminder", body)
         
         notifications += f'''
         <div style="background:linear-gradient(135deg,#e74c3c,#c0392b);padding:30px;margin:30px auto;border-radius:25px;max-width:600px;text-align:center;box-shadow:0 20px 40px rgba(231,76,60,0.4);cursor:pointer;animation:pulse 2s infinite;border:4px solid #ff6b6b" onclick="playAlarm()">
