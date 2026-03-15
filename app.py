@@ -9,31 +9,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ===== இங்க தான் ADD பண்ணுங்க =====
-def create_your_account():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    
-    # Check current users
-    c.execute("SELECT email, name FROM users")
-    users = c.fetchall()
-    print("Current users:", users)
-    
-    # உங்க details இங்க change பண்ணுங்க
-    your_email = "student@gmail.com"      # <- உங்க email
-    your_password = "123456"              # <- உங்க password  
-    your_name = "Student"                 # <- உங்க பேர்
-    
-    hashed_pw = generate_password_hash(your_password)
-    c.execute("INSERT OR IGNORE INTO users (email, password, name) VALUES (?, ?, ?)", 
-              (your_email, hashed_pw, your_name))
-    conn.commit()
-    print(f"✅ Account created: {your_email} / {your_password}")
-    conn.close()
-
-# Run once to create account (delete after first run)
-create_your_account()
-
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
 
