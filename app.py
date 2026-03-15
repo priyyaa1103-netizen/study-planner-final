@@ -17,6 +17,7 @@ os.makedirs('static/uploads', exist_ok=True)
 
 # Initialize SQLite Database
 def init_db():
+    try:
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
@@ -39,8 +40,6 @@ def init_db():
     conn.commit()
     conn.close()
     print("✅ Database ready with test user!")
-
-setup_database()
 
 init_db()
 
