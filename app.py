@@ -12,9 +12,11 @@ import requests
 from urllib.parse import urlencode
 
 # ===== உங்க Google credentials =====
-GOOGLE_CLIENT_ID = "443460939889-qm93e4877opr63d9kktm9lssta81h7md.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_CLIENT_ID = os.getenv("443460939889-qm93e4877opr63d9kktm9lssta81h7md.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.getenv("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")
 GOOGLE_REDIRECT_URI = "https://study-planner-final-6k41.onrender.com/google-callback"  # உங்க Render URL
+GMAIL_USER = os.getenv('GMAIL_USER')
+GMAIL_PASS = os.getenv('GMAIL_PASS')
 
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
@@ -44,26 +46,6 @@ def init_db():
     conn.close()
 
 init_db()
-
-# ===== USER CREATION - இங்க add ஆகும் =====
-def ensure_test_user():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users WHERE email='student@gmail.com'")
-    if c.fetchone()[0] == 0:
-        hashed_pw = generate_password_hash('123456')
-        c.execute("INSERT INTO users VALUES (?, ?, ?)", 
-                 ('student@gmail.com', hashed_pw, 'Student'))
-        conn.commit()
-        print("✅ Test user created!")
-    conn.close()
-
-ensure_test_user()
-# ========================================
-
-# Email Configuration - UPDATE THESE WITH YOUR GMAIL
-GMAIL_USER = "your-gmail@gmail.com"  # Change this
-GMAIL_PASS = "your-16-digit-app-password"  # Gmail App Password
 
 def send_email(to_email, subject, body):
     try:
@@ -99,28 +81,45 @@ def save_reminders_file(reminders):
         json.dump(reminders, f)
 
 @app.route('/', methods=['GET', 'POST'])
-def login():
+def login_register():
     if request.method == 'POST':
+        action = request.form.get('action')
         email = request.form['email'].lower().strip()
         password = request.form['password']
-        
-        print(f"Login attempt: {email}")  # Debug line
+        name = request.form['name'].strip()
         
         conn = get_db_connection()
-        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        
+        if action == 'register':
+            # Check if user exists
+            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+            if user:
+                conn.close()
+                return render_login_page("❌ Email already registered!")
+            
+            # Create new user
+            hashed_pw = generate_password_hash(password)
+            conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                        (email, hashed_pw, name))
+            conn.commit()
+            print(f"✅ New user registered: {email}")
+            
+        else:  # login
+            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                print(f"✅ Login success: {email}")
+                conn.close()
+                return redirect('/dashboard')
+            else:
+                print(f"❌ Login failed: {email}")
+                conn.close()
+                return render_login_page("❌ Email or Password incorrect!")
+        
         conn.close()
-        
-        print(f"User found: {user}")  # Debug line
-        
-        if user and check_password_hash(user['password'], password):
-            session['logged_in'] = True
-            session['email'] = email
-            session['name'] = user['name']
-            print("✅ Login SUCCESS!")
-            return redirect('/dashboard')
-        else:
-            print("❌ Login FAILED!")
-            return render_login_page("❌ Email or Password incorrect!")
+        return render_login_page()
     
     return render_login_page()
 
@@ -129,21 +128,28 @@ def render_login_page(error=""):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Study Planner</title>
+        <title>Study Planner - Login/Register</title>
         <style>
             *{{margin:0;padding:0;box-sizing:border-box}}
             body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
             .login-box{{background:#fff;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px;text-align:center}}
-            .input-group{{position:relative;margin:20px 0}}
-            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px;z-index:1}}
+            .tabs{{display:flex;margin-bottom:30px;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
+            .tab{{flex:1;padding:20px 30px;background:#f8fafc;cursor:pointer;font-weight:600;font-size:18px;transition:all 0.3s;border:none}}
+            .tab.active{{background:#667eea;color:white}}
+            .tab:hover:not(.active){{background:#e2e8f0}}
+            .input-group{{position:relative;margin:20px 0;display:none}}
+            .input-group.active{{display:block}}
+            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}
             input{{width:100%;padding:18px 18px 18px 55px;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}
             input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}
-            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:20px;color:#9ca3af;transition:all 0.3s}}
-            .password-toggle:hover{{color:#667eea}}
+            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:20px;color:#9ca3af}}
             button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
             button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}
-            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}
-            h1{{font-size:38px;margin-bottom:40px;color:#1f2937}}
+            button.secondary{{background:#6c757d}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+            h1{{font-size:38px;margin-bottom:20px;color:#1f2937}}
+            .google-btn{{background:#4285f4 !important;margin-top:15px;display:flex;align-items:center;justify-content:center;gap:10px}}
+            .google-btn:hover{{background:#3367d6 !important}}
         </style>
     </head>
     <body>
@@ -151,27 +157,68 @@ def render_login_page(error=""):
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
             
-            <form method="POST">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form method="POST" id="login-form" class="input-group active">
+                <input type="hidden" name="action" value="login">
                 <div class="input-group">
                     <i>👤</i>
-                    <input type="text" name="name" placeholder="Enter your name" required>
+                    <input type="text" name="name" placeholder="Your Name" required>
                 </div>
-                <div class="input-group" style="position:relative;">
+                <div class="input-group">
                     <i>📧</i>
                     <input type="email" name="email" placeholder="your-email@gmail.com" required>
                 </div>
                 <div class="input-group">
                     <i>🔒</i>
-                    <input type="password" name="password" id="password" placeholder="Enter your password" required>
-                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                    <input type="password" name="password" id="login-password" placeholder="Enter your password" required>
+                    <span class="password-toggle" onclick="togglePassword('login-password')">👁️</span>
                 </div>
                 <button type="submit">🚀 Login</button>
             </form>
+            
+            <!-- Register Form -->
+            <form method="POST" id="register-form" class="input-group">
+                <input type="hidden" name="action" value="register">
+                <div class="input-group">
+                    <i>👤</i>
+                    <input type="text" name="name" placeholder="Enter your full name" required>
+                </div>
+                <div class="input-group">
+                    <i>📧</i>
+                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                </div>
+                <div class="input-group">
+                    <i>🔒</i>
+                    <input type="password" name="password" id="register-password" placeholder="Create password" required>
+                    <span class="password-toggle" onclick="togglePassword('register-password')">👁️</span>
+                </div>
+                <button type="submit">✅ Create Account</button>
+            </form>
+            
+            <a href="/google-login" class="google-btn">
+                🌐 Login with Google
+            </a>
         </div>
         
         <script>
-        function togglePassword() {{
-            const password = document.getElementById('password');
+        let currentTab = 'login';
+        function showTab(tab) {{
+            currentTab = tab;
+            document.querySelectorAll('.input-group').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tab + '-form').classList.add('active');
+            event.target.classList.add('active');
+        }}
+        
+        function togglePassword(id) {{
+            const password = document.getElementById(id);
             const toggle = event.target;
             if (password.type === 'password') {{
                 password.type = 'text';
@@ -185,7 +232,7 @@ def render_login_page(error=""):
     </body>
     </html>
     '''
-
+    
 @app.route('/google-login')
 def google_login():
     google_url = "https://accounts.google.com/o/oauth2/auth"
@@ -785,55 +832,43 @@ def quiz(goal_id):
     
 @app.route('/view-goals')
 def view_goals():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
     conn = get_db_connection()
     goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY id DESC', 
                         (session['email'],)).fetchall()
-    conn.close()
+    conn.close()  # ← This was missing!
     
     goals_html = ''
     for goal in goals:
-        progress_width = goal['progress']
-        progress_color = '#2ecc71' if progress_width >= 80 else '#f39c12' if progress_width >= 50 else '#e67e22'
-        
+        progress_bar = f'''
+        <div style="background:linear-gradient(90deg, #50c878 {goal['progress']}%, #e0e0e0 {goal['progress']}%); 
+                    height:25px;border-radius:15px;overflow:hidden;margin:15px 0">
+            <span style="padding:8px 15px;background:rgba(255,255,255,0.2);border-radius:15px;font-weight:600">
+                {goal['progress']}% - Max: {goal['max_score']}/10
+            </span>
+        </div>
+        '''
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:25px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(15px);text-align:left">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-                <h3 style="font-size:26px;margin:0">{goal['subject']}</h3>
-                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;text-decoration:none" onclick="return confirm('Delete Goal?')">🗑️</a>
-            </div>
-            <p style="font-size:18px;margin-bottom:20px;color:#f1c40f"><strong>Goal:</strong> {goal['goal']}</p>
-            <p style="font-size:18px;margin-bottom:25px"><strong>Target Score:</strong> {goal['target_score']}</p>
-            
-            <div style="margin-bottom:20px">
-                <div style="background:#34495e;border-radius:25px;padding:3px;margin-bottom:10px">
-                    <div style="background:{progress_color};height:25px;border-radius:20px;width:{progress_width}%;transition:all 0.5s;box-shadow:0 5px 15px rgba(0,0,0,0.3)"></div>
-                </div>
-                <p style="text-align:center;font-size:20px;font-weight:600">
-                    Progress: {goal['progress']}% 
-                    ({goal['max_score']}/10 quizzes completed)
-                </p>
-            </div>
-            
-            <div style="text-align:center">
-                <a href="/quiz/{goal['id']}" style="padding:15px 35px;background:#9b59b6;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;box-shadow:0 8px 25px rgba(155,89,182,0.4);margin:5px">🧠 Take Quiz</a>
-            </div>
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
+            <h3>📚 {goal['subject']}</h3>
+            <p><strong>Goal:</strong> {goal['goal']}</p>
+            <p><strong>Target:</strong> {goal['target_score']}</p>
+            {progress_bar}
+            <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-weight:600">🧠 Take Quiz</a>
         </div>
         '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Your Goals</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
-    .container{{max-width:900px;margin:0 auto}}</style></head>
+    <html><head><title>My Goals</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;z-index:100}}</style></head>
     <body>
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
-        <h1 style="font-size:42px;text-align:center;margin-bottom:50px">📊 Your Goals</h1>
-        {goals_html or '<div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px"><p>No goals set yet!</p><a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">🎯 Set goals now!</a></div>'}
-        <div style="text-align:center;margin-top:50px">
-            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
-        </div>
+        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
+        {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f;margin-top:50px">No goals set yet! <a href="/goals" style="color:#50c878">Set goals →</a></p>'}
     </div>
     </body></html>
     '''
