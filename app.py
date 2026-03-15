@@ -25,7 +25,7 @@ def init_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
                   target_score INTEGER, progress INTEGER DEFAULT 0,
-                  max_score INTEGER DEFAULT 0)''')  # Updated here
+                  max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
@@ -37,6 +37,22 @@ def init_db():
     conn.close()
 
 init_db()
+
+# ===== USER CREATION - இங்க add ஆகும் =====
+def ensure_test_user():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users WHERE email='student@gmail.com'")
+    if c.fetchone()[0] == 0:
+        hashed_pw = generate_password_hash('123456')
+        c.execute("INSERT INTO users VALUES (?, ?, ?)", 
+                 ('student@gmail.com', hashed_pw, 'Student'))
+        conn.commit()
+        print("✅ Test user created!")
+    conn.close()
+
+ensure_test_user()
+# ========================================
 
 # Email Configuration - UPDATE THESE WITH YOUR GMAIL
 GMAIL_USER = "your-gmail@gmail.com"  # Change this
