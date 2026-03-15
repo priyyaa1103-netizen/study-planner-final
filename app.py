@@ -42,6 +42,10 @@ init_db()
 
 def send_email(to_email, subject, body):
     try:
+        if not GMAIL_USER or not GMAIL_PASS:
+            print("❌ Gmail credentials missing!")
+            return False
+            
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
         msg['To'] = to_email
@@ -53,8 +57,10 @@ def send_email(to_email, subject, body):
         server.login(GMAIL_USER, GMAIL_PASS)
         server.send_message(msg)
         server.quit()
+        print(f"✅ Email sent to {to_email}")
         return True
-    except:
+    except Exception as e:
+        print(f"❌ Email error: {e}")
         return False
 
 def get_db_connection():
@@ -212,61 +218,44 @@ def dashboard():
     name = session.get('name', 'User')
     notifications = ""
     
-    # ✅ Automatic Email + Visual notification
+    # ✅ Check for 5 min warnings
     try:
         conn = get_db_connection()
         reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
-        conn.close()
         
         now = datetime.now()
         for r in reminders:
             try:
-                # Parse time from stored format
-                deadline_str = r['deadline']  # "2026-03-15 09:05 PM"
+                # Parse deadline
+                deadline_str = r['deadline']
                 deadline = datetime.strptime(deadline_str, '%Y-%m-%d %I:%M %p')
                 
-                time_diff = deadline - now
-                total_mins = int(time_diff.total_seconds() / 60)
+                mins_left = int((deadline - now).total_seconds() / 60)
                 
-                # ✅ 5 mins warning - SEND EMAIL AUTOMATICALLY
-                if 0 < total_mins <= 5:
-                    body = f"""
-Hi {name},
+                if 0 < mins_left <= 5:
+                    # ✅ SEND EMAIL
+                    body = f"""Hi {name},
 
 🚨 REMINDER: {r['title']}
-Time: {deadline.strftime('%I:%M %p')}
-Remaining: {total_mins} minutes
+Time left: {mins_left} minutes
 
-Study hard! 📚
-
-Study Planner App
-                    """.strip()
+Study Planner App"""
                     
-                    send_email(email, f"🚨 {r['title']} - {total_mins} mins left!", body)
+                    result = send_email(email, f"🚨 {r['title']} - {mins_left} mins!", body)
                     
                     notifications += f'''
                     <div class="notification">
                         <div style="font-size:28px">🚨 {r['title']}</div>
-                        <div style="font-size:22px;color:#ffd700">✅ Email sent! ({total_mins} mins left)</div>
-                    </div>
-                    '''
-                elif total_mins <= 0:
-                    notifications += f'''
-                    <div class="notification" style="background:rgba(255,107,107,0.95)">
-                        <div style="font-size:28px">⏰ {r['title']} OVERDUE!</div>
-                    </div>
-                    '''
-                else:
-                    notifications += f'''
-                    <div class="info-notification">
-                        <div style="font-size:24px">{r['title']}</div>
-                        <div style="font-size:20px">{r['deadline']}</div>
+                        <div style="font-size:22px;color:#ffd700">
+                            {'✅ Email sent!' if result else '❌ Email failed'}
+                        </div>
                     </div>
                     '''
             except:
-                notifications += f'<div class="notification">{r["title"]} - {r["deadline"]}</div>'
-    except:
-        pass
+                pass
+        conn.close()
+    except Exception as e:
+        notifications += f'<div class="notification">Error: {str(e)}</div>'
     
     return f'''
     <!DOCTYPE html>
@@ -301,6 +290,17 @@ Study Planner App
     </body>
     </html>
     '''
+
+@app.route('/test-email')
+def test_email():
+    if not session.get('logged_in'):
+        return "Login first!"
+    
+    try:
+        send_email(session['email'], "🧪 Test Email", "Test successful!")
+        return "✅ Email sent! Check your inbox/spam."
+    except Exception as e:
+        return f"❌ Email error: {str(e)}"
     
 @app.route('/check-notifications')
 def check_notifications_api():
