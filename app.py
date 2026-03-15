@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, session, render_template_string, send_from_directory
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -8,28 +8,35 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import secrets
+import re
 
 app = Flask(__name__)
-app.secret_key = 'study2026-super-secure-key-change-this-in-production'
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))  # Secure random key
 
-# Create necessary folders
-os.makedirs('static/uploads', exist_ok=True)
+# Config - Set these as environment variables in production
+GMAIL_USER = os.environ.get('GMAIL_USER', 'your-gmail@gmail.com')
+GMAIL_PASS = os.environ.get('GMAIL_PASS', 'your-app-password')
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
-# Initialize SQLite Database
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def init_db():
-    try:
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''') 
-    c.execute("SELECT email FROM users WHERE email='test@gmail.com'")
-    if not c.fetchone():
-    c.execute("INSERT INTO users VALUES ('Test User', 'test@gmail.com', '123456')")
+                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
                   target_score INTEGER, progress INTEGER DEFAULT 0,
-                  max_score INTEGER DEFAULT 0)''')  # Updated here
+                  max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, title TEXT, deadline TEXT)''')
@@ -39,13 +46,13 @@ def init_db():
                   upload_date TEXT)''')
     conn.commit()
     conn.close()
-    print("✅ Database ready with test user!")
 
 init_db()
 
-# Email Configuration - UPDATE THESE WITH YOUR GMAIL
-GMAIL_USER = "your-gmail@gmail.com"  # Change this
-GMAIL_PASS = "your-16-digit-app-password"  # Gmail App Password
+def get_db_connection():
+    conn = sqlite3.connect('users.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def send_email(to_email, subject, body):
     try:
@@ -61,84 +68,117 @@ def send_email(to_email, subject, body):
         server.send_message(msg)
         server.quit()
         return True
-    except:
+    except Exception as e:
+        print(f"Email failed: {e}")
         return False
-
-def get_db_connection():
-    try:
-       conn = sqlite3.connect('users.db')
-       conn.row_factory = sqlite3.Row
-       return conn
-    except:
-       return None
-        
-def load_reminders_file():
-    try:
-        with open('static/reminders.json', 'r') as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save_reminders_file(reminders):
-    with open('static/reminders.json', 'w') as f:
-        json.dump(reminders, f)
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    error = ""
     if request.method == 'POST':
-        name = request.form['name'].strip()
+        action = request.form.get('action', 'login')
         email = request.form['email'].lower().strip()
-        password = request.form['password'].strip()
+        password = request.form['password']
         
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE name=? AND email=?", (name, email))
-        user = c.fetchone()
-        conn.close()
-        
-        if user and user[2] == password:
-            session['logged_in'] = True
-            session['email'] = email
-            session['name'] = name
-            return redirect('/dashboard')
+        if not re.match(r"[^@]+@[^@]+.[^@]+", email):
+            error = "❌ Invalid email format!"
         else:
-            return '''
-            <!DOCTYPE html>
-            <html><head><title>Login Failed</title>
-            <style>body{{background:#f8d7da;color:#721c24;font-family:'Segoe UI';text-align:center;padding:100px;min-height:100vh;display:flex;align-items:center;justify-content:center}}h1{{font-size:48px;margin-bottom:20px}}a{{color:#721c24;font-size:18px;text-decoration:none;padding:15px 30px;background:white;border-radius:10px;display:inline-block}}</style></head>
-            <body>
-                <h1>❌ Wrong Details!</h1>
-                <p style="font-size:20px">Name: Test User<br>Email: test@gmail.com<br>Password: 123456</p>
-                <a href="/">← Try Again</a>
-            </body></html>
-            '''
+            conn = get_db_connection()
+            c = conn.cursor()
+            
+            if action == 'register':
+                c.execute("SELECT email FROM users WHERE email=?", (email,))
+                if c.fetchone():
+                    error = "❌ Email already registered!"
+                else:
+                    name = email.split('@')[0].title()
+                    hashed_pw = generate_password_hash(password)
+                    c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                             (email, hashed_pw, name))
+                    conn.commit()
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = name
+                    conn.close()
+                    return redirect('/dashboard')
+            
+            elif action == 'login':
+                c.execute("SELECT * FROM users WHERE email=?", (email,))
+                user = c.fetchone()
+                conn.close()
+                if user and check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    return redirect('/dashboard')
+                else:
+                    error = "❌ Wrong email or password!"
     
+    return render_login_page(error)
+
+def render_login_page(error=""):
     return '''
     <!DOCTYPE html>
-    <html><head><title>Study Login</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}.box{{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);max-width:420px;width:100%;text-align:center}}h1{{font-size:38px;margin-bottom:40px;color:#333}}input{{width:100%;padding:20px;margin:12px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:16px;box-sizing:border-box;transition:all 0.3s}}input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}button{{width:100%;padding:22px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:25px;transition:all 0.3s}}button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}}label{{display:block;margin:10px 0 4px;font-weight:600;color:#555;font-size:16px;text-align:left}}.demo{{margin-top:30px;padding:20px;background:#f8f9fa;border-radius:12px;border-left:5px solid #28a745}}.demo h3{{margin-bottom:15px;color:#155724}}.demo p{{font-size:16px;margin:5px 0;color:#333}}</style></head>
+    <html>
+    <head>
+        <title>Study Planner & Reminder App</title>
+        <style>
+            *{margin:0;padding:0;box-sizing:border-box}
+            body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+            .login-box{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}
+            .tabs{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:30px 0}
+            .tab{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}
+            .tab.active{background:#667eea;color:white}
+            input{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}
+            input:focus{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}
+            button{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}
+            button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}
+            .error{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}
+            .demo{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}
+            h1{text-align:center;margin-bottom:30px;font-size:32px;color:#333}
+        </style>
+    </head>
     <body>
-    <div class="box">
-        <h1>🔐 Study Login</h1>
-        <form method="POST">
-            <label>Name</label>
-            <input type="text" name="name" placeholder="Test User" required>
-            <label>Email</label>
-            <input type="email" name="email" placeholder="test@gmail.com" required>
-            <label>Password</label>
-            <input type="password" name="password" placeholder="123456" required>
-            <button>Login</button>
-        </form>
-        <div class="demo">
-            <h3>✅ Use Exactly:</h3>
-            <p><strong>Name:</strong> Test User</p>
-            <p><strong>Email:</strong> test@gmail.com</p>
-            <p><strong>Password:</strong> 123456</p>
+        <div class="login-box">
+            <h1>🎓 Study Planner</h1>
+            ''' + (f'<div class="error">{error}</div>' if error else '') + f'''
+            
+            <div class="tabs-container">
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('login')">🔐 Login</div>
+                    <div class="tab" onclick="showTab('register')">➕ Register</div>
+                </div>
+            </div>
+            
+            <form method="POST" id="login-form">
+                <input type="hidden" name="action" value="login">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <form method="POST" id="register-form" style="display:none">
+                <input type="hidden" name="action" value="register">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Create Password" required>
+                <button type="submit">Create Account</button>
+            </form>
+            
+            <div class="demo">
+                Demo: test@test.com / 123456
+            </div>
         </div>
-    </div>
-    </body></html>
+        <script>
+        function showTab(tab) {
+            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+            document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
+            document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
+        }
+        </script>
+    </body>
+    </html>
     '''
-    
+
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'): 
@@ -898,6 +938,3 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
-
-
-
