@@ -83,83 +83,118 @@ def save_reminders_file(reminders):
 @app.route('/', methods=['GET', 'POST'])
 def login_register():
     if request.method == 'POST':
-        action = request.form.get('action')
-        email = request.form['email'].lower().strip()
-        password = request.form['password']
-        name = request.form['name'].strip()
-        
-        conn = get_db_connection()
-        
-        if action == 'register':
-            # Check if user exists
-            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            if user:
-                conn.close()
-                return render_login_page("❌ Email already exists!")
+        try:
+            email = request.form.get('email', '').lower().strip()
+            password = request.form.get('password', '')
+            name = request.form.get('name', '').strip()
+            action = request.form.get('action', 'login')
             
-            # Create new user
-            hashed_pw = generate_password_hash(password)
-            conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                        (email, hashed_pw, name))
-            conn.commit()
-            conn.close()
-            return render_login_page("✅ Account created! Now login.")
+            print(f"DEBUG: action={action}, email={email}")  # Debug
             
-        else:  # login
-            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
+            conn = get_db_connection()
+            
+            if action == 'register':
+                # Check if user exists
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                if user:
+                    conn.close()
+                    return render_login_page("❌ Email already registered!")
+                
+                # Create new user
+                hashed_pw = generate_password_hash(password)
+                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                            (email, hashed_pw, name))
+                conn.commit()
                 conn.close()
-                return redirect('/dashboard')
-            else:
+                return render_login_page("✅ Account created! Please login.")
+                
+            else:  # login
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
                 conn.close()
-                return render_login_page("❌ Wrong email/password!")
-        
+                
+                if user and check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    print(f"✅ Login SUCCESS: {email}")
+                    return redirect('/dashboard')
+                else:
+                    print(f"❌ Login FAILED: {email}")
+                    return render_login_page("❌ Wrong email or password!")
+                    
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return render_login_page("❌ Something went wrong!")
+    
     return render_login_page()
 
 def render_login_page(error=""):
-    return '''
+    error_html = f'<div class="error">{error}</div>' if error else ''
+    return f'''
     <!DOCTYPE html>
     <html>
-    <head><title>Study Planner</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center} .login-box{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center} input{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px} button{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0} .error{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0} .tabs{display:flex;margin-bottom:20px} .tab{flex:1;padding:15px;background:#f8fafc;cursor:pointer;border:none;font-weight:600} .tab.active{background:#667eea;color:white}}</style>
+    <head>
+        <title>Study Planner</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
+            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
+            .tab.active{{background:#667eea;color:white}}
+            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+            input:focus{{border-color:#667eea;outline:none}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        </style>
     </head>
     <body>
-    <div class="login-box">
-        <h1 style="font-size:40px;margin-bottom:20px">🎓 Study Planner</h1>
-        ''' + (f'<div class="error">{error}</div>' if error else '') + '''
-        
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">Login</button>
-            <button class="tab" onclick="showTab('register')">Register</button>
+        <div class="login-box">
+            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+            {error_html}
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <!-- LOGIN FORM -->
+            <form method="POST" id="loginForm">
+                <input type="hidden" name="action" value="login">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Enter password" required>
+                <button type="submit">🚀 Login</button>
+            </form>
+            
+            <!-- REGISTER FORM -->
+            <form method="POST" id="registerForm" style="display:none">
+                <input type="hidden" name="action" value="register">
+                <input type="text" name="name" placeholder="Your Full Name" required>
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
+                <button type="submit">✅ Create Account</button>
+            </form>
         </div>
         
-        <form method="POST" id="login-form">
-            <input type="hidden" name="action" value="login">
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="password" required>
-            <button>🚀 Login</button>
-        </form>
-        
-        <form method="POST" id="register-form" style="display:none">
-            <input type="hidden" name="action" value="register">
-            <input type="text" name="name" placeholder="Your Name" required>
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="Create Password" required>
-            <button>✅ Create Account</button>
-        </form>
-    </div>
-    
-    <script>
-    function showTab(tab) {
-        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-        event.target.classList.add('active');
-    }
-    </script>
+        <script>
+        function showTab(tabName) {{
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab');
+            
+            if (tabName === 'login') {{
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            }} else {{
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }}
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }}
+        </script>
     </body>
     </html>
     '''
