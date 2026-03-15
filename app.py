@@ -12,8 +12,8 @@ import requests
 from urllib.parse import urlencode
 
 # ===== உங்க Google credentials =====
-GOOGLE_CLIENT_ID = os.getenv("443460939889-qm93e4877opr63d9kktm9lssta81h7md.apps.googleusercontent.com")
-GOOGLE_CLIENT_SECRET = os.getenv("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")
+GOOGLE_CLIENT_ID = os.getenv("443460939889-qt7mis062pglnmnaq0soihmpl3i61trr.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.getenv("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","redirect_uris")
 GOOGLE_REDIRECT_URI = "https://study-planner-final-6k41.onrender.com/google-callback"  # உங்க Render URL
 GMAIL_USER = os.getenv('GMAIL_USER')
 GMAIL_PASS = os.getenv('GMAIL_PASS')
@@ -95,14 +95,15 @@ def login_register():
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
             if user:
                 conn.close()
-                return render_login_page("❌ Email already registered!")
+                return render_login_page("❌ Email already exists!")
             
             # Create new user
             hashed_pw = generate_password_hash(password)
             conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
                         (email, hashed_pw, name))
             conn.commit()
-            print(f"✅ New user registered: {email}")
+            conn.close()
+            return render_login_page("✅ Account created! Now login.")
             
         else:  # login
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
@@ -110,169 +111,66 @@ def login_register():
                 session['logged_in'] = True
                 session['email'] = email
                 session['name'] = user['name']
-                print(f"✅ Login success: {email}")
                 conn.close()
                 return redirect('/dashboard')
             else:
-                print(f"❌ Login failed: {email}")
                 conn.close()
-                return render_login_page("❌ Email or Password incorrect!")
+                return render_login_page("❌ Wrong email/password!")
         
-        conn.close()
-        return render_login_page()
-    
     return render_login_page()
 
 def render_login_page(error=""):
     return f'''
     <!DOCTYPE html>
     <html>
-    <head>
-        <title>Study Planner - Login/Register</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:#fff;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px;text-align:center}}
-            .tabs{{display:flex;margin-bottom:30px;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
-            .tab{{flex:1;padding:20px 30px;background:#f8fafc;cursor:pointer;font-weight:600;font-size:18px;transition:all 0.3s;border:none}}
-            .tab.active{{background:#667eea;color:white}}
-            .tab:hover:not(.active){{background:#e2e8f0}}
-            .input-group{{position:relative;margin:20px 0;display:none}}
-            .input-group.active{{display:block}}
-            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}
-            input{{width:100%;padding:18px 18px 18px 55px;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}
-            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}
-            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:20px;color:#9ca3af}}
-            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
-            button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}
-            button.secondary{{background:#6c757d}}
-            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
-            h1{{font-size:38px;margin-bottom:20px;color:#1f2937}}
-            .google-btn{{background:#4285f4 !important;margin-top:15px;display:flex;align-items:center;justify-content:center;gap:10px}}
-            .google-btn:hover{{background:#3367d6 !important}}
-        </style>
+    <head><title>Study Planner</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center}} .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}} input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px}} button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0}} .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0}} .tabs{{display:flex;margin-bottom:20px}} .tab{{flex:1;padding:15px;background:#f8fafc;cursor:pointer;border:none;font-weight:600}} .tab.active{{background:#667eea;color:white}}</style>
     </head>
     <body>
-        <div class="login-box">
-            <h1>🎓 Study Planner</h1>
-            {f'<div class="error">{error}</div>' if error else ''}
-            
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('login')">Login</button>
-                <button class="tab" onclick="showTab('register')">Register</button>
-            </div>
-            
-            <!-- Login Form -->
-            <form method="POST" id="login-form" class="input-group active">
-                <input type="hidden" name="action" value="login">
-                <div class="input-group">
-                    <i>👤</i>
-                    <input type="text" name="name" placeholder="Your Name" required>
-                </div>
-                <div class="input-group">
-                    <i>📧</i>
-                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                </div>
-                <div class="input-group">
-                    <i>🔒</i>
-                    <input type="password" name="password" id="login-password" placeholder="Enter your password" required>
-                    <span class="password-toggle" onclick="togglePassword('login-password')">👁️</span>
-                </div>
-                <button type="submit">🚀 Login</button>
-            </form>
-            
-            <!-- Register Form -->
-            <form method="POST" id="register-form" class="input-group">
-                <input type="hidden" name="action" value="register">
-                <div class="input-group">
-                    <i>👤</i>
-                    <input type="text" name="name" placeholder="Enter your full name" required>
-                </div>
-                <div class="input-group">
-                    <i>📧</i>
-                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                </div>
-                <div class="input-group">
-                    <i>🔒</i>
-                    <input type="password" name="password" id="register-password" placeholder="Create password" required>
-                    <span class="password-toggle" onclick="togglePassword('register-password')">👁️</span>
-                </div>
-                <button type="submit">✅ Create Account</button>
-            </form>
-            
-            <a href="/google-login" class="google-btn">
-                🌐 Login with Google
-            </a>
+    <div class="login-box">
+        <h1 style="font-size:40px;margin-bottom:20px">🎓 Study Planner</h1>
+        {f'<div class="error">{error}</div>' if error else ''}
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login')">Login</button>
+            <button class="tab" onclick="showTab('register')">Register</button>
         </div>
         
-        <script>
-        let currentTab = 'login';
-        function showTab(tab) {{
-            currentTab = tab;
-            document.querySelectorAll('.input-group').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(tab + '-form').classList.add('active');
-            event.target.classList.add('active');
-        }}
+        <form method="POST" id="login-form">
+            <input type="hidden" name="action" value="login">
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="password" required>
+            <button>🚀 Login</button>
+        </form>
         
-        function togglePassword(id) {{
-            const password = document.getElementById(id);
-            const toggle = event.target;
-            if (password.type === 'password') {{
-                password.type = 'text';
-                toggle.textContent = '🙈';
-            }} else {{
-                password.type = 'password';
-                toggle.textContent = '👁️';
-            }}
-        }}
-        </script>
+        <form method="POST" id="register-form" style="display:none">
+            <input type="hidden" name="action" value="register">
+            <input type="text" name="name" placeholder="Your Name" required>
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Create Password" required>
+            <button>✅ Create Account</button>
+        </form>
+    </div>
+    
+    <script>
+    function showTab(tab) {
+        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+    </script>
     </body>
     </html>
     '''
     
 @app.route('/google-login')
 def google_login():
-    google_url = "https://accounts.google.com/o/oauth2/auth"
-    params = {
-        'client_id': GOOGLE_CLIENT_ID,
-        'redirect_uri': GOOGLE_REDIRECT_URI,
-        'scope': 'openid email profile',
-        'response_type': 'code',
-        'access_type': 'offline'
-    }
-    url = f"{google_url}?{urlencode(params)}"
-    return redirect(url)
+    return redirect('/')  # Back to login
 
-@app.route('/google-callback')
+@app.route('/google-callback') 
 def google_callback():
-    code = request.args.get('code')
-    if not code:
-        return "Google login failed!", 400
-    
-    # Token exchange
-    token_data = {
-        'client_id': GOOGLE_CLIENT_ID,
-        'client_secret': GOOGLE_CLIENT_SECRET,
-        'code': code,
-        'grant_type': 'authorization_code',
-        'redirect_uri': GOOGLE_REDIRECT_URI
-    }
-    token_response = requests.post('https://oauth2.googleapis.com/token', data=token_data)
-    token = token_response.json()
-    
-    # User info
-    headers = {'Authorization': f'Bearer {token["access_token"]}'}
-    user_info = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers).json()
-    
-    # Login
-    session['logged_in'] = True
-    session['email'] = user_info['email']
-    session['name'] = user_info['name']
-    
-    return redirect('/dashboard')
+    return redirect('/')  # Back to login
     
 @app.route('/dashboard')
 def dashboard():
