@@ -117,7 +117,8 @@ def login():
     return render_login_page(error)
 
 def render_login_page(error=""):
-    return '''<!DOCTYPE html>
+    html = '''
+<!DOCTYPE html>
 <html>
 <head>
     <title>Study Planner & Reminder App</title>
@@ -135,19 +136,20 @@ def render_login_page(error=""):
         .error{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}
         .demo{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}
         h1{text-align:center;margin-bottom:30px;font-size:32px;color:#333}
-        .tabs-container{margin:25px 0}
     </style>
 </head>
 <body>
     <div class="login-box">
         <h1>🎓 Study Planner</h1>
-        ''' + (f'<div class="error">{error}</div>' if error else '') + f'''
-        
-        <div class="tabs-container">
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-                <div class="tab" onclick="showTab('register')">➕ Register</div>
-            </div>
+    '''
+    
+    if error:
+        html += f'<div class="error">{error}</div>'
+    
+    html += '''
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">🔐 Login</div>
+            <div class="tab" onclick="showTab('register')">➕ Register</div>
         </div>
         
         <form method="POST" id="login-form">
@@ -163,20 +165,19 @@ def render_login_page(error=""):
             <button type="submit">Create Account</button>
         </form>
         
-        <div class="demo">
-            Demo: test@test.com / 123456
-        </div>
+        <div class="demo">Demo: test@test.com / 123456</div>
     </div>
     <script>
     function showTab(tab) {
-        document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-        document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
-        document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
+        document.getElementById("login-form").style.display = tab == "login" ? "block" : "none";
+        document.getElementById("register-form").style.display = tab == "register" ? "block" : "none";
+        document.querySelectorAll(".tab")[0].classList.toggle("active", tab == "login");
+        document.querySelectorAll(".tab")[1].classList.toggle("active", tab == "register");
     }
     </script>
 </body>
 </html>'''
+    return html
 
 @app.route('/dashboard')
 def dashboard():
