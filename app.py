@@ -791,18 +791,20 @@ def reminders():
     
     if request.method == 'POST':
         conn = get_db_connection()
-        # ✅ Fix: IST timezone + proper format
-        deadline_input = request.form['deadline']  # 2026-03-15T20:15
-        deadline = datetime.fromisoformat(deadline_input.replace('T', ' ') + ':00')
-        deadline_str = deadline.isoformat()
+        deadline_input = request.form['deadline']  # "2026-03-15T20:20"
+        
+        # ✅ Fix: Date + Time combine
+        now_date = datetime.now().strftime('%Y-%m-%d')
+        fixed_datetime = f"{now_date} {deadline_input.split('T')[1]}:00"
+        deadline = datetime.strptime(fixed_datetime, '%Y-%m-%d %H:%M:%S')
         
         conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (email, request.form['title'], deadline_str))
+                    (email, request.form['title'], deadline.isoformat()))
         conn.commit()
         conn.close()
         return redirect('/reminders')
     
-    # ✅ Perfect time difference calculation
+    # ✅ Perfect time display
     conn = get_db_connection()
     reminders_data = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline", (email,)).fetchall()
     conn.close()
@@ -812,65 +814,57 @@ def reminders():
     
     for r in reminders_data:
         try:
-            # ✅ Fix: Correct parsing
-            deadline_str = r['deadline']
-            if 'T' in deadline_str:
-                deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
-            else:
-                # Format: 2026-03-15 20:15:00.000
-                deadline = datetime.fromisoformat(deadline_str)
-            
+            deadline = datetime.fromisoformat(r['deadline'])
             time_diff = deadline - now
-            total_seconds = max(0, time_diff.total_seconds())
             
-            # ✅ Perfect calculation
-            days = int(total_seconds // 86400)
-            hours = int((total_seconds % 86400) // 3600)
-            minutes = int((total_seconds % 3600) // 60)
+            # ✅ Real calculation
+            total_minutes = max(0, int(time_diff.total_seconds() / 60))
             
-            if total_seconds <= 0:
-                status = "🚨 OVERDUE!"
+            if total_minutes == 0:
+                status = "🚨 RIGHT NOW!"
                 color = "#ff4757"
-            elif total_seconds < 3600:
-                status = f"⏳ {minutes} minutes"
+            elif total_minutes < 60:
+                status = f"⏳ {total_minutes} mins"
                 color = "#ff6b7a"
-            elif total_seconds < 86400:
-                status = f"⏰ {hours}h {minutes}m"
+            elif total_minutes < 1440:  # 24 hours
+                hours = total_minutes // 60
+                mins = total_minutes % 60
+                status = f"⏰ {hours}h {mins}m"
                 color = "#f1c40f"
             else:
-                status = f"📅 {days}d {hours}h"
+                days = total_minutes // 1440
+                status = f"📅 {days} days"
                 color = "#2ed573"
             
-            # Format display time
-            display_time = deadline.strftime('%d/%m/%Y %I:%M %p')
+            display_time = deadline.strftime('%I:%M %p')
             
             reminders_html += f'''
-            <div style="background:rgba(255,255,255,0.12);padding:25px;margin:15px;border-radius:20px;border-left:6px solid {color};backdrop-filter:blur(10px)">
-                <div style="font-size:28px;font-weight:600;margin-bottom:8px">{r['title']}</div>
-                <div style="font-size:20px;color:#f1c40f;margin-bottom:12px">{display_time}</div>
-                <div style="font-size:24px;color:{color};font-weight:600">{status}</div>
+            <div style="background:rgba(255,255,255,0.1);padding:25px;margin:15px 0;border-radius:20px;border-left:6px solid {color}">
+                <div style="font-size:26px;font-weight:600">{r['title']}</div>
+                <div style="font-size:20px;color:#f1c40f">🕐 {display_time}</div>
+                <div style="font-size:22px;color:{color};font-weight:600">{status}</div>
             </div>
             '''
-        except Exception as e:
-            print(f"Time parse error: {e}")
-            reminders_html += f'<div style="padding:20px;margin:15px;background:rgba(255,255,255,0.1);border-radius:15px">{r["title"]} - {r["deadline"]}</div>'
+        except:
+            reminders_html += f'<div style="padding:20px;margin:15px;background:rgba(255,255,255,0.1);border-radius:15px">{r["title"]}</div>'
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>⏰ Reminders</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:700px;margin:0 auto}}.form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px 0;backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,0.2)}}input{{width:100%;padding:20px;margin:15px 0;border-radius:15px;border:none;font-size:18px;box-shadow:0 8px 25px rgba(0,0,0,0.1)}}button{{width:100%;padding:22px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;border:none;border-radius:20px;font-size:22px;font-weight:600;cursor:pointer;margin-top:10px;box-shadow:0 12px 35px rgba(80,200,120,0.4);transition:all 0.3s}}button:hover{{transform:translateY(-3px);box-shadow:0 18px 45px rgba(80,200,120,0.6)}}h1{{font-size:45px;text-align:center;margin-bottom:20px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}.back-btn{{position:fixed;top:30px;left:30px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:18px;font-weight:600;box-shadow:0 10px 25px rgba(243,156,18,0.4);z-index:100}}</style></head>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:650px;margin:0 auto;text-align:center}}.form-box{{background:rgba(255,255,255,0.15);padding:45px;border-radius:25px;margin:40px 0;backdrop-filter:blur(15px)}}input{{width:100%;padding:18px;margin:12px 0;border-radius:12px;border:none;font-size:18px;box-shadow:0 5px 20px rgba(0,0,0,0.1)}}button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin-top:10px}}h1{{font-size:42px;margin-bottom:30px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}.back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;font-size:18px}}</style></head>
     <body>
         <a href="/dashboard" class="back-btn">← Dashboard</a>
         <div class="container">
             <h1>⏰ Reminders</h1>
             <div class="form-box">
                 <form method="POST">
-                    <input name="title" placeholder="Reminder (ex: Complete Maths Ch3)" required>
-                    <input name="deadline" type="datetime-local" required>
-                    <button>Add Reminder</button>
+                    <input name="title" placeholder="Study Task" required>
+                    <input name="deadline" type="time" required>  <!-- ✅ TIME ONLY -->
+                    <button>✅ Add Reminder</button>
                 </form>
+                <small style="color:#f1c40f">Today’s date + your time = Perfect reminder!</small>
             </div>
-            {reminders_html or '<div style="text-align:center;padding:60px;background:rgba(255,255,255,0.1);border-radius:25px"><h2 style="font-size:32px">📝 No reminders added</h2></div>'}
+            {reminders_html or '<p style="font-size:28px;padding:40px;background:rgba(255,255,255,0.1);border-radius:20px">No reminders set</p>'}
         </div>
     </body></html>
     '''
