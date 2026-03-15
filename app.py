@@ -79,64 +79,50 @@ def save_reminders_file(reminders):
 def login():
     error = ""
     if request.method == 'POST':
-        action = request.form.get('action', 'login')
-        email = request.form['email'].lower()
+        name = request.form['name'].strip()
+        email = request.form['email'].lower().strip()
         password = request.form['password']
         
         conn = get_db_connection()
         c = conn.cursor()
         
-        if action == 'register':
-            c.execute("SELECT email FROM users WHERE email=?", (email,))
-            if c.fetchone():
-                error = "❌ Email already registered!"
-            else:
-                name = email.split('@')[0].title()
-                hashed_pw = generate_password_hash(password)
-                c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                         (email, hashed_pw, name))
-                conn.commit()
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = name
-                conn.close()
-                return redirect('/dashboard')
+        # Check if user exists
+        c.execute("SELECT * FROM users WHERE email=?", (email,))
+        user = c.fetchone()
         
-        elif action == 'login':
-            c.execute("SELECT * FROM users WHERE email=?", (email,))
-            user = c.fetchone()
+        if user and check_password_hash(user['password'], password):
+            # Login successful
+            session['logged_in'] = True
+            session['email'] = email
+            session['name'] = user['name']
             conn.close()
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                return redirect('/dashboard')
-            else:
-                error = "❌ Wrong email or password!"
+            return redirect('/dashboard')
+        else:
+            error = "❌ Email or password is incorrect!"
+            conn.close()
     
     return render_login_page(error)
-    
+
 def render_login_page(error=""):
     return f'''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Study Planner & Reminder App</title>
+        <title>Study Planner - Login</title>
         <style>
             *{{margin:0;padding:0;box-sizing:border-box}}
             body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:white;color:#333;padding:50px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.2);width:100%;max-width:420px}}
-            .tabs{{display:flex;background:#f8f9fa;border-radius:12px;overflow:hidden;margin:30px 0}}
-            .tab{{flex:1;padding:18px 10px;text-align:center;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}}
-            .tab.active{{background:#667eea;color:white}}
-            input{{width:100%;padding:15px;margin:10px 0;font-size:16px;border:2px solid #e1e5e9;border-radius:12px;box-sizing:border-box;transition:all 0.3s}}
-            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}
-            button{{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:5px 0}}
-            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-            .error{{background:#fee;color:#c53030;padding:12px;border-radius:8px;margin:15px 0;font-weight:500}}
-            .demo{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8f9fa;border-radius:8px}}
-            h1{{text-align:center;margin-bottom:30px;font-size:32px;color:#333}}
-            .tabs-container{{margin:25px 0}}
+            .login-box{{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px}}
+            input{{width:100%;padding:18px;margin:15px 0;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}
+            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
+            button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}
+            h1{{text-align:center;margin-bottom:40px;font-size:38px;color:#1f2937}}
+            .input-group{{position:relative;margin:15px 0}}
+            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}
+            input{{padding-left:55px}}
+            .info{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8fafc;border-radius:12px;border-left:4px solid #3b82f6}}
         </style>
     </head>
     <body>
@@ -144,39 +130,26 @@ def render_login_page(error=""):
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
             
-            <!-- TABS KEELA VARUM -->
-            <div class="tabs-container">
-                <div class="tabs">
-                    <div class="tab active" onclick="showTab('login')">🔐 Login</div>
-                    <div class="tab" onclick="showTab('register')">➕ Register</div>
+            <form method="POST">
+                <div class="input-group">
+                    <i>👤</i>
+                    <input type="text" name="name" placeholder="Enter your name" required>
                 </div>
-            </div>
-            
-            <form method="POST" id="login-form">
-                <input type="hidden" name="action" value="login">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit">Login</button>
-            </form>
-            <form method="POST" id="register-form" style="display:none">
-                <input type="hidden" name="action" value="register">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Create Password" required>
-                <button type="submit">Create Account</button>
+                <div class="input-group">
+                    <i>📧</i>
+                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                </div>
+                <div class="input-group">
+                    <i>🔒</i>
+                    <input type="password" name="password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit">🚀 Login to Study</button>
             </form>
             
-            <div class="demo">
-                Demo: test@test.com / 123456
+            <div class="info">
+                📧 No account? Contact admin to create one.
             </div>
         </div>
-        <script>
-        function showTab(tab) {{
-            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-            document.querySelectorAll('.tab')[0].classList.toggle('active', tab === 'login');
-            document.querySelectorAll('.tab')[1].classList.toggle('active', tab === 'register');
-        }}
-        </script>
     </body>
     </html>
     '''
