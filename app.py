@@ -9,6 +9,31 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# ===== இங்க தான் ADD பண்ணுங்க =====
+def create_your_account():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    
+    # Check current users
+    c.execute("SELECT email, name FROM users")
+    users = c.fetchall()
+    print("Current users:", users)
+    
+    # உங்க details இங்க change பண்ணுங்க
+    your_email = "student@gmail.com"      # <- உங்க email
+    your_password = "123456"              # <- உங்க password  
+    your_name = "Student"                 # <- உங்க பேர்
+    
+    hashed_pw = generate_password_hash(your_password)
+    c.execute("INSERT OR IGNORE INTO users (email, password, name) VALUES (?, ?, ?)", 
+              (your_email, hashed_pw, your_name))
+    conn.commit()
+    print(f"✅ Account created: {your_email} / {your_password}")
+    conn.close()
+
+# Run once to create account (delete after first run)
+create_your_account()
+
 app = Flask(__name__)
 app.secret_key = 'study2026-super-secure-key-change-this-in-production'
 
@@ -77,78 +102,43 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    error = ""
     if request.method == 'POST':
         name = request.form['name'].strip()
         email = request.form['email'].lower().strip()
         password = request.form['password']
         
         conn = get_db_connection()
-        c = conn.cursor()
-        
-        # Check if user exists
-        c.execute("SELECT * FROM users WHERE email=?", (email,))
-        user = c.fetchone()
+        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        conn.close()
         
         if user and check_password_hash(user['password'], password):
-            # Login successful
             session['logged_in'] = True
             session['email'] = email
             session['name'] = user['name']
-            conn.close()
             return redirect('/dashboard')
         else:
-            error = "❌ Email or password is incorrect!"
-            conn.close()
+            return render_login_page("❌ Email or Password is incorrect!")
     
-    return render_login_page(error)
+    return render_login_page()
 
 def render_login_page(error=""):
     return f'''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Study Planner - Login</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:white;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px}}
-            input{{width:100%;padding:18px;margin:15px 0;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}
-            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}
-            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
-            button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}
-            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}
-            h1{{text-align:center;margin-bottom:40px;font-size:38px;color:#1f2937}}
-            .input-group{{position:relative;margin:15px 0}}
-            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}
-            input{{padding-left:55px}}
-            .info{{text-align:center;margin-top:25px;font-size:14px;color:#666;padding:15px;background:#f8fafc;border-radius:12px;border-left:4px solid #3b82f6}}
-        </style>
+        <title>Study Planner</title>
+        <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}.login-box{{background:#fff;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px;text-align:center}}input{{width:100%;padding:18px;margin:15px 0;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}.error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}.input-group{{position:relative;margin:15px 0}}.input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}input{{padding-left:55px}}h1{{font-size:38px;margin-bottom:40px;color:#1f2937}}</style>
     </head>
     <body>
         <div class="login-box">
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
-            
             <form method="POST">
-                <div class="input-group">
-                    <i>👤</i>
-                    <input type="text" name="name" placeholder="Enter your name" required>
-                </div>
-                <div class="input-group">
-                    <i>📧</i>
-                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                </div>
-                <div class="input-group">
-                    <i>🔒</i>
-                    <input type="password" name="password" placeholder="Enter your password" required>
-                </div>
-                <button type="submit">🚀 Login to Study</button>
+                <div class="input-group"><i>👤</i><input type="text" name="name" placeholder="Enter your name" required></div>
+                <div class="input-group"><i>📧</i><input type="email" name="email" placeholder="your-email@gmail.com" required></div>
+                <div class="input-group"><i>🔒</i><input type="password" name="password" placeholder="Enter your password" required></div>
+                <button type="submit">🚀 Login</button>
             </form>
-            
-            <div class="info">
-                📧 No account? Contact admin to create one.
-            </div>
         </div>
     </body>
     </html>
