@@ -274,38 +274,31 @@ def check_notifications():
     overdue = c.fetchall()
     
     notifications = ""
-    for reminder in overdue:
-      email = session['email']
+for reminder in overdue:
+    email = session['email']
 
-      body = f"""
-    Hello {session['name']},
+    body = f"""
+Hello {session['name']},
 
-    This is your Study Planner Reminder.
+This is your Study Planner Reminder.
 
-    Subject: {reminder['title']}
-    Deadline: {reminder['deadline']}
+Subject: {reminder['title']}
+Deadline: {reminder['deadline']}
 
-    Please complete your study.
+Please complete your study.
 
-    Study Planner App
-    """
+Study Planner App
+"""
 
-        send_email(email, "🚨 Study Reminder", body)
-        
-        notifications += f'''
-        <div style="background:linear-gradient(135deg,#e74c3c,#c0392b);padding:30px;margin:30px auto;border-radius:25px;max-width:600px;text-align:center;box-shadow:0 20px 40px rgba(231,76,60,0.4);cursor:pointer;animation:pulse 2s infinite;border:4px solid #ff6b6b" onclick="playAlarm()">
-            <div style="font-size:28px;margin-bottom:15px">🚨 REMINDER</div>
-            <div style="font-size:24px;font-weight:600;color:#ffd700">{reminder['title']}</div>
-            <div style="font-size:20px;margin-top:10px;color:#fff">Deadline Passed! 🔊</div>
-        </div>
-        <style>
-        @keyframes pulse {{
-            0% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }}
-            70% {{ transform: scale(1.02); box-shadow: 0 0 0 20px rgba(231, 76, 60, 0); }}
-            100% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }}
-        }}
-        </style>
-        '''
+    send_email(email, "🚨 Study Reminder", body)
+
+    notifications += f'''
+    <div style="background:linear-gradient(135deg,#e74c3c,#c0392b);padding:30px;margin:30px auto;border-radius:25px;max-width:600px;text-align:center;box-shadow:0 20px 40px rgba(231,76,60,0.4);cursor:pointer;animation:pulse 2s infinite;border:4px solid #ff6b6b" onclick="playAlarm()">
+        <div style="font-size:28px;margin-bottom:15px">🚨 REMINDER</div>
+        <div style="font-size:24px;font-weight:600;color:#ffd700">{reminder['title']}</div>
+        <div style="font-size:20px;margin-top:10px;color:#fff">Deadline Passed! 🔊</div>
+    </div>
+    '''
     
     conn.close()
     return notifications
