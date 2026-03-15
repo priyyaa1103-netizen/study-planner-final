@@ -77,8 +77,8 @@ def save_reminders_file(reminders):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    error = ""
     if request.method == 'POST':
-        name = request.form['name'].strip()
         email = request.form['email'].lower().strip()
         password = request.form['password']
         
@@ -92,9 +92,9 @@ def login():
             session['name'] = user['name']
             return redirect('/dashboard')
         else:
-            return render_login_page("❌ Email or Password is incorrect!")
+            error = "❌ Email or Password is incorrect!"
     
-    return render_login_page()
+    return render_login_page(error)
 
 def render_login_page(error=""):
     return f'''
@@ -102,23 +102,62 @@ def render_login_page(error=""):
     <html>
     <head>
         <title>Study Planner</title>
-        <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}.login-box{{background:#fff;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px;text-align:center}}input{{width:100%;padding:18px;margin:15px 0;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}.error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}.input-group{{position:relative;margin:15px 0}}.input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px}}input{{padding-left:55px}}h1{{font-size:38px;margin-bottom:40px;color:#1f2937}}</style>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:#fff;color:#333;padding:60px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:100%;max-width:450px;text-align:center}}
+            .input-group{{position:relative;margin:20px 0}}
+            .input-group i{{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:20px;z-index:1}}
+            input{{width:100%;padding:18px 18px 18px 55px;font-size:17px;border:2px solid #e1e5e9;border-radius:15px;box-sizing:border-box;transition:all 0.3s}}
+            input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 4px rgba(102,126,234,0.1)}}
+            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:20px;color:#9ca3af;transition:all 0.3s}}
+            .password-toggle:hover{{color:#667eea}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:10px 0}}
+            button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.5)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500;border:1px solid #fecaca}}
+            h1{{font-size:38px;margin-bottom:40px;color:#1f2937}}
+        </style>
     </head>
     <body>
         <div class="login-box">
             <h1>🎓 Study Planner</h1>
             {f'<div class="error">{error}</div>' if error else ''}
+            
             <form method="POST">
-                <div class="input-group"><i>👤</i><input type="text" name="name" placeholder="Enter your name" required></div>
-                <div class="input-group"><i>📧</i><input type="email" name="email" placeholder="your-email@gmail.com" required></div>
-                <div class="input-group"><i>🔒</i><input type="password" name="password" placeholder="Enter your password" required></div>
+                <div class="input-group">
+                    <i>👤</i>
+                    <input type="text" name="name" placeholder="Enter your name" required>
+                </div>
+                <div class="input-group" style="position:relative;">
+                    <i>📧</i>
+                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                </div>
+                <div class="input-group">
+                    <i>🔒</i>
+                    <input type="password" name="password" id="password" placeholder="Enter your password" required>
+                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                </div>
                 <button type="submit">🚀 Login</button>
             </form>
         </div>
+        
+        <script>
+        function togglePassword() {{
+            const password = document.getElementById('password');
+            const toggle = event.target;
+            if (password.type === 'password') {{
+                password.type = 'text';
+                toggle.textContent = '🙈';
+            }} else {{
+                password.type = 'password';
+                toggle.textContent = '👁️';
+            }}
+        }}
+        </script>
     </body>
     </html>
     '''
-
+    
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'): 
