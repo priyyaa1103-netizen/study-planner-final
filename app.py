@@ -79,134 +79,67 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
-@app.route('/', methods=['GET', 'POST'])
-def login_register():
+@app.route('/login', methods=['GET', 'POST'])
+def login():
     if request.method == 'POST':
         try:
-            email = request.form.get('email', '').lower().strip()
-            password = request.form.get('password', '')
-            name = request.form.get('name', '').strip()
-            action = request.form.get('action', 'login')
-            
-            print(f"🔍 DEBUG: action={action}, email={email}, password_len={len(password) if password else 0}")
+            email = request.form['email']
+            password = request.form['password']
             
             conn = get_db_connection()
+            user = conn.execute("SELECT * FROM users WHERE email=? AND password=?", 
+                               (email, password)).fetchone()
+            conn.close()
             
-            if action == 'register':
-                # Check if user exists
-                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                print(f"🔍 User exists? {user is not None}")
-                
-                if user:
-                    conn.close()
-                    return render_login_page("❌ Email already registered!")
-                
-                # Create new user
-                hashed_pw = generate_password_hash(password)
-                print(f"🔐 Hash created: {hashed_pw[:20]}...")
-                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                            (email, hashed_pw, name))
-                conn.commit()
-                conn.close()
-                print(f"✅ User CREATED: {email}")
-                return render_login_page("✅ Account created! Please login.")
-                
-            else:  # login
-                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                print(f"🔍 User found: {user['email'] if user else 'None'}")
-                
-                if user:
-                    print(f"🔍 Password check: {check_password_hash(user['password'], password)}")
-                    print(f"🔍 Stored hash: {user['password'][:20]}...")
-                    print(f"🔍 Input password len: {len(password)}")
-                
-                conn.close()
-                
-                if user and check_password_hash(user['password'], password):
-                    session['logged_in'] = True
-                    session['email'] = email
-                    session['name'] = user['name']
-                    print(f"✅ LOGIN SUCCESS: {email}")
-                    return redirect('/dashboard')
-                else:
-                    print(f"❌ LOGIN FAILED: {email}")
-                    return render_login_page("❌ Wrong email or password! Check console logs.")
-                    
+            if user:
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                print(f"✅ Login success: {email}")
+                return redirect('/dashboard')
+            else:
+                print("❌ Login failed: Invalid credentials")
+                return '''
+                <!DOCTYPE html>
+                <html><head><title>Login Failed</title>
+                <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-family:Arial;padding:100px;text-align:center}}
+                .error{{background:rgba(231,76,60,0.9);padding:40px;border-radius:20px;max-width:500px;margin:0 auto}}</style></head>
+                <body>
+                    <div class="error">
+                        <h1 style="font-size:48px">❌ Login Failed!</h1>
+                        <p style="font-size:24px">Invalid email or password</p>
+                        <a href="/login" style="background:#f39c12;color:white;padding:15px 30px;text-decoration:none;border-radius:10px;font-size:20px">Try Again</a>
+                    </div>
+                </body></html>
+                '''
         except Exception as e:
-            print(f"💥 ERROR: {e}")
-            return render_login_page(f"❌ Error: {str(e)}")
+            print(f"Login error: {e}")
+            return f"<h1>Login Error: {str(e)}</h1>"
     
-    return render_login_page()
-    
-def render_login_page(error=""):
-    error_html = f'<div class="error">{error}</div>' if error else ''
-    return f'''
+    # GET request - show login form
+    return '''
     <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Study Planner</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
-            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
-            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
-            .tab.active{{background:#667eea;color:white}}
-            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
-            input:focus{{border-color:#667eea;outline:none}}
-            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
-            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
-        </style>
-    </head>
+    <html><head><title>Login - Study Planner</title>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+    .login-card{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;backdrop-filter:blur(20px);box-shadow:0 25px 60px rgba(0,0,0,0.3);max-width:450px;width:100%;text-align:center;border:1px solid rgba(255,255,255,0.2)}}
+    h1{{font-size:36px;margin-bottom:30px;color:#f1c40f;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
+    input{{width:100%;padding:18px;margin:15px 0;border-radius:15px;border:none;font-size:18px;box-shadow:0 8px 25px rgba(0,0,0,0.1);background:rgba(255,255,255,0.9)}}
+    button{{width:100%;padding:20px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 12px 35px rgba(80,200,120,0.4)}}
+    button:hover{{transform:translateY(-3px);box-shadow:0 18px 45px rgba(80,200,120,0.6)}}
+    .register-link{{margin-top:30px;color:#f1c40f;font-size:18px;text-decoration:none}}
+    .register-link:hover{{text-decoration:underline}}</style></head>
     <body>
-        <div class="login-box">
-            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
-            {error_html}
-            
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('login')">Login</button>
-                <button class="tab" onclick="showTab('register')">Register</button>
-            </div>
-            
-            <!-- LOGIN FORM -->
-            <form method="POST" id="loginForm">
-                <input type="hidden" name="action" value="login">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Enter password" required>
+        <div class="login-card">
+            <h1>🎓 Study Planner</h1>
+            <form method="POST">
+                <input type="email" name="email" placeholder="📧 Email" required>
+                <input type="password" name="password" placeholder="🔒 Password" required>
                 <button type="submit">🚀 Login</button>
             </form>
-            
-            <!-- REGISTER FORM -->
-            <form method="POST" id="registerForm" style="display:none">
-                <input type="hidden" name="action" value="register">
-                <input type="text" name="name" placeholder="Your Full Name" required>
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
-                <button type="submit">✅ Create Account</button>
-            </form>
+            <a href="/register" class="register-link">Don't have account? Register →</a>
         </div>
-        
-        <script>
-        function showTab(tabName) {{
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const tabs = document.querySelectorAll('.tab');
-            
-            if (tabName === 'login') {{
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-            }} else {{
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-            }}
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-        }}
-        </script>
-    </body>
-    </html>
+    </body></html>
     '''
     
 @app.route('/dashboard')
