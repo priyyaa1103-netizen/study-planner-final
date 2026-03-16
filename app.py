@@ -199,70 +199,145 @@ def dashboard():
     
     email = session.get('email', '')
     name = session.get('name', 'User')
-    notifications = ""
     
-    try:
-        conn = get_db_connection()
-        reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
-        conn.close()
-        
-        for r in reminders:
-            # Simple notification - no complex parsing
-            notifications += f'''
-            <div class="notification" onclick="playAlarm()">
-                <div style="font-size:28px">⏰ {r['title']}</div>
-                <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
-            </div>
-            '''
-    except:
-        pass
+    conn = get_db_connection()
+    reminders = conn.execute("""
+        SELECT * FROM reminders WHERE email=? 
+        ORDER BY deadline ASC
+    """, (email,)).fetchall()
+    conn.close()
+    
+    # Alarm HTML + JavaScript
+    notifications = ""
+    for r in reminders:
+        notifications += f'''
+        <div class="auto-alarm" 
+             data-alarm-time="{r['deadline']}"
+             data-title="{r['title']}">
+            <div style="font-size:28px">⏰ {r['title']}</div>
+            <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Dashboard - Study Planner</title>
-        <style>*{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+        <title>Dashboard</title>
+        <style>
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
         .container{{max-width:900px;margin:0 auto;text-align:center}}
-        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+        .auto-alarm{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b}}
+        .auto-alarm.ringing{{background:linear-gradient(45deg,#ff6b6b,#ffd700)!important;animation:shake 0.3s infinite, pulse 0.6s infinite!important;border:4px solid #ffd700!important;transform:scale(1.1)!important}}
+        @keyframes shake{{0%,100%{{transform:translateX(0);}}25%{{transform:translateX(-15px);}}75%{{transform:translateX(15px);}}}}
+        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.08);}}100%{{transform:scale(1);}}}}
+        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
         .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-        .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}
-        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
-        .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
+        </style>
+        
+        <!-- 🔥 AUTOMATIC ALARM SYSTEM - NO CLICK NEEDED 🔥 -->
         <script>
-        function playAlarm() {{
-            try {{
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 1);
-            }} catch(e) {{}}
+        // Page load ஆனதும் start ஆகும்!
+        window.addEventListener('load', function() {{
+            console.log('🚀 Auto Alarm System Started!');
+            checkAlarmsEverySecond();
+        }});
+        
+        // Every SECOND check பண்ணும்
+        function checkAlarmsEverySecond() {{
+            setInterval(function() {{
+                checkAllAlarms();
+            }}, 1000); // 1 second-க்கு ஒரு தடவை
+        }}
+        
+        function checkAllAlarms() {{
+            const now = new Date();
+            const alarms = document.querySelectorAll('.auto-alarm');
+            
+            alarms.forEach(function(alarm) {{
+                const alarmTime = new Date(alarm.getAttribute('data-alarm-time'));
+                const timeDiff = alarmTime - now;
+                
+                // Time ஆனா → ALARM TRIGGER! 🎵
+                if (timeDiff <= 0) {{
+                    if (!alarm.classList.contains('triggered')) {{
+                        alarm.classList.add('ringing', 'triggered');
+                        playLoudBeep();
+                        flashScreen();
+                        showBrowserNotification(alarm.getAttribute('data-title'));
+                    }}
+                }}
+            }});
+        }}
+        
+        // LOUD BEEP SOUND (3 beeps)
+        function playLoudBeep() {{
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Beep 1
+            playBeep(audioContext, 800, 0);
+            // Beep 2  
+            setTimeout(() => playBeep(audioContext, 1000, 0.4), 400);
+            // Beep 3
+            setTimeout(() => playBeep(audioContext, 1200, 0.6), 800);
+        }}
+        
+        function playBeep(context, freq, delay) {{
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+            
+            oscillator.frequency.value = freq;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.6, context.currentTime + delay);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + delay + 0.4);
+            
+            oscillator.start(context.currentTime + delay);
+            oscillator.stop(context.currentTime + delay + 0.4);
+        }}
+        
+        // Screen flash
+        function flashScreen() {{
+            document.body.style.background = '#ff6b6b';
+            setTimeout(() => {{
+                document.body.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+            }}, 200);
+            setTimeout(() => {{
+                document.body.style.background = '#ff6b6b';
+            }}, 400);
+            setTimeout(() => {{
+                document.body.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+            }}, 600);
+        }}
+        
+        // Browser notification
+        function showBrowserNotification(title) {{
+            if (Notification.permission === 'granted') {{
+                new Notification('⏰ ALARM!', {{body: title, icon: '📚'}});
+            }} else {{
+                alert('⏰⏰ ' + title + ' ⏰⏰');
+            }}
         }}
         </script>
     </head>
     <body>
         <div class="container">
-            <div class="welcome-card">
-                <h1 style="font-size:42px">🎓 Welcome {name}!</h1>
-                <h2 style="font-size:24px;margin-bottom:30px">Study Planner</h2>
+            <h1 style="font-size:42px;margin-bottom:40px">🎓 Welcome {name}!</h1>
+            
+            <div style="margin-bottom:40px">
+                <h2 style="font-size:28px">Active Alarms:</h2>
+                {notifications or '<p style="color:#f1c40f;font-size:24px">No active alarms</p>'}
             </div>
             
-            {notifications}
-            
-            <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goals</a>
-            <a href="/view-goals" class="btn">📊 View Goals</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
-            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+            <div>
+                <a href="/study" class="btn">📚 Study</a>
+                <a href="/goals" class="btn">🎯 Goals</a>
+                <a href="/reminders" class="btn">⏰ Set Reminder</a>
+                <a href="/myfiles" class="btn">📁 Files</a>
+                <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+            </div>
         </div>
     </body>
     </html>
@@ -784,47 +859,36 @@ def view_goals():
 def reminders():
     if not session.get('logged_in'): return redirect('/')
     
-    email = session['email']
-    conn = get_db_connection()
-    
     if request.method == 'POST':
-        title = request.form['title']
-        deadline = request.form['deadline']
+        conn = get_db_connection()
         conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (email, title, deadline))
+                    (session['email'], request.form['title'], request.form['deadline']))
         conn.commit()
-    
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
-    conn.close()
-    
-    reminders_html = ''
-    for r in reminders:
-        reminders_html += f'''
-        <div style="background:rgba(231,76,60,0.9);padding:20px;margin:15px;border-radius:15px">
-            <strong>⏰ {r['title']}</strong><br>
-            <span style="color:#ffd700">{r['deadline']}</span>
-            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete?')" style="color:#ff6b6b;float:right">[X]</a>
-        </div>
-        '''
+        conn.close()
+        return redirect('/dashboard')
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Reminders</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}}.container{{max-width:600px;margin:0 auto}}</style></head>
+    <html><head><title>⏰ Set Alarm</title>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI';display:flex;align-items:center;justify-content:center}}
+    .form{{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.3)}}
+    input{{width:100%;padding:20px;margin:15px 0;border:none;border-radius:15px;font-size:18px;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+    button{{width:100%;padding:20px;background:#ff6b6b;color:white;border:none;border-radius:20px;font-size:24px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(255,107,107,0.4)}}
+    </style></head>
     <body>
-    <div class="container">
-        <h1 style="text-align:center;font-size:40px;margin-bottom:40px">⏰ Reminders</h1>
-        <form method="POST" style="background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:30px">
-            <input name="title" placeholder="Reminder title" style="width:70%;padding:15px;border-radius:10px;border:none;font-size:18px">
-            <input name="deadline" type="datetime-local" style="width:28%;padding:15px;border-radius:10px;border:none;font-size:18px">
-            <button type="submit" style="width:100%;padding:15px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;margin-top:15px">➕ Add Reminder</button>
+    <div class="form">
+        <h1 style="font-size:40px;margin-bottom:30px;text-align:center">⏰ Set Study Alarm</h1>
+        <form method="POST">
+            <input name="title" placeholder="Alarm Title (ex: Maths Chapter 2)" required>
+            <input name="deadline" type="datetime-local" required>
+            <button type="submit">🚨 Set Alarm Now!</button>
         </form>
-        {reminders_html or '<p style="text-align:center;color:#f1c40f;font-size:24px">No reminders set</p>'}
-        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#f1c40f;font-size:20px">← Dashboard</a>
+        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#ffd700;font-size:20px">← Back to Dashboard</a>
     </div>
-    </body></html>
+    </body>
+    </html>
     '''
-
+    
 @app.route('/delete-reminder/<int:reminder_id>')
 def delete_reminder(reminder_id):
     if not session.get('logged_in'): return redirect('/')
