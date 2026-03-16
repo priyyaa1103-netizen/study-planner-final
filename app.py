@@ -312,129 +312,42 @@ def dashboard():
         '''
     
     return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Dashboard</title>
-        <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
-        .container{{max-width:900px;margin:0 auto;text-align:center}}
-        .auto-alarm{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b}}
-        .auto-alarm.ringing{{background:linear-gradient(45deg,#ff6b6b,#ffd700)!important;animation:shake 0.3s infinite, pulse 0.6s infinite!important;border:4px solid #ffd700!important;transform:scale(1.1)!important}}
-        @keyframes shake{{0%,100%{{transform:translateX(0);}}25%{{transform:translateX(-15px);}}75%{{transform:translateX(15px);}}}}
-        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.08);}}100%{{transform:scale(1);}}}}
-        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-        .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-        </style>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - Study Planner</title>
+    <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+    .container{{max-width:900px;margin:0 auto;text-align:center}}
+    .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+    .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="font-size:42px;margin-bottom:20px">🎓 Welcome {session.get("name", "User")}!</h1>
+        <h2 style="font-size:24px;margin-bottom:30px">Study Planner Dashboard</h2>
         
-        <!-- 🔥 AUTOMATIC ALARM SYSTEM - NO CLICK NEEDED 🔥 -->
-        <script>
-        // Page load ஆனதும் start ஆகும்!
-        window.addEventListener('load', function() {{
-            console.log('🚀 Auto Alarm System Started!');
-            checkAlarmsEverySecond();
-        }});
+        <!-- Active Reminders -->
+        {notifications if "notifications" in locals() else ""}
         
-        // Every SECOND check பண்ணும்
-        function checkAlarmsEverySecond() {{
-            setInterval(function() {{
-                checkAllAlarms();
-            }}, 1000); // 1 second-க்கு ஒரு தடவை
-        }}
-        
-        function checkAllAlarms() {{
-            const now = new Date();
-            const alarms = document.querySelectorAll('.auto-alarm');
-            
-            alarms.forEach(function(alarm) {{
-                const alarmTime = new Date(alarm.getAttribute('data-alarm-time'));
-                const timeDiff = alarmTime - now;
-                
-                // Time ஆனா → ALARM TRIGGER! 🎵
-                if (timeDiff <= 0) {{
-                    if (!alarm.classList.contains('triggered')) {{
-                        alarm.classList.add('ringing', 'triggered');
-                        playLoudBeep();
-                        flashScreen();
-                        showBrowserNotification(alarm.getAttribute('data-title'));
-                    }}
-                }}
-            }});
-        }}
-        
-        // LOUD BEEP SOUND (3 beeps)
-        function playLoudBeep() {{
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Beep 1
-            playBeep(audioContext, 800, 0);
-            // Beep 2  
-            setTimeout(() => playBeep(audioContext, 1000, 0.4), 400);
-            // Beep 3
-            setTimeout(() => playBeep(audioContext, 1200, 0.6), 800);
-        }}
-        
-        function playBeep(context, freq, delay) {{
-            const oscillator = context.createOscillator();
-            const gainNode = context.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(context.destination);
-            
-            oscillator.frequency.value = freq;
-            oscillator.type = 'sine';
-            gainNode.gain.setValueAtTime(0.6, context.currentTime + delay);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + delay + 0.4);
-            
-            oscillator.start(context.currentTime + delay);
-            oscillator.stop(context.currentTime + delay + 0.4);
-        }}
-        
-        // Screen flash
-        function flashScreen() {{
-            document.body.style.background = '#ff6b6b';
-            setTimeout(() => {{
-                document.body.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
-            }}, 200);
-            setTimeout(() => {{
-                document.body.style.background = '#ff6b6b';
-            }}, 400);
-            setTimeout(() => {{
-                document.body.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
-            }}, 600);
-        }}
-        
-        // Browser notification
-        function showBrowserNotification(title) {{
-            if (Notification.permission === 'granted') {{
-                new Notification('⏰ ALARM!', {{body: title, icon: '📚'}});
-            }} else {{
-                alert('⏰⏰ ' + title + ' ⏰⏰');
-            }}
-        }}
-        </script>
-    </head>
-    <body>
-        <div class="container">
-            <h1 style="font-size:42px;margin-bottom:40px">🎓 Welcome {name}!</h1>
-            
-            <div style="margin-bottom:40px">
-                <h2 style="font-size:28px">Active Alarms:</h2>
-                {notifications or '<p style="color:#f1c40f;font-size:24px">No active alarms</p>'}
-            </div>
-            
-            <div>
-                <a href="/study" class="btn">📚 Study</a>
-                <a href="/goals" class="btn">🎯 Goals</a>
-                <a href="/reminders" class="btn">⏰ Set Reminder</a>
-                <a href="/myfiles" class="btn">📁 Files</a>
-                <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
-            </div>
+        <div style="margin:40px 0">
+            <a href="/study" class="btn">📚 Study Dashboard</a>
+            <a href="/goals" class="btn">🎯 Set Goals</a>
+            <a href="/view-goals" class="btn">📊 View Goals</a>
+            <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
+            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
         </div>
-    </body>
+    </div>
+
+    <!-- 🔥 GLOBAL ALARM - இங்க தான் work ஆகும்! 🔥 -->
     {GLOBAL_ALARM_JS}
-    </html>
-    '''
+</body>
+</html>
+'''
     
 @app.route('/check-notifications')
 def check_notifications_api():
@@ -500,8 +413,8 @@ def study():
         <a href="/year3" class="year-btn">🎓 3rd Year</a>
         
     </div>
-    </body>
     {GLOBAL_ALARM_JS}
+    </body>
     </html>
     '''
 
@@ -742,7 +655,8 @@ def myfiles_page():  # Function name change pannirukken
         <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
         {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
     </div>
-    </body>{GLOBAL_ALARM_JS}</html>
+    {GLOBAL_ALARM_JS}
+    </body></html>
     '''
     
 @app.route('/delete/<subject>/<filename>')
@@ -795,7 +709,8 @@ def goals():
         <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
     </div>
     <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    </body>{GLOBAL_ALARM_JS}</html>
+    {GLOBAL_ALARM_JS}
+    </body></html>
     '''
 
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
@@ -966,7 +881,8 @@ def view_goals():
             <a href="/goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">➕ New Goal</a>
         </div>
     </div>
-    </body>{GLOBAL_ALARM_JS}   9</html>
+    {GLOBAL_ALARM_JS}
+    </body></html>
     '''
     
 @app.route('/reminders', methods=['GET', 'POST'])
