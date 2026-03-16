@@ -74,7 +74,12 @@ def save_reminders_file(reminders):
         json.dump(reminders, f)
 
 @app.route('/', methods=['GET', 'POST'])
-def login_register():
+def home():
+    # ✅ AUTOMATIC REDIRECT MAGIC
+    if session.get('logged_in'):
+        print(f"🚀 Auto-redirecting {session['email']} to dashboard")
+        return redirect('/dashboard')
+    
     if request.method == 'POST':
         try:
             email = request.form.get('email', '').lower().strip()
@@ -82,38 +87,23 @@ def login_register():
             name = request.form.get('name', '').strip()
             action = request.form.get('action', 'login')
             
-            print(f"🔍 DEBUG: action={action}, email={email}, password_len={len(password) if password else 0}")
-            
             conn = get_db_connection()
             
             if action == 'register':
-                # Check if user exists
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                print(f"🔍 User exists? {user is not None}")
-                
                 if user:
                     conn.close()
                     return render_login_page("❌ Email already registered!")
                 
-                # Create new user
                 hashed_pw = generate_password_hash(password)
-                print(f"🔐 Hash created: {hashed_pw[:20]}...")
                 conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
                             (email, hashed_pw, name))
                 conn.commit()
                 conn.close()
-                print(f"✅ User CREATED: {email}")
                 return render_login_page("✅ Account created! Please login.")
                 
             else:  # login
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                print(f"🔍 User found: {user['email'] if user else 'None'}")
-                
-                if user:
-                    print(f"🔍 Password check: {check_password_hash(user['password'], password)}")
-                    print(f"🔍 Stored hash: {user['password'][:20]}...")
-                    print(f"🔍 Input password len: {len(password)}")
-                
                 conn.close()
                 
                 if user and check_password_hash(user['password'], password):
@@ -121,10 +111,9 @@ def login_register():
                     session['email'] = email
                     session['name'] = user['name']
                     print(f"✅ LOGIN SUCCESS: {email}")
-                    return redirect('/dashboard')
+                    return redirect('/dashboard')  # Auto dashboard!
                 else:
-                    print(f"❌ LOGIN FAILED: {email}")
-                    return render_login_page("❌ Wrong email or password! Check console logs.")
+                    return render_login_page("❌ Wrong email or password!")
                     
         except Exception as e:
             print(f"💥 ERROR: {e}")
