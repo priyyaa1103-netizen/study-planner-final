@@ -749,9 +749,9 @@ def view_goals():
         return redirect('/')
     
     conn = get_db_connection()
-    goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY id DESC', 
+    goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY ID DESC', 
                         (session['email'],)).fetchall()
-    conn.close()  # ← This was missing!
+    conn.close()
     
     goals_html = ''
     for goal in goals:
@@ -769,87 +769,82 @@ def view_goals():
             <p><strong>Goal:</strong> {goal['goal']}</p>
             <p><strong>Target:</strong> {goal['target_score']}</p>
             {progress_bar}
-            <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#50c878;color:white;text-decoration:none;border-radius:15px;font-weight:600">🧠 Take Quiz</a>
+            <div style="margin-top:20px">
+                <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#50c878;color:white;text-decoration:none;border-radius:12px;font-weight:600;margin:5px">🧠 Take Quiz</a>
+            </div>
         </div>
         '''
     
     return f'''
     <!DOCTYPE html>
     <html><head><title>My Goals</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600;z-index:100}}</style></head>
+    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
     <body>
     <a href="/dashboard" class="back-btn">← Dashboard</a>
     <div class="container">
         <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
-        {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f;margin-top:50px">No goals set yet! <a href="/goals" style="color:#50c878">Set goals →</a></p>'}
+        {goals_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No goals set yet! <a href='/goals' style='color:#50c878'>Set goals →</a></p>"}
+        <div style="text-align:center;margin-top:40px">
+            <a href="/goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">➕ New Goal</a>
+        </div>
     </div>
     </body></html>
     '''
     
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
-    if not session.get('logged_in'): 
-        return redirect('/')
+    if not session.get('logged_in'): return redirect('/')
     
-    email = session.get('email', '')
+    email = session['email']
+    conn = get_db_connection()
     
     if request.method == 'POST':
-        conn = get_db_connection()
         title = request.form['title']
-        time_input = request.form['deadline']  # "21:05"
-        
-        # Today + time
-        today = datetime.now().strftime('%Y-%m-%d')
-        full_time = f"{today} {time_input}:00"
-        deadline = datetime.strptime(full_time, '%Y-%m-%d %H:%M:%S')
-        
-        # ✅ Save as readable format
+        deadline = request.form['deadline']
         conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (email, title, deadline.strftime('%Y-%m-%d %I:%M %p')))
+                    (email, title, deadline))
         conn.commit()
-        conn.close()
-        return redirect('/reminders')
     
-    conn = get_db_connection()
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY id DESC", (email,)).fetchall()
+    reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
     conn.close()
     
     reminders_html = ''
-    now = datetime.now()
-    
     for r in reminders:
-        try:
-            # ✅ 12-hour display: "09:05 PM"
-            display_time = r['deadline'].split()[-1]  # Get time part
-            reminders_html += f'''
-            <div style="background:rgba(255,255,255,0.12);padding:25px;margin:15px;border-radius:20px;border-left:5px solid #f1c40f">
-                <div style="font-size:28px;font-weight:600">{r['title']}</div>
-                <div style="font-size:22px;color:#f1c40f">🕐 {display_time}</div>
-            </div>
-            '''
-        except:
-            reminders_html += f'<div>{r["title"]}</div>'
+        reminders_html += f'''
+        <div style="background:rgba(231,76,60,0.9);padding:20px;margin:15px;border-radius:15px">
+            <strong>⏰ {r['title']}</strong><br>
+            <span style="color:#ffd700">{r['deadline']}</span>
+            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete?')" style="color:#ff6b6b;float:right">[X]</a>
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>⏰ Reminders</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:650px;margin:0 auto}}.form-box{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin:40px 0}}input{{width:100%;padding:18px;margin:12px 0;border-radius:12px;border:none}}button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer}}.back-btn{{position:fixed;top:25px;left:25px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
+    <html><head><title>Reminders</title>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}}.container{{max-width:600px;margin:0 auto}}</style></head>
     <body>
-        <a href="/dashboard" class="back-btn">← Dashboard</a>
-        <div class="container">
-            <h1 style="font-size:42px;margin-bottom:30px">⏰ Reminders</h1>
-            <div class="form-box">
-                <form method="POST">
-                    <input name="title" placeholder="Task (Maths)" required>
-                    <input name="deadline" type="time" required>
-                    <button>✅ Add Reminder</button>
-                </form>
-            </div>
-            {reminders_html}
-        </div>
+    <div class="container">
+        <h1 style="text-align:center;font-size:40px;margin-bottom:40px">⏰ Reminders</h1>
+        <form method="POST" style="background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:30px">
+            <input name="title" placeholder="Reminder title" style="width:70%;padding:15px;border-radius:10px;border:none;font-size:18px">
+            <input name="deadline" type="datetime-local" style="width:28%;padding:15px;border-radius:10px;border:none;font-size:18px">
+            <button type="submit" style="width:100%;padding:15px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;margin-top:15px">➕ Add Reminder</button>
+        </form>
+        {reminders_html or '<p style="text-align:center;color:#f1c40f;font-size:24px">No reminders set</p>'}
+        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#f1c40f;font-size:20px">← Dashboard</a>
+    </div>
     </body></html>
     '''
-    
+
+@app.route('/delete-reminder/<int:reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (reminder_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/reminders')
+
 @app.route('/myfiles')
 def myfiles():
     if not session.get('logged_in'): return redirect('/')
@@ -865,15 +860,6 @@ def myfiles():
     </div></body></html>
     '''
     
-@app.route('/delete_reminder/<int:id>')
-def delete_reminder(id):
-    if not session.get('logged_in'): return redirect('/')
-    conn = sqlite3.connect('users.db')
-    conn.execute('DELETE FROM reminders WHERE id=? AND email=?', (id, session['email']))
-    conn.commit()
-    conn.close()
-    return redirect('/reminders')
-
 @app.route('/delete_goal/<int:id>')
 def delete_goal(id):
     if not session.get('logged_in'): return redirect('/')
