@@ -12,6 +12,98 @@ from email.mime.multipart import MIMEMultipart
 # ✅ NO dotenv - Direct env vars
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Default for testing
+# Global alarm script எல்லா pages-க்கும்
+GLOBAL_ALARM_JS = '''
+<script>
+// 🔥 GLOBAL ALARM - எங்க இருந்தாலும் work ஆகும்! 🔥
+let alarmInterval = null;
+
+function startGlobalAlarm() {
+    if (alarmInterval) return; // Already running
+    
+    console.log('🚀 Global Alarm Started!');
+    alarmInterval = setInterval(checkGlobalAlarms, 1000);
+}
+
+function stopGlobalAlarm() {
+    if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+    }
+}
+
+function checkGlobalAlarms() {
+    fetch('/api/alarms')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(alarm => {
+                if (isAlarmTime(alarm.deadline) && !alarm.triggered) {
+                    triggerGlobalAlarm(alarm.title);
+                }
+            });
+        })
+        .catch(err => console.log('Alarm check failed:', err));
+}
+
+function isAlarmTime(deadline) {
+    const now = new Date();
+    const alarmTime = new Date(deadline);
+    return alarmTime <= now;
+}
+
+function triggerGlobalAlarm(title) {
+    // LOUD BEEP x3
+    playGlobalBeep();
+    // Screen flash எல்லா tabs-ல
+    flashGlobalScreen();
+    // Notification
+    showGlobalNotification(title);
+    console.log('🚨 GLOBAL ALARM:', title);
+}
+
+// Global Beep Sound
+function playGlobalBeep() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    playBeep(audioContext, 800, 0);
+    setTimeout(() => playBeep(audioContext, 1000, 0), 400);
+    setTimeout(() => playBeep(audioContext, 1200, 0), 800);
+}
+
+function playBeep(context, freq, delay) {
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    oscillator.frequency.value = freq;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.6, context.currentTime + delay);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + delay + 0.4);
+    oscillator.start(context.currentTime + delay);
+    oscillator.stop(context.currentTime + delay + 0.4);
+}
+
+// Screen Flash எல்லா pages
+function flashGlobalScreen() {
+    const originalBg = document.body.style.background;
+    document.body.style.background = '#ff6b6b';
+    setTimeout(() => document.body.style.background = originalBg, 200);
+}
+
+// Browser Notification
+function showGlobalNotification(title) {
+    if (Notification.permission === 'granted') {
+        new Notification('⏰ ALARM!', {body: title, icon: '📚'});
+    }
+}
+
+// Page load ஆனதும் start
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startGlobalAlarm);
+} else {
+    startGlobalAlarm();
+}
+</script>
+'''
 
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
@@ -340,6 +432,7 @@ def dashboard():
             </div>
         </div>
     </body>
+    {GLOBAL_ALARM_JS}
     </html>
     '''
     
@@ -358,6 +451,26 @@ def check_notifications_api():
     if count > 0:
         return "🚨"
     return ""
+
+@app.route('/api/alarms')
+def get_alarms():
+    if not session.get('logged_in'):
+        return jsonify([])
+    
+    conn = get_db_connection()
+    alarms = conn.execute("""
+        SELECT id, title, deadline 
+        FROM reminders 
+        WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
+    """, (session['email'],)).fetchall()
+    conn.close()
+    
+    return jsonify([{
+        'id': r['id'], 
+        'title': r['title'], 
+        'deadline': r['deadline'],
+        'triggered': False
+    } for r in alarms])
 
 @app.route('/study')
 def study():
@@ -388,6 +501,7 @@ def study():
         
     </div>
     </body>
+    {GLOBAL_ALARM_JS}
     </html>
     '''
 
@@ -628,7 +742,7 @@ def myfiles_page():  # Function name change pannirukken
         <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
         {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
     </div>
-    </body></html>
+    </body>{GLOBAL_ALARM_JS}</html>
     '''
     
 @app.route('/delete/<subject>/<filename>')
@@ -681,7 +795,7 @@ def goals():
         <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
     </div>
     <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    </body></html>
+    </body>{GLOBAL_ALARM_JS}</html>
     '''
 
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
@@ -852,38 +966,71 @@ def view_goals():
             <a href="/goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">➕ New Goal</a>
         </div>
     </div>
-    </body></html>
+    </body>{GLOBAL_ALARM_JS}   9</html>
     '''
     
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
     
+    conn = get_db_connection()
+    email = session['email']
+    
     if request.method == 'POST':
-        conn = get_db_connection()
-        conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (session['email'], request.form['title'], request.form['deadline']))
+        if 'delete' in request.form:
+            reminder_id = request.form['reminder_id']
+            conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
+                        (reminder_id, email))
+        else:
+            conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
+                        (email, request.form['title'], request.form['deadline']))
         conn.commit()
-        conn.close()
-        return redirect('/dashboard')
+        return redirect('/reminders')
+    
+    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
+                            (email,)).fetchall()
+    conn.close()
+    
+    reminders_html = ''
+    for r in reminders:
+        reminders_html += f'''
+        <div style="background:rgba(231,76,60,0.9);padding:25px;margin:20px;border-radius:20px;
+                    display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <div style="font-size:24px">⏰ {r['title']}</div>
+                <div style="color:#ffd700;font-size:18px">{r['deadline']}</div>
+            </div>
+            <form method="POST" style="display:inline">
+                <input type="hidden" name="reminder_id" value="{r['id']}">
+                <input type="hidden" name="delete" value="1">
+                <button type="submit" onclick="return confirm('Delete {r["title"]}?')"
+                        style="background:#e74c3c;color:white;border:none;padding:10px 20px;
+                               border-radius:10px;cursor:pointer;font-size:16px">🗑️ Delete</button>
+            </form>
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>⏰ Set Alarm</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI';display:flex;align-items:center;justify-content:center}}
-    .form{{background:rgba(255,255,255,0.1);padding:50px;border-radius:25px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.3)}}
-    input{{width:100%;padding:20px;margin:15px 0;border:none;border-radius:15px;font-size:18px;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
-    button{{width:100%;padding:20px;background:#ff6b6b;color:white;border:none;border-radius:20px;font-size:24px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(255,107,107,0.4)}}
-    </style></head>
-    <body>
-    <div class="form">
-        <h1 style="font-size:40px;margin-bottom:30px;text-align:center">⏰ Set Study Alarm</h1>
-        <form method="POST">
-            <input name="title" placeholder="Alarm Title (ex: Maths Chapter 2)" required>
-            <input name="deadline" type="datetime-local" required>
-            <button type="submit">🚨 Set Alarm Now!</button>
-        </form>
-        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#ffd700;font-size:20px">← Back to Dashboard</a>
+    <html><head><title>⏰ Reminders</title>
+    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}}.container{{max-width:700px;margin:0 auto}}</style>
+    </head>
+    <body>{GLOBAL_ALARM_JS}
+    <div class="container">
+        <h1 style="text-align:center;font-size:40px;margin-bottom:40px">⏰ My Reminders</h1>
+        
+        <!-- ADD NEW REMINDER -->
+        <div style="background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:30px">
+            <form method="POST">
+                <input name="title" placeholder="Reminder Title" style="width:70%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
+                <input name="deadline" type="datetime-local" style="width:28%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
+                <button type="submit" style="width:100%;padding:20px;background:#ff6b6b;color:white;border:none;border-radius:20px;font-size:22px;margin-top:15px;cursor:pointer">➕ Add Reminder</button>
+            </form>
+        </div>
+        
+        {reminders_html or '<p style="text-align:center;font-size:24px;color:#f1c40f">No reminders set</p>'}
+        
+        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#ffd700;font-size:20px;text-decoration:none">← Dashboard</a>
     </div>
     </body>
     </html>
@@ -891,13 +1038,16 @@ def reminders():
     
 @app.route('/delete-reminder/<int:reminder_id>')
 def delete_reminder(reminder_id):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
     conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (reminder_id, session['email']))
+    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
+                (reminder_id, session['email']))
     conn.commit()
     conn.close()
     return redirect('/reminders')
-
+    
 @app.route('/myfiles')
 def myfiles():
     if not session.get('logged_in'): return redirect('/')
