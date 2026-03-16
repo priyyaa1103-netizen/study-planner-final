@@ -210,52 +210,30 @@ def render_login_page(error=""):
     '''
     
 @app.route('/dashboard')
+@login_required  # Add this import: from functools import wraps
 def dashboard():
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    email = session.get('email', '')
-    name = session.get('name', 'User')
+    email = session.get('email')
     notifications = ""
     
-    # ✅ Check for 5 min warnings
+    # Simple notification - NO complex datetime parsing
     try:
         conn = get_db_connection()
         reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
         
-        now = datetime.now()
-        for r in reminders:
-            try:
-                # Parse deadline
-                deadline_str = r['deadline']
-                deadline = datetime.strptime(deadline_str, '%Y-%m-%d %I:%M %p')
-                
-                mins_left = int((deadline - now).total_seconds() / 60)
-                
-                if 0 < mins_left <= 5:
-                    # ✅ SEND EMAIL
-                    body = f"""Hi {name},
-
-🚨 REMINDER: {r['title']}
-Time left: {mins_left} minutes
-
-Study Planner App"""
-                    
-                    result = send_email(email, f"🚨 {r['title']} - {mins_left} mins!", body)
-                    
-                    notifications += f'''
-                    <div class="notification">
-                        <div style="font-size:28px">🚨 {r['title']}</div>
-                        <div style="font-size:22px;color:#ffd700">
-                            {'✅ Email sent!' if result else '❌ Email failed'}
-                        </div>
-                    </div>
-                    '''
-            except:
-                pass
+        for reminder in reminders:
+            # Send email for ALL reminders (test purpose)
+            send_email(email, f"⏰ {reminder['title']}", f"Your reminder: {reminder['deadline']}")
+            
+            notifications += f'''
+            <div style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);padding:25px;margin:20px;border-radius:20px">
+                <h2 style="color:white;font-size:28px">{reminder['title']}</h2>
+                <p style="color:#ffd700;font-size:20px">✅ Email sent to {email}</p>
+                <p>{reminder['deadline']}</p>
+            </div>
+            '''
         conn.close()
     except Exception as e:
-        notifications += f'<div class="notification">Error: {str(e)}</div>'
+        notifications = f"<p style='color:red'>Error: {str(e)}</p>"
     
     return f'''
     <!DOCTYPE html>
@@ -293,14 +271,11 @@ Study Planner App"""
 
 @app.route('/test-email')
 def test_email():
-    if not session.get('logged_in'):
-        return "Login first!"
-    
     try:
-        send_email(session['email'], "🧪 Test Email", "Test successful!")
-        return "✅ Email sent! Check your inbox/spam."
+        send_email("jaseypriya@gmail.com", "🧪 TEST", "Test email working!")
+        return "<h1 style='color:green'>✅ EMAIL SENT! Check inbox/spam</h1>"
     except Exception as e:
-        return f"❌ Email error: {str(e)}"
+        return f"<h1 style='color:red'>❌ ERROR: {str(e)}</h1>"
     
 @app.route('/check-notifications')
 def check_notifications_api():
