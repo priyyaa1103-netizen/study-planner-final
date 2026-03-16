@@ -42,10 +42,6 @@ init_db()
 
 def send_email(to_email, subject, body):
     try:
-        if not GMAIL_USER or not GMAIL_PASS:
-            print("❌ Gmail credentials missing!")
-            return False
-            
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
         msg['To'] = to_email
@@ -57,10 +53,8 @@ def send_email(to_email, subject, body):
         server.login(GMAIL_USER, GMAIL_PASS)
         server.send_message(msg)
         server.quit()
-        print(f"✅ Email sent to {to_email}")
         return True
-    except Exception as e:
-        print(f"❌ Email error: {e}")
+    except:
         return False
 
 def get_db_connection():
@@ -79,67 +73,134 @@ def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+@app.route('/', methods=['GET', 'POST'])
+def login_register():
     if request.method == 'POST':
         try:
-            email = request.form['email']
-            password = request.form['password']
+            email = request.form.get('email', '').lower().strip()
+            password = request.form.get('password', '')
+            name = request.form.get('name', '').strip()
+            action = request.form.get('action', 'login')
+            
+            print(f"🔍 DEBUG: action={action}, email={email}, password_len={len(password) if password else 0}")
             
             conn = get_db_connection()
-            user = conn.execute("SELECT * FROM users WHERE email=? AND password=?", 
-                               (email, password)).fetchone()
-            conn.close()
             
-            if user:
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                print(f"✅ Login success: {email}")
-                return redirect('/dashboard')
-            else:
-                print("❌ Login failed: Invalid credentials")
-                return '''
-                <!DOCTYPE html>
-                <html><head><title>Login Failed</title>
-                <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-family:Arial;padding:100px;text-align:center}}
-                .error{{background:rgba(231,76,60,0.9);padding:40px;border-radius:20px;max-width:500px;margin:0 auto}}</style></head>
-                <body>
-                    <div class="error">
-                        <h1 style="font-size:48px">❌ Login Failed!</h1>
-                        <p style="font-size:24px">Invalid email or password</p>
-                        <a href="/login" style="background:#f39c12;color:white;padding:15px 30px;text-decoration:none;border-radius:10px;font-size:20px">Try Again</a>
-                    </div>
-                </body></html>
-                '''
+            if action == 'register':
+                # Check if user exists
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                print(f"🔍 User exists? {user is not None}")
+                
+                if user:
+                    conn.close()
+                    return render_login_page("❌ Email already registered!")
+                
+                # Create new user
+                hashed_pw = generate_password_hash(password)
+                print(f"🔐 Hash created: {hashed_pw[:20]}...")
+                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                            (email, hashed_pw, name))
+                conn.commit()
+                conn.close()
+                print(f"✅ User CREATED: {email}")
+                return render_login_page("✅ Account created! Please login.")
+                
+            else:  # login
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                print(f"🔍 User found: {user['email'] if user else 'None'}")
+                
+                if user:
+                    print(f"🔍 Password check: {check_password_hash(user['password'], password)}")
+                    print(f"🔍 Stored hash: {user['password'][:20]}...")
+                    print(f"🔍 Input password len: {len(password)}")
+                
+                conn.close()
+                
+                if user and check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    print(f"✅ LOGIN SUCCESS: {email}")
+                    return redirect('/dashboard')
+                else:
+                    print(f"❌ LOGIN FAILED: {email}")
+                    return render_login_page("❌ Wrong email or password! Check console logs.")
+                    
         except Exception as e:
-            print(f"Login error: {e}")
-            return f"<h1>Login Error: {str(e)}</h1>"
+            print(f"💥 ERROR: {e}")
+            return render_login_page(f"❌ Error: {str(e)}")
     
-    # GET request - show login form
-    return '''
+    return render_login_page()
+    
+def render_login_page(error=""):
+    error_html = f'<div class="error">{error}</div>' if error else ''
+    return f'''
     <!DOCTYPE html>
-    <html><head><title>Login - Study Planner</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-    .login-card{{background:rgba(255,255,255,0.15);padding:60px;border-radius:25px;backdrop-filter:blur(20px);box-shadow:0 25px 60px rgba(0,0,0,0.3);max-width:450px;width:100%;text-align:center;border:1px solid rgba(255,255,255,0.2)}}
-    h1{{font-size:36px;margin-bottom:30px;color:#f1c40f;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
-    input{{width:100%;padding:18px;margin:15px 0;border-radius:15px;border:none;font-size:18px;box-shadow:0 8px 25px rgba(0,0,0,0.1);background:rgba(255,255,255,0.9)}}
-    button{{width:100%;padding:20px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 12px 35px rgba(80,200,120,0.4)}}
-    button:hover{{transform:translateY(-3px);box-shadow:0 18px 45px rgba(80,200,120,0.6)}}
-    .register-link{{margin-top:30px;color:#f1c40f;font-size:18px;text-decoration:none}}
-    .register-link:hover{{text-decoration:underline}}</style></head>
+    <html>
+    <head>
+        <title>Study Planner</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
+            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
+            .tab.active{{background:#667eea;color:white}}
+            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+            input:focus{{border-color:#667eea;outline:none}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        </style>
+    </head>
     <body>
-        <div class="login-card">
-            <h1>🎓 Study Planner</h1>
-            <form method="POST">
-                <input type="email" name="email" placeholder="📧 Email" required>
-                <input type="password" name="password" placeholder="🔒 Password" required>
+        <div class="login-box">
+            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+            {error_html}
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <!-- LOGIN FORM -->
+            <form method="POST" id="loginForm">
+                <input type="hidden" name="action" value="login">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Enter password" required>
                 <button type="submit">🚀 Login</button>
             </form>
-            <a href="/register" class="register-link">Don't have account? Register →</a>
+            
+            <!-- REGISTER FORM -->
+            <form method="POST" id="registerForm" style="display:none">
+                <input type="hidden" name="action" value="register">
+                <input type="text" name="name" placeholder="Your Full Name" required>
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
+                <button type="submit">✅ Create Account</button>
+            </form>
         </div>
-    </body></html>
+        
+        <script>
+        function showTab(tabName) {{
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab');
+            
+            if (tabName === 'login') {{
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            }} else {{
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }}
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }}
+        </script>
+    </body>
+    </html>
     '''
     
 @app.route('/dashboard')
@@ -149,67 +210,74 @@ def dashboard():
     
     email = session.get('email', '')
     name = session.get('name', 'User')
-    
-    # ✅ Simple notification test
     notifications = ""
-    test_message = ""
     
     try:
-        # Test email send
-        result = send_email(email, "🧪 TEST NOTIFICATION", f"Hi {name}! Test successful!")
-        test_message = "✅ Email sent!" if result else "❌ Email failed - check Gmail password"
+        conn = get_db_connection()
+        reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
+        conn.close()
         
-        notifications = f'''
-        <div style="background:linear-gradient(135deg,#2ed573,#27ae60);padding:30px;margin:20px;border-radius:25px">
-            <h2 style="color:white;font-size:28px">📧 {test_message}</h2>
-            <p style="color:#f1c40f;font-size:20px">Email: {email}</p>
-        </div>
-        '''
-    except Exception as e:
-        notifications = f'''
-        <div style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);padding:30px;margin:20px;border-radius:25px">
-            <h2 style="color:white">❌ Error: {str(e)}</h2>
-        </div>
-        '''
+        for r in reminders:
+            # Simple notification - no complex parsing
+            notifications += f'''
+            <div class="notification" onclick="playAlarm()">
+                <div style="font-size:28px">⏰ {r['title']}</div>
+                <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
+            </div>
+            '''
+    except:
+        pass
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Dashboard - Study Planner</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:40px}}
-    .container{{max-width:900px;margin:0 auto;text-align:center}}
-    .btn{{display:inline-block;padding:22px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-    .welcome-card{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin-bottom:50px;backdrop-filter:blur(15px)}}</style></head>
+    <html>
+    <head>
+        <title>Dashboard - Study Planner</title>
+        <style>*{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
+        .container{{max-width:900px;margin:0 auto;text-align:center}}
+        .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+        .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+        .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b;animation:pulse 2s infinite}}
+        @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.05);}}100%{{transform:scale(1);}}}}
+        .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style>
+        <script>
+        function playAlarm() {{
+            try {{
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1);
+            }} catch(e) {{}}
+        }}
+        </script>
+    </head>
     <body>
         <div class="container">
             <div class="welcome-card">
-                <h1 style="font-size:45px;margin-bottom:20px">🎓 Welcome {name}!</h1>
-                <h2 style="font-size:26px">Study Planner Dashboard</h2>
+                <h1 style="font-size:42px">🎓 Welcome {name}!</h1>
+                <h2 style="font-size:24px;margin-bottom:30px">Study Planner</h2>
             </div>
             
             {notifications}
             
-            <div style="margin:40px 0">
-                <a href="/study" class="btn">📚 Study Dashboard</a>
-                <a href="/goals" class="btn">🎯 Set Goals</a>
-                <a href="/view-goals" class="btn">📊 View Goals</a>
-                <a href="/reminders" class="btn">⏰ Reminders</a>
-                <a href="/myfiles" class="btn">📁 My Files</a>
-                <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
-            </div>
+            <a href="/study" class="btn">📚 Study Dashboard</a>
+            <a href="/goals" class="btn">🎯 Set Goals</a>
+            <a href="/view-goals" class="btn">📊 View Goals</a>
+            <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
+            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
         </div>
     </body>
     </html>
     '''
-    
-@app.route('/test-email')
-def test_email():
-    try:
-        send_email("jaseypriya@gmail.com", "🧪 TEST", "Test email working!")
-        return "<h1 style='color:green'>✅ EMAIL SENT! Check inbox/spam</h1>"
-    except Exception as e:
-        return f"<h1 style='color:red'>❌ ERROR: {str(e)}</h1>"
     
 @app.route('/check-notifications')
 def check_notifications_api():
