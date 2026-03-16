@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, session, render_template_string, send_from_directory
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify 
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -8,7 +8,6 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import jsonify 
 
 # ✅ NO dotenv - Direct env vars
 app = Flask(__name__)
@@ -16,67 +15,85 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Default for
 # Global alarm script எல்லா pages-க்கும்
 GLOBAL_ALARM_JS = '''
 <script>
-// 🔥 100% WORKING ALARM - SOUND + VISUAL + ALERT
-let alarmsFired = new Set();
+let firedAlarms = new Set();
 
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("🔥 ALARM SYSTEM LOADED");
+    console.log("🎵 SOUND ALARM LOADED");
     
-    setInterval(function() {
+    setInterval(() => {
         fetch("/api/user-alarms")
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
+            const now = new Date();
             data.forEach(alarm => {
-                const now = new Date();
-                const alarmTime = new Date(alarm.deadline);
-                const alarmId = alarm.id;
-                
-                if (alarmTime <= now && !alarmsFired.has(alarmId)) {
-                    alarmsFired.add(alarmId);
-                    TRIGGER_ALARM(alarm.title);
+                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
+                    firedAlarms.add(alarm.id);
+                    console.log("🚨 TRIGGER ALARM:", alarm.title);
+                    playAlarmSound(alarm.title);
                 }
             });
-        })
-        .catch(error => console.log("Fetch error:", error));
-    }, 1000);
+        });
+    }, 2000);
 });
 
-function TRIGGER_ALARM(title) {
-    console.log("🚨 ALARM TRIGGERED:", title);
+function playAlarmSound(title) {
+    // METHOD 1: HTML5 Audio (Multiple sources)
+    const audioUrls = [
+        https://freesound.org/data/previews/316/316847_4939433-lq.mp3,
+        "https://bigsoundbank
+    audio.volume = 1.0;
+    audio.play().catch(e => console.log("Audio play failed:", e));
     
-    // 1. FULL SCREEN RED FLASH
-    document.body.style.background = "#ff0000 !important";
-    document.body.style.color = "white !important";
-    document.title = "🚨 ALARM! " + title;
+    // 2. Backup beep sound
+    playBeepSound();
     
-    // 2. MASSIVE ALERT
-    setTimeout(() => {
-        alert("🔥🔥🔥 " + title.toUpperCase() + " TIME REACHED! 🔥🔥🔥");
-    }, 100);
+    // 3. VISUAL EXPLOSION
+    document.body.innerHTML += `
+        <div style="
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
+            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
+            animation: pulse 1s infinite;" 
+            onclick="this.remove()">
+            🚨 ${title.toUpperCase()} 🚨
+        </div>
+    `;
     
-    // 3. LOUD VISUAL BEEP SIMULATION (5 flashes)
-    for(let i = 0; i < 5; i++) {
-        setTimeout(() => {
-            document.body.style.background = i%2 === 0 ? "#ff0000" : "#ffffff";
-            document.body.style.color = i%2 === 0 ? "white" : "black";
-        }, i * 200);
-    }
-    
-    // 4. Reset after 3 seconds
-    setTimeout(() => {
-        document.body.style.background = "";
-        document.body.style.color = "";
-        document.title = "Study Planner";
-    }, 3000);
+    // 4. Screen shake
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 2000);
 }
 
-// Add shake animation
-const style = document.createElement('style');
-style.textContent = '@keyframes shake {0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}} body.shake{animation:shake 0.5s infinite}';
-document.head.appendChild(style);
+// Multiple beep fallback
+function playBeepSound() {
+    for(let i=0; i<3; i++) {
+        setTimeout(() => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = 800 + i*200;
+                o.type = "sine";
+                g.gain.setValueAtTime(0.3, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
+            } catch(e) {}
+        }, i*600);
+    }
+}
 </script>
+
 <style>
-body {{ animation: shake 0.5s infinite; }}
+@keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+@keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+body.shake { animation: shake 0.2s infinite; }
 </style>
 '''
 
@@ -342,23 +359,28 @@ def check_notifications_api():
 
 @app.route('/api/user-alarms')
 def user_alarms():
+    print("🔥 API CALLED - Check terminal!")  # Terminal check pannu
     if not session.get('logged_in'):
+        print("❌ No login")
         return jsonify([])
     
-    conn = get_db_connection()
-    alarms = conn.execute("""
-        SELECT id, title, deadline 
-        FROM reminders 
-        WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
-    """, (session['email'],)).fetchall()
-    conn.close()
-    
-    return jsonify([{
-        'id': alarm['id'],
-        'title': alarm['title'],
-        'deadline': alarm['deadline']
-    } for alarm in alarms])
-
+    try:
+        conn = get_db_connection()
+        alarms = conn.execute("""
+            SELECT id, title, deadline 
+            FROM reminders WHERE email=?
+        """, (session['email'],)).fetchall()
+        conn.close()
+        print(f"✅ Found {len(alarms)} alarms")
+        return jsonify([{
+            'id': a['id'],
+            'title': a['title'],
+            'deadline': a['deadline']
+        } for a in alarms])
+    except Exception as e:
+        print(f"💥 Database error: {e}")
+        return jsonify([])
+        
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
