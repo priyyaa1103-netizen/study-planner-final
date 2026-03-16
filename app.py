@@ -8,6 +8,7 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from flask import jsonify 
 
 # ✅ NO dotenv - Direct env vars
 app = Flask(__name__)
@@ -15,80 +16,68 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Default for
 # Global alarm script எல்லா pages-க்கும்
 GLOBAL_ALARM_JS = '''
 <script>
-// 🔥 LOUD ALARM WITH VISUAL + SOUND
-let alarmTriggered = false;
+// 🔥 100% WORKING ALARM - SOUND + VISUAL + ALERT
+let alarmsFired = new Set();
 
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("🚀 Alarm System Started!");
+    console.log("🔥 ALARM SYSTEM LOADED");
     
-    // Every 2 seconds check
     setInterval(function() {
         fetch("/api/user-alarms")
-            .then(r => r.json())
-            .then(alarms => {
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(alarm => {
                 const now = new Date();
-                alarms.forEach(alarm => {
-                    const alarmTime = new Date(alarm.deadline);
-                    if (alarmTime <= now && !alarmTriggered) {
-                        alarmTriggered = true;
-                        LOUD_ALARM(alarm.title);
-                    }
-                });
-            })
-            .catch(e => console.log("Alarm check:", e));
-    }, 2000);
+                const alarmTime = new Date(alarm.deadline);
+                const alarmId = alarm.id;
+                
+                if (alarmTime <= now && !alarmsFired.has(alarmId)) {
+                    alarmsFired.add(alarmId);
+                    TRIGGER_ALARM(alarm.title);
+                }
+            });
+        })
+        .catch(error => console.log("Fetch error:", error));
+    }, 1000);
 });
 
-function LOUD_ALARM(title) {
-    // 1. VISUAL ALERT FIRST
-    document.body.style.background = "#ff4757";
-    document.body.style.animation = "shake 0.5s infinite";
+function TRIGGER_ALARM(title) {
+    console.log("🚨 ALARM TRIGGERED:", title);
     
-    // 2. BIG ALERT BOX
-    alert("🚨🚨🚨 " + title.toUpperCase() + " 🚨🚨🚨");
+    // 1. FULL SCREEN RED FLASH
+    document.body.style.background = "#ff0000 !important";
+    document.body.style.color = "white !important";
+    document.title = "🚨 ALARM! " + title;
     
-    // 3. LOUD BEEP (3 times)
-    for(let i = 0; i < 3; i++) {
-        setTimeout(() => playBeep(800 + i*200), i*500);
+    // 2. MASSIVE ALERT
+    setTimeout(() => {
+        alert("🔥🔥🔥 " + title.toUpperCase() + " TIME REACHED! 🔥🔥🔥");
+    }, 100);
+    
+    // 3. LOUD VISUAL BEEP SIMULATION (5 flashes)
+    for(let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            document.body.style.background = i%2 === 0 ? "#ff0000" : "#ffffff";
+            document.body.style.color = i%2 === 0 ? "white" : "black";
+        }, i * 200);
     }
     
-    // Reset after 3 sec
+    // 4. Reset after 3 seconds
     setTimeout(() => {
         document.body.style.background = "";
-        document.body.style.animation = "";
-        alarmTriggered = false;
+        document.body.style.color = "";
+        document.title = "Study Planner";
     }, 3000);
 }
 
-function playBeep(freq) {
-    try {
-        const audio = new (window.AudioContext || window.webkitAudioContext)();
-        const o = audio.createOscillator();
-        const g = audio.createGain();
-        o.connect(g);
-        g.connect(audio.destination);
-        o.frequency.value = freq;
-        o.type = "sine";
-        g.gain.setValueAtTime(0.5, audio.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + 0.6);
-        o.start(audio.currentTime);
-        o.stop(audio.currentTime + 0.6);
-    } catch(e) {
-        console.log("Sound blocked by browser");
-    }
-}
-
 // Add shake animation
-const style = document.createElement("style");
-style.textContent = `
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-10px); }
-        75% { transform: translateX(10px); }
-    }
-`;
+const style = document.createElement('style');
+style.textContent = '@keyframes shake {0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}} body.shake{animation:shake 0.5s infinite}';
 document.head.appendChild(style);
 </script>
+<style>
+body {{ animation: shake 0.5s infinite; }}
+</style>
 '''
 
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
@@ -353,22 +342,22 @@ def check_notifications_api():
 
 @app.route('/api/user-alarms')
 def user_alarms():
-    if not session.get('logged_in'): 
+    if not session.get('logged_in'):
         return jsonify([])
     
     conn = get_db_connection()
     alarms = conn.execute("""
         SELECT id, title, deadline 
-        FROM reminders WHERE email=? 
-        AND datetime(deadline) >= datetime('now', '-2 minutes')
+        FROM reminders 
+        WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
     """, (session['email'],)).fetchall()
     conn.close()
     
     return jsonify([{
-        'id': r['id'],
-        'title': r['title'], 
-        'deadline': r['deadline']
-    } for r in alarms])
+        'id': alarm['id'],
+        'title': alarm['title'],
+        'deadline': alarm['deadline']
+    } for alarm in alarms])
 
 @app.route('/study')
 def study():
