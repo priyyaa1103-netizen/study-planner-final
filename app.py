@@ -15,93 +15,79 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Default for
 # Global alarm script எல்லா pages-க்கும்
 GLOBAL_ALARM_JS = '''
 <script>
-// 🔥 GLOBAL ALARM - எங்க இருந்தாலும் work ஆகும்! 🔥
-let alarmInterval = null;
+// 🔥 LOUD ALARM WITH VISUAL + SOUND
+let alarmTriggered = false;
 
-function startGlobalAlarm() {
-    if (alarmInterval) return; // Already running
+document.addEventListener("DOMContentLoaded", function() {
+    console.log("🚀 Alarm System Started!");
     
-    console.log('🚀 Global Alarm Started!');
-    alarmInterval = setInterval(checkGlobalAlarms, 1000);
+    // Every 2 seconds check
+    setInterval(function() {
+        fetch("/api/user-alarms")
+            .then(r => r.json())
+            .then(alarms => {
+                const now = new Date();
+                alarms.forEach(alarm => {
+                    const alarmTime = new Date(alarm.deadline);
+                    if (alarmTime <= now && !alarmTriggered) {
+                        alarmTriggered = true;
+                        LOUD_ALARM(alarm.title);
+                    }
+                });
+            })
+            .catch(e => console.log("Alarm check:", e));
+    }, 2000);
+});
+
+function LOUD_ALARM(title) {
+    // 1. VISUAL ALERT FIRST
+    document.body.style.background = "#ff4757";
+    document.body.style.animation = "shake 0.5s infinite";
+    
+    // 2. BIG ALERT BOX
+    alert("🚨🚨🚨 " + title.toUpperCase() + " 🚨🚨🚨");
+    
+    // 3. LOUD BEEP (3 times)
+    for(let i = 0; i < 3; i++) {
+        setTimeout(() => playBeep(800 + i*200), i*500);
+    }
+    
+    // Reset after 3 sec
+    setTimeout(() => {
+        document.body.style.background = "";
+        document.body.style.animation = "";
+        alarmTriggered = false;
+    }, 3000);
 }
 
-function stopGlobalAlarm() {
-    if (alarmInterval) {
-        clearInterval(alarmInterval);
-        alarmInterval = null;
+function playBeep(freq) {
+    try {
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        o.connect(g);
+        g.connect(audio.destination);
+        o.frequency.value = freq;
+        o.type = "sine";
+        g.gain.setValueAtTime(0.5, audio.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + 0.6);
+        o.start(audio.currentTime);
+        o.stop(audio.currentTime + 0.6);
+    } catch(e) {
+        console.log("Sound blocked by browser");
     }
 }
 
-function checkGlobalAlarms() {
-    fetch('/api/alarms')
-        .then(response => response.json())
-        .then(data => {
-            data.forEach(alarm => {
-                if (isAlarmTime(alarm.deadline) && !alarm.triggered) {
-                    triggerGlobalAlarm(alarm.title);
-                }
-            });
-        })
-        .catch(err => console.log('Alarm check failed:', err));
-}
-
-function isAlarmTime(deadline) {
-    const now = new Date();
-    const alarmTime = new Date(deadline);
-    return alarmTime <= now;
-}
-
-function triggerGlobalAlarm(title) {
-    // LOUD BEEP x3
-    playGlobalBeep();
-    // Screen flash எல்லா tabs-ல
-    flashGlobalScreen();
-    // Notification
-    showGlobalNotification(title);
-    console.log('🚨 GLOBAL ALARM:', title);
-}
-
-// Global Beep Sound
-function playGlobalBeep() {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    playBeep(audioContext, 800, 0);
-    setTimeout(() => playBeep(audioContext, 1000, 0), 400);
-    setTimeout(() => playBeep(audioContext, 1200, 0), 800);
-}
-
-function playBeep(context, freq, delay) {
-    const oscillator = context.createOscillator();
-    const gainNode = context.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
-    oscillator.frequency.value = freq;
-    oscillator.type = 'sine';
-    gainNode.gain.setValueAtTime(0.6, context.currentTime + delay);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + delay + 0.4);
-    oscillator.start(context.currentTime + delay);
-    oscillator.stop(context.currentTime + delay + 0.4);
-}
-
-// Screen Flash எல்லா pages
-function flashGlobalScreen() {
-    const originalBg = document.body.style.background;
-    document.body.style.background = '#ff6b6b';
-    setTimeout(() => document.body.style.background = originalBg, 200);
-}
-
-// Browser Notification
-function showGlobalNotification(title) {
-    if (Notification.permission === 'granted') {
-        new Notification('⏰ ALARM!', {body: title, icon: '📚'});
+// Add shake animation
+const style = document.createElement("style");
+style.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
     }
-}
-
-// Page load ஆனதும் start
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startGlobalAlarm);
-} else {
-    startGlobalAlarm();
-}
+`;
+document.head.appendChild(style);
 </script>
 '''
 
@@ -365,24 +351,23 @@ def check_notifications_api():
         return "🚨"
     return ""
 
-@app.route('/api/alarms')
-def get_alarms():
-    if not session.get('logged_in'):
+@app.route('/api/user-alarms')
+def user_alarms():
+    if not session.get('logged_in'): 
         return jsonify([])
     
     conn = get_db_connection()
     alarms = conn.execute("""
         SELECT id, title, deadline 
-        FROM reminders 
-        WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
+        FROM reminders WHERE email=? 
+        AND datetime(deadline) >= datetime('now', '-2 minutes')
     """, (session['email'],)).fetchall()
     conn.close()
     
     return jsonify([{
-        'id': r['id'], 
+        'id': r['id'],
         'title': r['title'], 
-        'deadline': r['deadline'],
-        'triggered': False
+        'deadline': r['deadline']
     } for r in alarms])
 
 @app.route('/study')
