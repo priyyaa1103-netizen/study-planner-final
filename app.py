@@ -210,48 +210,49 @@ def render_login_page(error=""):
     '''
     
 @app.route('/dashboard')
-@login_required  # Add this import: from functools import wraps
 def dashboard():
-    email = session.get('email')
-    notifications = ""
+    if not session.get('logged_in'): 
+        return redirect('/')
     
-    # Simple notification - NO complex datetime parsing
+    email = session.get('email', '')
+    name = session.get('name', 'User')
+    
+    # ✅ Simple notification test
+    notifications = ""
+    test_message = ""
+    
     try:
-        conn = get_db_connection()
-        reminders = conn.execute("SELECT * FROM reminders WHERE email=?", (email,)).fetchall()
+        # Test email send
+        result = send_email(email, "🧪 TEST NOTIFICATION", f"Hi {name}! Test successful!")
+        test_message = "✅ Email sent!" if result else "❌ Email failed - check Gmail password"
         
-        for reminder in reminders:
-            # Send email for ALL reminders (test purpose)
-            send_email(email, f"⏰ {reminder['title']}", f"Your reminder: {reminder['deadline']}")
-            
-            notifications += f'''
-            <div style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);padding:25px;margin:20px;border-radius:20px">
-                <h2 style="color:white;font-size:28px">{reminder['title']}</h2>
-                <p style="color:#ffd700;font-size:20px">✅ Email sent to {email}</p>
-                <p>{reminder['deadline']}</p>
-            </div>
-            '''
-        conn.close()
+        notifications = f'''
+        <div style="background:linear-gradient(135deg,#2ed573,#27ae60);padding:30px;margin:20px;border-radius:25px">
+            <h2 style="color:white;font-size:28px">📧 {test_message}</h2>
+            <p style="color:#f1c40f;font-size:20px">Email: {email}</p>
+        </div>
+        '''
     except Exception as e:
-        notifications = f"<p style='color:red'>Error: {str(e)}</p>"
+        notifications = f'''
+        <div style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);padding:30px;margin:20px;border-radius:25px">
+            <h2 style="color:white">❌ Error: {str(e)}</h2>
+        </div>
+        '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>Dashboard</title>
+    <html><head><title>Dashboard - Study Planner</title>
     <style>*{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:40px}}
     .container{{max-width:900px;margin:0 auto;text-align:center}}
-    .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3)}}
-    .btn:hover{{transform:translateY(-5px)}}
-    .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);border:3px solid #ff6b6b;animation:pulse 2s infinite}}
-    .info-notification{{background:rgba(52,152,219,0.3);padding:20px;border-radius:15px;margin:15px auto;max-width:500px;border-left:4px solid #3498db}}
-    @keyframes pulse{{0%{{transform:scale(1);}}50%{{transform:scale(1.03);}}100%{{transform:scale(1);}}}}
-    .welcome-card{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;margin-bottom:40px}}</style></head>
+    .btn{{display:inline-block;padding:22px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
+    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
+    .welcome-card{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin-bottom:50px;backdrop-filter:blur(15px)}}</style></head>
     <body>
         <div class="container">
             <div class="welcome-card">
-                <h1 style="font-size:42px">🎓 Welcome {name}!</h1>
-                <h2 style="font-size:24px;margin-bottom:30px">Study Planner</h2>
+                <h1 style="font-size:45px;margin-bottom:20px">🎓 Welcome {name}!</h1>
+                <h2 style="font-size:26px">Study Planner Dashboard</h2>
             </div>
             
             {notifications}
@@ -259,7 +260,7 @@ def dashboard():
             <div style="margin:40px 0">
                 <a href="/study" class="btn">📚 Study Dashboard</a>
                 <a href="/goals" class="btn">🎯 Set Goals</a>
-                <a href="/view-goals" class="btn">📊 View Goals</a><br>
+                <a href="/view-goals" class="btn">📊 View Goals</a>
                 <a href="/reminders" class="btn">⏰ Reminders</a>
                 <a href="/myfiles" class="btn">📁 My Files</a>
                 <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
@@ -268,7 +269,7 @@ def dashboard():
     </body>
     </html>
     '''
-
+    
 @app.route('/test-email')
 def test_email():
     try:
