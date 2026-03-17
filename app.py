@@ -13,67 +13,50 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
 # ✅ FIXED GLOBAL ALARM JS - Complete working version
-GLOBAL_ALARM_JS = '''
+<!-- GLOBAL ALARM JS - FIXED VERSION -->
 <script>
-let firedAlarms = new Set();
+let firedAlarms = JSON.parse(localStorage.getItem('firedAlarms') || '[]');
 
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 SOUND ALARM LOADED");
-    
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('ALARM LOADED');
     setInterval(() => {
-        fetch("/api/user-alarms")
-        .then(r => r.json())
-        .then(data => {
-            const now = new Date();
-            data.forEach(alarm => {
-                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                    firedAlarms.add(alarm.id);
-                    console.log("🚨 TRIGGER ALARM:", alarm.title);
-                    playAlarmSound(alarm.title);
-                }
-            });
-        }).catch(e => console.log("Alarm check failed:", e));
-    }, 2000);
+        fetch('/api/user-alarms')
+            .then(r => r.json())
+            .then(data => {
+                const now = new Date();
+                data.forEach(alarm => {
+                    if (new Date(alarm.deadline) <= now && 
+                        !firedAlarms.includes(alarm.id)) {
+                        firedAlarms.push(alarm.id);
+                        localStorage.setItem('firedAlarms', JSON.stringify(firedAlarms));
+                        
+                        // Mark as fired in backend
+                        fetch('/api/mark-alarm-fired', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({id: alarm.id})
+                        });
+                        
+                        playAlarmSound(alarm.title);
+                    }
+                });
+            })
+            .catch(e => console.log('Alarm check failed', e));
+    }, 5000); // 5s interval
 });
 
 function playAlarmSound(title) {
-    // ✅ FIXED: Complete audio URLs
-    const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo");
+    // Audio + Visual same as before
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBja2LDciUFLIHO8tiJNwgZaLvt559NEAxQpPwtmMcBjiR1LMeSwFJHfH8N2QQAo');
     audio.volume = 0.8;
-    audio.play().catch(e => console.log("Audio play failed:", e));
+    audio.play().catch(e => console.log('Audio play failed', e));
     
     // Visual explosion
     document.body.innerHTML += `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.85);z-index:9999;display:flex;align-items:center;
-            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
-            animation: pulse 1s infinite;" 
-            onclick="this.remove()">
-            🚨 ${title.toUpperCase()} 🚨
-        </div>
+        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;animation:pulse 1s infinite;onclick=this.remove()" onclick="this.remove()">${title.toUpperCase()}</div>
     `;
-    
-    // Screen shake
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 2000);
-}
-
-function playBeepSound() {
-    for(let i = 0; i < 3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i * 200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i * 600);
-    }
 }
 </script>
 <style>
@@ -81,7 +64,7 @@ function playBeepSound() {
 @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 body.shake { animation: shake 0.2s infinite; }
 </style>
-'''
+
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
@@ -98,8 +81,11 @@ def init_db():
                   target_score INTEGER, progress INTEGER DEFAULT 0,
                   max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, title TEXT, deadline TEXT)''')
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  email TEXT, 
+                  title TEXT, 
+                  deadline TEXT,
+                  fired INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS files 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, subject TEXT, filename TEXT, 
@@ -344,27 +330,36 @@ def check_notifications_api():
 
 @app.route('/api/user-alarms')
 def user_alarms():
-    print("🔥 API CALLED - Check terminal!")  # Terminal check pannu
-    if not session.get('logged_in'):
-        print("❌ No login")
+    if not session.get('loggedin'):
         return jsonify([])
-    
     try:
         conn = get_db_connection()
-        alarms = conn.execute("""
-            SELECT id, title, deadline 
-            FROM reminders WHERE email=?
-        """, (session['email'],)).fetchall()
+        # fired=0 மட்டும் return
+        alarms = conn.execute(
+            "SELECT id, title, deadline FROM reminders WHERE email=? AND fired=0", 
+            (session['email'],)
+        ).fetchall()
         conn.close()
-        print(f"✅ Found {len(alarms)} alarms")
         return jsonify([{
-            'id': a['id'],
-            'title': a['title'],
+            'id': a['id'], 
+            'title': a['title'], 
             'deadline': a['deadline']
         } for a in alarms])
-    except Exception as e:
-        print(f"💥 Database error: {e}")
+    except:
         return jsonify([])
+
+@app.route('/api/mark-alarm-fired', methods=['POST'])
+def mark_alarm_fired():
+    if not session.get('loggedin'):
+        return '', 401
+    data = request.get_json()
+    alarm_id = data.get('id')
+    conn = get_db_connection()
+    conn.execute("UPDATE reminders SET fired=1 WHERE id=? AND email=?", 
+                (alarm_id, session['email']))
+    conn.commit()
+    conn.close()
+    return '', 200
         
 @app.route('/study')
 def study():
