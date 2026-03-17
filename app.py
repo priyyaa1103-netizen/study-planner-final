@@ -266,7 +266,7 @@ def render_login_page(error=""):
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🎓 Study Planner</title>
+    <title>Study Planner</title>  <!-- ✅ NO EMOJI HERE -->
     <style>
         *{{margin:0;padding:0;box-sizing:border-box}}
         body{{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
@@ -275,65 +275,45 @@ def render_login_page(error=""):
         .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
         .tab{{flex:1;padding:18px 20px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s ease}}
         .tab.active{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;transform:translateY(-2px)}}
-        .tab:hover:not(.active){{background:#e2e8f0;transform:translateY(-1px)}}
         input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box;transition:all 0.3s ease;background:rgba(255,255,255,0.8)}}
         input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);background:white;transform:translateY(-2px)}}
-        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s ease;transform:translateY(0)}}
+        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s ease}}
         button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}}
-        .error{{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;padding:15px;border-radius:12px;margin:20px 0;font-weight:500;border-left:5px solid #ef4444;box-shadow:0 4px 15px rgba(239,68,68,0.2)}}
-        h1{{font-size:42px;margin-bottom:20px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800;letter-spacing:-1px}}
-        .form{{transition:all 0.4s ease;transform:translateY(0);opacity:1}}
-        .form.hidden{{transform:translateY(20px);opacity:0;pointer-events:none}}
+        .error{{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;padding:15px;border-radius:12px;margin:20px 0;font-weight:500;border-left:5px solid #ef4444}}
+        h1{{font-size:42px;margin-bottom:20px;color:#333;font-weight:800;letter-spacing:-1px}}
     </style>
 </head>
 <body>
     <div class="login-box">
-        <h1>🎓 Study Planner</h1>
+        <h1>Study Planner</h1>  <!-- ✅ NO EMOJI HERE -->
         {error_html}
         
-        <!-- TABS -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">👤 Login</button>
-            <button class="tab" onclick="showTab('register')">➕ Register</button>
+            <button class="tab active" onclick="showTab('login')">Login</button>
+            <button class="tab" onclick="showTab('register')">Register</button>
         </div>
         
-        <!-- LOGIN FORM -->
-        <form method="POST" id="loginForm" class="form">
+        <form method="POST" id="loginForm">
             <input type="hidden" name="action" value="login">
-            <input type="email" name="email" placeholder="📧 your-email@gmail.com" required autocomplete="email">
-            <input type="password" name="password" placeholder="🔒 Enter password" required autocomplete="current-password">
-            <button type="submit">🚀 Login Now</button>
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Enter password" required>
+            <button type="submit">Login</button>
         </form>
         
-        <!-- REGISTER FORM -->
-        <form method="POST" id="registerForm" class="form hidden">
-            <input type="text" name="name" placeholder="👤 Your Full Name" required>
-            <input type="email" name="email" placeholder="📧 your-email@gmail.com" required autocomplete="email">
-            <input type="password" name="password" placeholder="🔐 Create Password (6+ chars)" required minlength="6" autocomplete="new-password">
-            <button type="submit">✅ Create Account</button>
+        <form method="POST" id="registerForm" style="display:none">
+            <input type="text" name="name" placeholder="Your Full Name" required>
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Create Password" required>
+            <button type="submit">Create Account</button>
         </form>
     </div>
     
     <script>
         function showTab(tabName) {{
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const tabs = document.querySelectorAll('.tab');
-            
-            // Hide all forms
-            loginForm.classList.add('hidden');
-            registerForm.classList.add('hidden');
-            
-            // Remove active from all tabs
-            tabs.forEach(tab => tab.classList.remove('active'));
-            
-            if (tabName === 'login') {{
-                loginForm.classList.remove('hidden');
-                event.target.classList.add('active');
-            }} else {{
-                registerForm.classList.remove('hidden');
-                event.target.classList.add('active');
-            }}
+            document.getElementById('loginForm').style.display = tabName === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = tabName === 'register' ? 'block' : 'none';
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
         }}
     </script>
 </body>
