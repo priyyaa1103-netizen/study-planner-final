@@ -10,100 +10,137 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'study2026-secure-key-change-me')
+app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
-# ✅ FIXED GLOBAL ALARM - Complete working version
+# Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = '''
 <script>
-let firedAlarms = JSON.parse(localStorage.getItem('study_alarms') || '{}');
+let firedAlarms = new Set();
 
 document.addEventListener("DOMContentLoaded", function() {
+    console.log("🎵 SOUND ALARM LOADED");
+    
     setInterval(() => {
-        fetch("/api/user-alarms", {cache: "no-store"})
+        fetch("/api/user-alarms")
         .then(r => r.json())
         .then(data => {
             const now = new Date();
             data.forEach(alarm => {
-                const key = `alarm_${alarm.id}`;
-                if(new Date(alarm.deadline) <= now && !firedAlarms[key]) {
-                    firedAlarms[key] = true;
-                    localStorage.setItem('study_alarms', JSON.stringify(firedAlarms));
-                    showAlarm(alarm.title);
+                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
+                    firedAlarms.add(alarm.id);
+                    console.log("🚨 TRIGGER ALARM:", alarm.title);
+                    playAlarmSound(alarm.title);
                 }
             });
-        }).catch(e => {});
-    }, 3000);
+        });
+    }, 2000);
 });
 
-function showAlarm(title) {
-    if(document.getElementById('study-alarm')) return;
+function playAlarmSound(title) {
+    // Fixed audio URLs
+    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+    audio.volume = 1.0;
+    audio.play().catch(e => console.log("Audio play failed:", e));
     
-    const alarm = document.createElement('div');
-    alarm.id = 'study-alarm';
-    alarm.style.cssText = `
-        position:fixed;top:20px;right:20px;width:300px;background:linear-gradient(135deg,#e74c3c,#c0392b);
-        color:white;padding:20px;border-radius:15px;z-index:99999;box-shadow:0 20px 40px rgba(0,0,0,0.5);
-        animation:slideIn 0.5s ease;font-family:'Segoe UI',sans-serif;
-    `;
-    alarm.innerHTML = `
-        <div style="display:flex;gap:10px;align-items:center">
-            <span style="font-size:24px">🚨</span>
-            <div><strong>${title}</strong></div>
+    // Backup beep sound
+    playBeepSound();
+    
+    // VISUAL EXPLOSION
+    document.body.innerHTML += `
+        <div style="
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
+            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
+            animation: pulse 1s infinite;" 
+            onclick="this.remove()">
+            🚨 ${title.toUpperCase()} 🚨
         </div>
-        <button onclick="this.parentElement.remove();document.body.classList.remove('shake');" 
-                style="width:100%;margin-top:15px;padding:10px;background:rgba(255,255,255,0.3);border:none;border-radius:10px;color:white;font-weight:600;cursor:pointer">
-            ✓ Dismiss
-        </button>
     `;
-    document.body.appendChild(alarm);
+    
+    // Screen shake
     document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 2000);
 }
 
-function clearAlarms() {
-    localStorage.removeItem('study_alarms');
-    location.reload();
+function playBeepSound() {
+    for(let i=0; i<3; i++) {
+        setTimeout(() => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = 800 + i*200;
+                o.type = "sine";
+                g.gain.setValueAtTime(0.3, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
+            } catch(e) {}
+        }, i*600);
+    }
 }
 </script>
-<style>
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
-body.shake{animation:shake 0.2s infinite}
-</style>
 
-GMAIL_USER = os.getenv("GMAIL_USER", "")
+<style>
+@keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+@keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+body.shake { animation: shake 0.2s infinite; }
+</style>
+'''
+
+GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
 
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    
-    # ✅ SINGLE LINE QUERIES - NO INDENTATION PROBLEM
-    c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password TEXT, name TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, goal TEXT, target_score INTEGER, progress INTEGER DEFAULT 0, max_score INTEGER DEFAULT 0)")
-    c.execute("CREATE TABLE IF NOT EXISTS reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, title TEXT, deadline TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, filename TEXT, upload_date TEXT)")
-    
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS goals 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  email TEXT, subject TEXT, goal TEXT, 
+                  target_score INTEGER, progress INTEGER DEFAULT 0,
+                  max_score INTEGER DEFAULT 0)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS reminders 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, filename TEXT, 
+                  upload_date TEXT)''')
     conn.commit()
     conn.close()
 
-# Call init_db at start
 init_db()
+
+def send_email(to_email, subject, body):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = GMAIL_USER
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_PASS)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except:
+        return False
+
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
     return conn
-
-def load_reminders_file():
-    try:
-        with open('static/reminders.json', 'r') as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save_reminders_file(reminders):
-    with open('static/reminders.json', 'w') as f:
-        json.dump(reminders, f)
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
