@@ -60,8 +60,10 @@ def send_email(to_email, subject, body):
         return False
 
 def get_db_connection():
-    conn = sqlite3.connect('users.db')
-    conn.row_factory = sqlite3.Row
+    # Render-ல absolute path use
+    db_path = os.path.join(os.path.dirname(__file__), 'users.db')
+    conn = sqlite3.connect(db_path)
+    conn.rowfactory = sqlite3.Row
     return conn
 
 def load_reminders_file():
@@ -74,6 +76,14 @@ def load_reminders_file():
 def save_reminders_file(reminders):
     with open('static/reminders.json', 'w') as f:
         json.dump(reminders, f)
+
+@app.errorhandler(500)
+def internal_error(error):
+    return "Server error - check logs", 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return "Page not found", 404
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -845,5 +855,6 @@ def logout():
 # 🔥 RENDER.COM PORT FIX 🔥
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False important
+
 
