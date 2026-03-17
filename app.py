@@ -16,83 +16,136 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 GLOBAL_ALARM_JS = '''
 <script>
 let firedAlarms = new Set();
+let lastCheckTime = Date.now();
 
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 SOUND ALARM LOADED");
+    console.log("🎵 ALARM SYSTEM LOADED");
     
-    setInterval(() => {
-        fetch("/api/user-alarms")
-        .then(r => r.json())
-        .then(data => {
-            const now = new Date();
-            data.forEach(alarm => {
-                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                    firedAlarms.add(alarm.id);
-                    console.log("🚨 TRIGGER ALARM:", alarm.title);
-                    playAlarmSound(alarm.title);
-                }
-            });
-        });
-    }, 2000);
+    // 🔥 IMMEDIATE CHECK ON PAGE LOAD (fixes 08:56 issue)
+    checkAlarmsNow();
+    
+    // 1-second polling (faster detection)
+    setInterval(checkAlarmsNow, 1000);
 });
 
-function playAlarmSound(title) {
-    // Fixed audio URLs
-    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-    audio.volume = 1.0;
-    audio.play().catch(e => console.log("Audio play failed:", e));
-    
-    // Backup beep sound
-    playBeepSound();
-    
-    // VISUAL EXPLOSION
-    document.body.innerHTML += `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
-            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
-            animation: pulse 1s infinite;" 
-            onclick="this.remove()">
-            🚨 ${title.toUpperCase()} 🚨
-        </div>
-    `;
-    
-    // Screen shake
-    document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 2000);
+async function checkAlarmsNow() {
+    try {
+        const response = await fetch("/api/user-alarms");
+        const alarms = await response.json();
+        const now = new Date();
+        
+        alarms.forEach(alarm => {
+            const alarmTime = new Date(alarm.deadline);
+            
+            // 🔥 PRECISE TIME COMPARISON (fixes 1-min delay)
+            if (alarmTime <= now && !firedAlarms.has(alarm.id)) {
+                firedAlarms.add(alarm.id);
+                console.log("🚨 TRIGGERING:", alarm.title, "at", now.toLocaleTimeString());
+                playFullAlarm(alarm.title, alarm.id);
+            }
+        });
+    } catch(e) {
+        console.log("Alarm check failed:", e);
+    }
 }
 
-function playBeepSound() {
-    for(let i=0; i<3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i*200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i*600);
+function playFullAlarm(title, alarmId) {
+    // 1. LOUD AUDIO
+    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+    audio.volume = 1.0;
+    audio.loop = true;
+    audio.play().catch(e => playBeepFallback());
+    
+    // 2. FULLSCREEN ALERT
+    const alertDiv = document.createElement('div');
+    alertDiv.id = `alarm-${alarmId}`;
+    alertDiv.innerHTML = `
+        <div style="
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:linear-gradient(45deg, rgba(255,0,0,0.9), rgba(255,100,0,0.9));
+            z-index:99999;display:flex;align-items:center;justify-content:center;
+            font-size:clamp(40px,8vw,80px);font-weight:bold;text-shadow:0 0 30px #fff;
+            animation: alarmPulse 0.8s infinite alternate;" 
+            ondblclick="dismissAlarm('${alarmId}')"
+            oncontextmenu="dismissAlarm('${alarmId}');return false;">
+            🚨 ${title.toUpperCase()} 🚨<br><br>
+            <div style="font-size:0.4em;margin-top:20px;">
+                Right-click or Double-click to dismiss
+            </div>
+        </div>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    // 3. SCREEN SHAKE + FLASH
+    document.body.classList.add('alarm-shake');
+    flashScreen();
+    
+    // 4. NOTIFICATION (if supported)
+    if (Notification.permission === 'granted') {
+        new Notification('🚨 Study Alarm!', { 
+            body: title, 
+            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjUiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iNTAlIiB5PSI2MCUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4rPC90ZXh0Pgo8L3N2Zz4K'
+        });
     }
+}
+
+function dismissAlarm(alarmId) {
+    firedAlarms.add(alarmId); // Permanent dismiss
+    const alertDiv = document.getElementById(`alarm-${alarmId}`);
+    if (alertDiv) alertDiv.remove();
+    document.body.classList.remove('alarm-shake');
+    
+    // Stop all audio
+    document.querySelectorAll('audio').forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+    });
+}
+
+function playBeepFallback() {
+    // Triple beep sequence
+    [800, 1000, 1200].forEach((freq, i) => {
+        setTimeout(() => {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = freq;
+            o.type = "sine";
+            g.gain.setValueAtTime(0.4, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+            o.start(ctx.currentTime); 
+            o.stop(ctx.currentTime + 0.6);
+        }, i * 400);
+    });
+}
+
+function flashScreen() {
+    const originalBg = document.body.style.background;
+    const flashInterval = setInterval(() => {
+        document.body.style.background = document.body.style.background.includes('red') ? 
+            'linear-gradient(135deg,#667eea,#764ba2)' : 
+            'linear-gradient(135deg,#ff0000,#cc0000)';
+    }, 200);
+    
+    setTimeout(() => {
+        clearInterval(flashInterval);
+        document.body.style.background = originalBg;
+    }, 5000);
 }
 </script>
 
 <style>
-@keyframes pulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+@keyframes alarmPulse {
+    0% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+    100% { transform: scale(1.05) rotate(2deg); opacity: 1; }
 }
 @keyframes shake {
     0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
+    10%,30%,50%,70%,90% { transform: translateX(-8px); }
+    20%,40%,60%,80% { transform: translateX(8px); }
 }
-body.shake { animation: shake 0.2s infinite; }
+body.alarm-shake { animation: shake 0.3s infinite; }
 </style>
-'''
 
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
@@ -310,12 +363,26 @@ def dashboard():
 def user_alarms():
     if not session.get('logged_in'):
         return jsonify([])
-    conn = get_db_connection()
-    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", 
-                         (session['email'],)).fetchall()
-    conn.close()
-    return jsonify([{'id': a['id'], 'title': a['title'], 'deadline': a['deadline']} for a in alarms])
-
+    
+    try:
+        conn = get_db_connection()
+        # 🔥 FIXED: Use proper datetime comparison
+        alarms = conn.execute("""
+            SELECT id, title, deadline 
+            FROM reminders WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
+            ORDER BY deadline ASC
+        """, (session['email'],)).fetchall()
+        conn.close()
+        
+        return jsonify([{
+            'id': a['id'],
+            'title': a['title'],
+            'deadline': a['deadline']  # ISO format works fine now
+        } for a in alarms])
+    except Exception as e:
+        print(f"API Error: {e}")
+        return jsonify([])
+        
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
