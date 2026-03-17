@@ -9,10 +9,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ✅ NO dotenv - Direct env vars
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Default for testing
-# Global alarm script எல்லா pages-க்கும்
+app.secret_key = os.getenv('SECRET_KEY', 'study2026-secure-key-change-me')
+
+# ✅ FIXED GLOBAL ALARM - Complete working version
 GLOBAL_ALARM_JS = '''
 <script>
 let firedAlarms = new Set();
@@ -32,76 +32,61 @@ document.addEventListener("DOMContentLoaded", function() {
                     playAlarmSound(alarm.title);
                 }
             });
-        });
+        }).catch(e => console.log("Alarm check failed:", e));
     }, 2000);
 });
 
 function playAlarmSound(title) {
-    // METHOD 1: HTML5 Audio (Multiple sources)
-    const audioUrls = [
-        https://freesound.org/data/previews/316/316847_4939433-lq.mp3,
-        "https://bigsoundbank
-    audio.volume = 1.0;
+    // ✅ FIXED: Proper audio sources with error handling
+    const audio = new Audio();
+    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";
+    audio.volume = 0.8;
     audio.play().catch(e => console.log("Audio play failed:", e));
     
-    // 2. Backup beep sound
-    playBeepSound();
-    
-    // 3. VISUAL EXPLOSION
-    document.body.innerHTML += `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
-            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
-            animation: pulse 1s infinite;" 
-            onclick="this.remove()">
-            🚨 ${title.toUpperCase()} 🚨
-        </div>
+    // Visual explosion + screen shake
+    const alarmDiv = document.createElement("div");
+    alarmDiv.style.cssText = `
+        position:fixed;top:0;left:0;width:100vw;height:100vh;
+        background:rgba(255,0,0,0.85);z-index:9999;display:flex;align-items:center;
+        justify-content:center;font-size:48px;font-weight:bold;color:white;text-shadow:0 0 20px #fff;
+        animation: pulse 1s infinite; cursor:pointer;
     `;
+    alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click to dismiss</small>`;
+    alarmDiv.onclick = () => alarmDiv.remove();
+    document.body.appendChild(alarmDiv);
     
-    // 4. Screen shake
     document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 2000);
+    setTimeout(() => document.body.classList.remove('shake'), 3000);
 }
 
-// Multiple beep fallback
 function playBeepSound() {
-    for(let i=0; i<3; i++) {
+    for(let i = 0; i < 3; i++) {
         setTimeout(() => {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const o = ctx.createOscillator(), g = ctx.createGain();
                 o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i*200;
+                o.frequency.value = 800 + i * 200;
                 o.type = "sine";
                 g.gain.setValueAtTime(0.3, ctx.currentTime);
                 g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
                 o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
             } catch(e) {}
-        }, i*600);
+        }, i * 600);
     }
 }
 </script>
-
 <style>
-@keyframes pulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-@keyframes shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
-}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 body.shake { animation: shake 0.2s infinite; }
 </style>
 '''
 
-GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
+GMAIL_USER = os.getenv("GMAIL_USER", "")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
 
-# Initialize SQLite Database
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -123,23 +108,6 @@ def init_db():
     conn.close()
 
 init_db()
-
-def send_email(to_email, subject, body):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = GMAIL_USER
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_PASS)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except:
-        return False
 
 def get_db_connection():
     conn = sqlite3.connect('users.db')
@@ -281,65 +249,109 @@ def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
     
-    email = session.get('email', '')
-    name = session.get('name', 'User')
-    
+    email = session['email']
     conn = get_db_connection()
-    reminders = conn.execute("""
-        SELECT * FROM reminders WHERE email=? 
-        ORDER BY deadline ASC
-    """, (email,)).fetchall()
+    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
     conn.close()
     
-    # Alarm HTML + JavaScript
     notifications = ""
-    for r in reminders:
+    for r in reminders[:5]:  # Show top 5
         notifications += f'''
-        <div class="auto-alarm" 
-             data-alarm-time="{r['deadline']}"
-             data-title="{r['title']}">
-            <div style="font-size:28px">⏰ {r['title']}</div>
-            <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
+        <div class="notification" style="background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer">
+            <div style="font-size:28px">⏰ {r["title"]}</div>
+            <div style="font-size:20px;color:#ffd700">{r["deadline"]}</div>
         </div>
         '''
     
     return f'''
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard - Study Planner</title>
-    <style>
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .container{{max-width:900px;margin:0 auto;text-align:center}}
-    .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-    .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b}}
-    </style>
-</head>
+<html><head><title>Dashboard</title>
+<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto;text-align:center}}.btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}.btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}</style></head>
 <body>
-    <div class="container">
-        <h1 style="font-size:42px;margin-bottom:20px">🎓 Welcome {session.get("name", "User")}!</h1>
-        <h2 style="font-size:24px;margin-bottom:30px">Study Planner Dashboard</h2>
-        
-        <!-- Active Reminders -->
-        {notifications if "notifications" in locals() else ""}
-        
-        <div style="margin:40px 0">
-            <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goals</a>
-            <a href="/view-goals" class="btn">📊 View Goals</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
-            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
-        </div>
+<div class="container">
+    <h1 style="font-size:42px;margin-bottom:20px">🎓 Welcome {session.get("name", "User")}!</h1>
+    <h2 style="font-size:24px;margin-bottom:30px">Study Planner Dashboard</h2>
+    {notifications}
+    <div style="margin:40px 0">
+        <a href="/study" class="btn">📚 Study Dashboard</a>
+        <a href="/goals" class="btn">🎯 Set Goals</a>
+        <a href="/view-goals" class="btn">📊 View Goals</a>
+        <a href="/reminders" class="btn">⏰ Reminders</a>
+        <a href="/myfiles" class="btn">📁 My Files</a>
+        <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
     </div>
-
-    <!-- 🔥 GLOBAL ALARM - இங்க தான் work ஆகும்! 🔥 -->
-    {GLOBAL_ALARM_JS}
-</body>
-</html>
+</div>
+{GLOBAL_ALARM_JS}
+</body></html>
 '''
+
+@app.route('/api/user-alarms')
+def user_alarms():
+    if not session.get('logged_in'):
+        return jsonify([])
+    conn = get_db_connection()
+    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", 
+                         (session['email'],)).fetchall()
+    conn.close()
+    return jsonify([{'id': a['id'], 'title': a['title'], 'deadline': a['deadline']} for a in alarms])
+
+@app.route('/reminders', methods=['GET', 'POST'])
+def reminders():
+    if not session.get('logged_in'): return redirect('/')
+    
+    if request.method == 'POST':
+        conn = get_db_connection()
+        conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
+                    (session['email'], request.form['title'], request.form['deadline']))
+        conn.commit()
+        conn.close()
+        return redirect('/reminders')
+    
+    conn = get_db_connection()
+    my_reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
+                               (session['email'],)).fetchall()
+    conn.close()
+    
+    reminders_html = ""
+    for r in my_reminders:
+        reminders_html += f'''
+        <div style="background:rgba(255,255,255,0.2);padding:20px;margin:15px;border-radius:15px">
+            <strong>{r['title']}</strong> - {r['deadline']}
+            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete?')" 
+               style="float:right;color:#ff6b6b;font-weight:bold">🗑️</a>
+        </div>
+        '''
+    
+    return f'''
+<!DOCTYPE html>
+<html><head><title>Reminders</title>
+<style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px}}.form-box{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;max-width:600px;margin:0 auto}}.input-group input{{width:100%;padding:15px;margin:10px 0;border-radius:12px;border:none;font-size:16px}}</style></head>
+<body>
+<div class="form-box">
+    <h1 style="text-align:center;font-size:36px;margin-bottom:30px">⏰ Set Reminder</h1>
+    <form method="POST">
+        <div class="input-group">
+            <input name="title" placeholder="Reminder Title (ex: Math Exam)" required>
+            <input name="deadline" type="datetime-local" required>
+            <button style="width:100%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer">✅ Add Reminder</button>
+        </div>
+    </form>
+    <h2 style="margin-top:40px">Your Reminders:</h2>
+    {reminders_html or '<p style="text-align:center;color:#f1c40f">No reminders set</p>'}
+    <a href="/dashboard" style="display:block;margin-top:30px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:12px;text-align:center;font-weight:600">← Dashboard</a>
+</div>
+{GLOBAL_ALARM_JS}
+</body></html>
+'''
+
+@app.route('/delete-reminder/<int:reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): return redirect('/')
+    conn = get_db_connection()
+    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (reminder_id, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect('/reminders')
     
 @app.route('/check-notifications')
 def check_notifications_api():
@@ -357,30 +369,6 @@ def check_notifications_api():
         return "🚨"
     return ""
 
-@app.route('/api/user-alarms')
-def user_alarms():
-    print("🔥 API CALLED - Check terminal!")  # Terminal check pannu
-    if not session.get('logged_in'):
-        print("❌ No login")
-        return jsonify([])
-    
-    try:
-        conn = get_db_connection()
-        alarms = conn.execute("""
-            SELECT id, title, deadline 
-            FROM reminders WHERE email=?
-        """, (session['email'],)).fetchall()
-        conn.close()
-        print(f"✅ Found {len(alarms)} alarms")
-        return jsonify([{
-            'id': a['id'],
-            'title': a['title'],
-            'deadline': a['deadline']
-        } for a in alarms])
-    except Exception as e:
-        print(f"💥 Database error: {e}")
-        return jsonify([])
-        
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
@@ -834,131 +822,36 @@ def quiz(goal_id):
     
 @app.route('/view-goals')
 def view_goals():
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+    if not session.get('logged_in'): return redirect('/')
     conn = get_db_connection()
-    goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY ID DESC', 
+    goals = conn.execute("SELECT * FROM goals WHERE email=? ORDER BY progress DESC", 
                         (session['email'],)).fetchall()
     conn.close()
     
-    goals_html = ''
+    goals_html = ""
     for goal in goals:
-        progress_bar = f'''
-        <div style="background:linear-gradient(90deg, #50c878 {goal['progress']}%, #e0e0e0 {goal['progress']}%); 
-                    height:25px;border-radius:15px;overflow:hidden;margin:15px 0">
-            <span style="padding:8px 15px;background:rgba(255,255,255,0.2);border-radius:15px;font-weight:600">
-                {goal['progress']}% - Max: {goal['max_score']}/10
-            </span>
-        </div>
-        '''
+        progress_bar = f'<div style="background:#ddd;height:25px;border-radius:12px;overflow:hidden"><div style="background:linear-gradient(90deg,#50c878,#27ae60);width:{goal["progress"]}% height:100%;transition:width 0.5s"></div></div>'
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:20px">
-            <h3>📚 {goal['subject']}</h3>
-            <p><strong>Goal:</strong> {goal['goal']}</p>
-            <p><strong>Target:</strong> {goal['target_score']}</p>
+        <div style="background:rgba(255,255,255,0.2);padding:30px;margin:20px;border-radius:20px">
+            <h3>{goal["subject"]} - {goal["goal"]}</h3>
+            <p>Target: {goal["target_score"]}% | Progress: {goal["progress"]}% | Best: {goal["max_score"]}/10</p>
             {progress_bar}
-            <div style="margin-top:20px">
-                <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#50c878;color:white;text-decoration:none;border-radius:12px;font-weight:600;margin:5px">🧠 Take Quiz</a>
-            </div>
+            <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-top:15px;display:inline-block">📝 Take Quiz</a>
         </div>
         '''
     
     return f'''
-    <!DOCTYPE html>
-    <html><head><title>My Goals</title>
-    <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}.back-btn{{position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600}}</style></head>
-    <body>
-    <a href="/dashboard" class="back-btn">← Dashboard</a>
-    <div class="container">
-        <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
-        {goals_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No goals set yet! <a href='/goals' style='color:#50c878'>Set goals →</a></p>"}
-        <div style="text-align:center;margin-top:40px">
-            <a href="/goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600">➕ New Goal</a>
-        </div>
-    </div>
-    {GLOBAL_ALARM_JS}
-    </body></html>
-    '''
-    
-@app.route('/reminders', methods=['GET', 'POST'])
-def reminders():
-    if not session.get('logged_in'): return redirect('/')
-    
-    conn = get_db_connection()
-    email = session['email']
-    
-    if request.method == 'POST':
-        if 'delete' in request.form:
-            reminder_id = request.form['reminder_id']
-            conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
-                        (reminder_id, email))
-        else:
-            conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                        (email, request.form['title'], request.form['deadline']))
-        conn.commit()
-        return redirect('/reminders')
-    
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
-                            (email,)).fetchall()
-    conn.close()
-    
-    reminders_html = ''
-    for r in reminders:
-        reminders_html += f'''
-        <div style="background:rgba(231,76,60,0.9);padding:25px;margin:20px;border-radius:20px;
-                    display:flex;justify-content:space-between;align-items:center">
-            <div>
-                <div style="font-size:24px">⏰ {r['title']}</div>
-                <div style="color:#ffd700;font-size:18px">{r['deadline']}</div>
-            </div>
-            <form method="POST" style="display:inline">
-                <input type="hidden" name="reminder_id" value="{r['id']}">
-                <input type="hidden" name="delete" value="1">
-                <button type="submit" onclick="return confirm('Delete {r["title"]}?')"
-                        style="background:#e74c3c;color:white;border:none;padding:10px 20px;
-                               border-radius:10px;cursor:pointer;font-size:16px">🗑️ Delete</button>
-            </form>
-        </div>
-        '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>⏰ Reminders</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}}.container{{max-width:700px;margin:0 auto}}</style>
-    </head>
-    <body>{GLOBAL_ALARM_JS}
-    <div class="container">
-        <h1 style="text-align:center;font-size:40px;margin-bottom:40px">⏰ My Reminders</h1>
-        
-        <!-- ADD NEW REMINDER -->
-        <div style="background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:30px">
-            <form method="POST">
-                <input name="title" placeholder="Reminder Title" style="width:70%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
-                <input name="deadline" type="datetime-local" style="width:28%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
-                <button type="submit" style="width:100%;padding:20px;background:#ff6b6b;color:white;border:none;border-radius:20px;font-size:22px;margin-top:15px;cursor:pointer">➕ Add Reminder</button>
-            </form>
-        </div>
-        
-        {reminders_html or '<p style="text-align:center;font-size:24px;color:#f1c40f">No reminders set</p>'}
-        
-        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#ffd700;font-size:20px;text-decoration:none">← Dashboard</a>
-    </div>
-    </body>
-    </html>
-    '''
-    
-@app.route('/delete-reminder/<int:reminder_id>')
-def delete_reminder(reminder_id):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
-    conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
-                (reminder_id, session['email']))
-    conn.commit()
-    conn.close()
-    return redirect('/reminders')
+<!DOCTYPE html>
+<html><head><title>My Goals</title>
+<style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}</style></head>
+<body>
+<a href="/dashboard" style="position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600">← Dashboard</a>
+<div class="container">
+    <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
+    {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No goals set yet! <a href="/goals" style="color:#50c878">Create one →</a></p>'}
+</div>
+</body></html>
+'''
     
 @app.route('/myfiles')
 def myfiles():
