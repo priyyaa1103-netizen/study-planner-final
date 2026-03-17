@@ -13,8 +13,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
 def get_global_alarm_js():
-    return '''<script>let firedAlarms=new Set();document.addEventListener("DOMContentLoaded",function(){console.log("🎵 ALARM!");setInterval(()=>{fetch("/api/user-alarms").then(r=>r.json()).then(data=>{const now=new Date();data.forEach(alarm=>{if(new Date(alarm.deadline)<=now&&!firedAlarms.has(alarm.id)){firedAlarms.add(alarm.id);playAlarmSound(alarm.title);}})}).catch(e=>{});},2000);});function playAlarmSound(title){const audio=new Audio();audio.src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";audio.volume=1;audio.play().catch(e=>{});const alarmDiv=document.createElement("div");alarmDiv.style.cssText="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.9);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 30px #fff;animation:pulse 1s infinite;";alarmDiv.innerHTML=`🚨 ${title.toUpperCase()} 🚨<br><br><button onclick="this.parentElement.remove();document.body.classList.remove('shake');document.querySelectorAll('audio').forEach(a=>a.pause());" style="padding:15px 30px;font-size:20px;background:#fff;color:#f00;border:none;border-radius:10px;cursor:pointer;font-weight:bold">STOP ALARM</button>`;document.body.appendChild(alarmDiv);document.body.classList.add('shake');}</script><style>@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}body.shake{animation:shake 0.2s infinite;}</style>'''
-# Rest of your database and email setup remains same...
+    return '<script>let firedAlarms=new Set();document.addEventListener("DOMContentLoaded",function(){setInterval(()=>{fetch("/api/user-alarms").then(r=>r.json()).then(data=>{const now=new Date();data.forEach(alarm=>{if(new Date(alarm.deadline)<=now&&!firedAlarms.has(alarm.id)){firedAlarms.add(alarm.id);const audio=new Audio();audio.src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";audio.play();const div=document.createElement("div");div.style.cssText="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.9);z-index:99999;font-size:50px;display:flex;align-items:center;justify-content:center;";div.innerHTML="🚨 "+alarm.title.toUpperCase()+" 🚨";document.body.appendChild(div);}})})},2000);});</script><style>@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}body.shake{animation:shake 0.2s infinite;}</style>'
+    
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
@@ -164,9 +164,36 @@ def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
     name = session.get('name', 'User')
-    return f'''<!DOCTYPE html>
-<html><head><title>Dashboard</title>
-<style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:20px}}.container{{max-width:800px;margin:0 auto;text-align:center}}h1{{font-size:36px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}h2{{font-size:24px;margin-bottom:40px}}.btn{{display:inline-block;padding:20px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:15px;font-size:20px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.2);transition:all 0.3s}}.btn:hover{{transform:translateY(-5px);box-shadow:0 15px 40px rgba(0,0,0,0.3)}}.welcome{{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:40px;backdrop-filter:blur(10px)}}</style></head><body><div class="container"><div class="welcome"><h1>Welcome {name}! 🎓</h1><h2>Study Planner & Reminder App</h2></div><a href="/study" class="btn">📚 Study</a><a href="/goals" class="btn">🎯 Goals</a><a href="/view-goals" class="btn">📊 View Goals</a><a href="/reminders" class="btn">⏰ Reminders</a><a href="/myfiles" class="btn">📁 Files</a><a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a></div>{get_global_alarm_js()}</body></html>'''
+    return f'''
+<!DOCTYPE html>
+<html>
+<head><title>Dashboard</title>
+<style>
+body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:20px}}
+.container{{max-width:800px;margin:0 auto;text-align:center}}
+h1{{font-size:36px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
+h2{{font-size:24px;margin-bottom:40px}}
+.btn{{display:inline-block;padding:20px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:15px;font-size:20px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.2);transition:all 0.3s}}
+.btn:hover{{transform:translateY(-5px);box-shadow:0 15px 40px rgba(0,0,0,0.3)}}
+.welcome{{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:40px;backdrop-filter:blur(10px)}}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="welcome">
+        <h1>Welcome {name}! 🎓</h1>
+        <h2>Study Planner & Reminder App</h2>
+    </div>
+    <a href="/study" class="btn">📚 Study Dashboard</a>
+    <a href="/goals" class="btn">🎯 Set Goal</a>
+    <a href="/view-goals" class="btn">📊 View Goals</a>
+    <a href="/reminders" class="btn">⏰ Reminders</a>
+    <a href="/myfiles" class="btn">📁 My Files</a>
+    <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+</div>
+{get_global_alarm_js()}
+</body>
+</html>'''
     
 @app.route('/check-notifications')
 def check_notifications_api():
@@ -727,7 +754,7 @@ def user_alarms():
 @app.route('/myfiles')
 def myfiles():
     if not session.get('logged_in'): return redirect('/')
-        return
+    return
     render_template('myfiles.html')
     # List all uploaded files (implementation similar to above)
     return '''
