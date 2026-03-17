@@ -539,91 +539,53 @@ def sem6():
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-@app.route('/subject/<subject>', methods=['GET', 'POST'])
+@app.route('/subject/<subject>', methods=['GET'])
 def subject(subject):
-    if not session.get('logged_in'): 
-        return redirect('/')
+    if not session.get('logged_in'): return redirect('/')
     
-    # File upload handling (POST)
-    if request.method == 'POST':
-        unit_num = request.form.get('unit')
-        file = request.files.get('file')
-        
-        if file and file.filename and unit_num:
-            filename = f"unit{unit_num}.pdf"
-            os.makedirs(f'static/uploads/{subject}', exist_ok=True)
-            file_path = f'static/uploads/{subject}/{filename}'
-            file.save(file_path)
-            
-            # ✅ IMMEDIATE ALARM SET - 10 SEC
-            conn = get_db_connection()
-            alarm_title = f"✅ {subject.replace('-', ' ').title()} Unit {unit_num} UPLOADED!"
-            alarm_time = (datetime.now() + timedelta(seconds=10)).isoformat()
-            
-            conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                        (session['email'], alarm_title, alarm_time))
-            conn.commit()
-            conn.close()
-            
-            return f'''
-            <script>
-            alert("✅ Unit {unit_num} uploaded! Alarm in 10 seconds 🚨");
-            setTimeout(() => location.reload(), 1000);
-            </script>
-            '''
-    
-    # Check uploaded files (GET)
+    # Check uploaded files
     files = []
     subject_path = f'static/uploads/{subject}'
     if os.path.exists(subject_path):
         files = [f for f in os.listdir(subject_path) if f.endswith('.pdf')]
     
-    # Units HTML with DIRECT UPLOAD FORM
+    # Units 1-10 HTML
     units_html = ''
     for i in range(1, 6):
         filename = f"unit{i}.pdf"
         if filename in files:
             units_html += f'''
-            <div style="background:#d4edda;color:#155724;padding:20px;margin:15px;border-radius:15px">
-                ✅ Unit {i} <strong style="color:green">[UPLOADED]</strong><br>
-                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[👀 View]</a>
-                <a href="/download/{subject}/{filename}" style="color:#007bff">[📥 Download]</a>
-                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete?')" style="color:#dc3545">[🗑️ Delete]</a>
+            <div style="background:#d4edda;color:#155724;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} ✅ 
+                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[View]</a>
+                <a href="/download/{subject}/{filename}" style="color:#007bff">[Download]</a>
+                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete Unit {i}?')" style="color:#dc3545">[Delete]</a>
             </div>
             '''
         else:
             units_html += f'''
-            <div style="background:#fff3cd;color:#856404;padding:20px;margin:15px;border-radius:15px">
-                📤 Unit {i} <strong>[UPLOAD NOW]</strong><br>
-                <form method="POST" enctype="multipart/form-data" style="margin-top:10px" onsubmit="return confirm('Upload Unit {i}?')">
-                    <input type="hidden" name="unit" value="{i}">
-                    <input type="file" name="file" accept=".pdf" style="padding:8px;border-radius:8px" required>
-                    <button type="submit" style="padding:8px 15px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;margin-left:10px">Upload</button>
-                </form>
+            <div style="background:#fff3cd;color:#856404;padding:15px;margin:10px;border-radius:10px">
+                📚 Unit {i} 📤 
+                <a href="/upload/{subject}/{i}" style="color:#856404;font-weight:bold">[UPLOAD]</a>
             </div>
             '''
     
     return f'''
     <!DOCTYPE html>
-    <html>
-    <head><title>{subject.replace('-', ' ').title()}</title>
+    <html><head><title>{subject.replace('-', ' ').title()}</title>
     <style>
     body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
-    .container{{max-width:900px;margin:0 auto}}
-    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px}}
-    h1{{text-align:center;font-size:42px;margin:80px 0 50px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
-    input[type=file]{{background:#fff;padding:10px;border-radius:8px;margin-right:10px}}
-    </style>
-    </head>
+    .container{{max-width:800px;margin:0 auto}}
+    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}
+    h1{{text-align:center;font-size:36px;margin:60px 0 40px}}
+    </style></head>
     <body>
-        <a href="/study" class="back">← Study Dashboard</a>
-        <div class="container">
-            <h1>📚 {subject.replace('-', ' ').title()}</h1>
-            {units_html}
-        </div>
-        {GLOBAL_ALARM_JS}
-    </body>
-    </html>
+    <a href="/study" class="back">← Study</a>
+    <div class="container">
+        <h1>{subject.replace('-', ' ').title()}</h1>
+        {units_html}
+    </div>
+    </body></html>
     '''
 # ============= FILE UPLOAD =============
 @app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
