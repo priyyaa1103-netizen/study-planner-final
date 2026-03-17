@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: study-planner
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.6
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_PASS
+        sync: false
