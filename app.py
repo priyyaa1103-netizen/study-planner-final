@@ -12,59 +12,6 @@ from email.mime.multipart import MIMEMultipart
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
-# ✅ FIXED GLOBAL ALARM JS - Complete working version
-<!-- GLOBAL ALARM JS - FIXED VERSION -->
-<script>
-let firedAlarms = JSON.parse(localStorage.getItem('firedAlarms') || '[]');
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('ALARM LOADED');
-    setInterval(() => {
-        fetch('/api/user-alarms')
-            .then(r => r.json())
-            .then(data => {
-                const now = new Date();
-                data.forEach(alarm => {
-                    if (new Date(alarm.deadline) <= now && 
-                        !firedAlarms.includes(alarm.id)) {
-                        firedAlarms.push(alarm.id);
-                        localStorage.setItem('firedAlarms', JSON.stringify(firedAlarms));
-                        
-                        // Mark as fired in backend
-                        fetch('/api/mark-alarm-fired', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({id: alarm.id})
-                        });
-                        
-                        playAlarmSound(alarm.title);
-                    }
-                });
-            })
-            .catch(e => console.log('Alarm check failed', e));
-    }, 5000); // 5s interval
-});
-
-function playAlarmSound(title) {
-    // Audio + Visual same as before
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBja2LDciUFLIHO8tiJNwgZaLvt559NEAxQpPwtmMcBjiR1LMeSwFJHfH8N2QQAo');
-    audio.volume = 0.8;
-    audio.play().catch(e => console.log('Audio play failed', e));
-    
-    // Visual explosion
-    document.body.innerHTML += `
-        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;animation:pulse 1s infinite;onclick=this.remove()" onclick="this.remove()">${title.toUpperCase()}</div>
-    `;
-    document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 2000);
-}
-</script>
-<style>
-@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
-body.shake { animation: shake 0.2s infinite; }
-</style>
-
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
@@ -899,3 +846,4 @@ def logout():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
