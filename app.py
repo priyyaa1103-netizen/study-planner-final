@@ -232,11 +232,11 @@ event.target.classList.add('active');
 def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
-        return
-    render_template('dashboard.html')    
-    
+       
     email = session.get('email', '')
     name = session.get('name', 'User')
+        return
+    render_template('dashboard.html', name=name)
     
     conn = get_db_connection()
     reminders = conn.execute("""
