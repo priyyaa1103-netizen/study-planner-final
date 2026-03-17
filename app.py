@@ -15,73 +15,49 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-secure-key-change-me')
 # ✅ FIXED GLOBAL ALARM - Complete working version
 GLOBAL_ALARM_JS = '''
 <script>
-let firedAlarms = new Set();
+// ✅ இது browser-ல permanent save ஆகும்
+let firedAlarms = JSON.parse(localStorage.getItem('firedAlarms') || '{}');
 
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 SOUND ALARM LOADED");
-    
     setInterval(() => {
         fetch("/api/user-alarms")
         .then(r => r.json())
         .then(data => {
             const now = new Date();
             data.forEach(alarm => {
-                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                    firedAlarms.add(alarm.id);
-                    console.log("🚨 TRIGGER ALARM:", alarm.title);
+                // இந்த alarm ஏற்கனவே fire ஆகி இருக்கானு check
+                const alarmKey = alarm.id;
+                if(new Date(alarm.deadline) <= now && !firedAlarms[alarmKey]) {
+                    // முதல் தடவை மட்டும் fire ஆகும்
+                    firedAlarms[alarmKey] = true;
+                    localStorage.setItem('firedAlarms', JSON.stringify(firedAlarms));
                     playAlarmSound(alarm.title);
                 }
             });
-        }).catch(e => console.log("Alarm check failed:", e));
-    }, 2000);
+        });
+    }, 3000);
 });
 
 function playAlarmSound(title) {
-    // ✅ FIXED: Proper audio sources with error handling
-    const audio = new Audio();
-    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";
-    audio.volume = 0.8;
-    audio.play().catch(e => console.log("Audio play failed:", e));
-    
-    // Visual explosion + screen shake
-    const alarmDiv = document.createElement("div");
-    alarmDiv.style.cssText = `
-        position:fixed;top:0;left:0;width:100vw;height:100vh;
-        background:rgba(255,0,0,0.85);z-index:9999;display:flex;align-items:center;
-        justify-content:center;font-size:48px;font-weight:bold;color:white;text-shadow:0 0 20px #fff;
-        animation: pulse 1s infinite; cursor:pointer;
+    // Screen shake + popup
+    document.body.innerHTML += `
+        <div style="
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
+            justify-content:center;font-size:50px;color:white;
+            animation: pulse 1s infinite;" 
+            onclick="this.remove();document.body.classList.remove('shake')">
+            🚨 ${title} - Click to Dismiss Forever 🚨
+        </div>
     `;
-    alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click to dismiss</small>`;
-    alarmDiv.onclick = () => alarmDiv.remove();
-    document.body.appendChild(alarmDiv);
-    
     document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 3000);
-}
-
-function playBeepSound() {
-    for(let i = 0; i < 3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i * 200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i * 600);
-    }
 }
 </script>
 <style>
-@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
-body.shake { animation: shake 0.2s infinite; }
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake{animation:shake 0.2s infinite;}
 </style>
-'''
 
 GMAIL_USER = os.getenv("GMAIL_USER", "")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
@@ -279,6 +255,10 @@ def dashboard():
         <a href="/reminders" class="btn">⏰ Reminders</a>
         <a href="/myfiles" class="btn">📁 My Files</a>
         <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+<button onclick="localStorage.removeItem('firedAlarms');location.reload();" 
+        style="background:orange;color:white;padding:20px;border-radius:15px;font-size:18px">
+    🗑️ Clear All Alarms (Test Use)
+</button>
     </div>
 </div>
 {GLOBAL_ALARM_JS}
@@ -518,53 +498,91 @@ def sem6():
     <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
     '''
 
-@app.route('/subject/<subject>', methods=['GET'])
+@app.route('/subject/<subject>', methods=['GET', 'POST'])
 def subject(subject):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     
-    # Check uploaded files
+    # File upload handling (POST)
+    if request.method == 'POST':
+        unit_num = request.form.get('unit')
+        file = request.files.get('file')
+        
+        if file and file.filename and unit_num:
+            filename = f"unit{unit_num}.pdf"
+            os.makedirs(f'static/uploads/{subject}', exist_ok=True)
+            file_path = f'static/uploads/{subject}/{filename}'
+            file.save(file_path)
+            
+            # ✅ IMMEDIATE ALARM SET - 10 SEC
+            conn = get_db_connection()
+            alarm_title = f"✅ {subject.replace('-', ' ').title()} Unit {unit_num} UPLOADED!"
+            alarm_time = (datetime.now() + timedelta(seconds=10)).isoformat()
+            
+            conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
+                        (session['email'], alarm_title, alarm_time))
+            conn.commit()
+            conn.close()
+            
+            return f'''
+            <script>
+            alert("✅ Unit {unit_num} uploaded! Alarm in 10 seconds 🚨");
+            setTimeout(() => location.reload(), 1000);
+            </script>
+            '''
+    
+    # Check uploaded files (GET)
     files = []
     subject_path = f'static/uploads/{subject}'
     if os.path.exists(subject_path):
         files = [f for f in os.listdir(subject_path) if f.endswith('.pdf')]
     
-    # Units 1-10 HTML
+    # Units HTML with DIRECT UPLOAD FORM
     units_html = ''
     for i in range(1, 6):
         filename = f"unit{i}.pdf"
         if filename in files:
             units_html += f'''
-            <div style="background:#d4edda;color:#155724;padding:15px;margin:10px;border-radius:10px">
-                📚 Unit {i} ✅ 
-                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[View]</a>
-                <a href="/download/{subject}/{filename}" style="color:#007bff">[Download]</a>
-                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete Unit {i}?')" style="color:#dc3545">[Delete]</a>
+            <div style="background:#d4edda;color:#155724;padding:20px;margin:15px;border-radius:15px">
+                ✅ Unit {i} <strong style="color:green">[UPLOADED]</strong><br>
+                <a href="/view-pdf/{subject}/{filename}" target="_blank" style="color:#28a745">[👀 View]</a>
+                <a href="/download/{subject}/{filename}" style="color:#007bff">[📥 Download]</a>
+                <a href="/delete/{subject}/{filename}" onclick="return confirm('Delete?')" style="color:#dc3545">[🗑️ Delete]</a>
             </div>
             '''
         else:
             units_html += f'''
-            <div style="background:#fff3cd;color:#856404;padding:15px;margin:10px;border-radius:10px">
-                📚 Unit {i} 📤 
-                <a href="/upload/{subject}/{i}" style="color:#856404;font-weight:bold">[UPLOAD]</a>
+            <div style="background:#fff3cd;color:#856404;padding:20px;margin:15px;border-radius:15px">
+                📤 Unit {i} <strong>[UPLOAD NOW]</strong><br>
+                <form method="POST" enctype="multipart/form-data" style="margin-top:10px" onsubmit="return confirm('Upload Unit {i}?')">
+                    <input type="hidden" name="unit" value="{i}">
+                    <input type="file" name="file" accept=".pdf" style="padding:8px;border-radius:8px" required>
+                    <button type="submit" style="padding:8px 15px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;margin-left:10px">Upload</button>
+                </form>
             </div>
             '''
     
     return f'''
     <!DOCTYPE html>
-    <html><head><title>{subject.replace('-', ' ').title()}</title>
+    <html>
+    <head><title>{subject.replace('-', ' ').title()}</title>
     <style>
     body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px;font-family:'Segoe UI'}}
-    .container{{max-width:800px;margin:0 auto}}
-    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px}}
-    h1{{text-align:center;font-size:36px;margin:60px 0 40px}}
-    </style></head>
+    .container{{max-width:900px;margin:0 auto}}
+    .back{{position:fixed;top:20px;left:20px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-size:18px}}
+    h1{{text-align:center;font-size:42px;margin:80px 0 50px;text-shadow:0 5px 20px rgba(0,0,0,0.3)}}
+    input[type=file]{{background:#fff;padding:10px;border-radius:8px;margin-right:10px}}
+    </style>
+    </head>
     <body>
-    <a href="/study" class="back">← Study</a>
-    <div class="container">
-        <h1>{subject.replace('-', ' ').title()}</h1>
-        {units_html}
-    </div>
-    </body></html>
+        <a href="/study" class="back">← Study Dashboard</a>
+        <div class="container">
+            <h1>📚 {subject.replace('-', ' ').title()}</h1>
+            {units_html}
+        </div>
+        {GLOBAL_ALARM_JS}
+    </body>
+    </html>
     '''
 # ============= FILE UPLOAD =============
 @app.route('/upload/<subject>/<unit>', methods=['GET', 'POST'])
