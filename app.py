@@ -691,52 +691,47 @@ def view_goals():
     
 @app.route('/reminders')
 def reminders():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
     conn = get_db_connection()
     reminders_list = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (session['email'],)).fetchall()
     conn.close()
     
-    reminders_html = ""
+    r_html = ''
     for r in reminders_list:
-        reminders_html += f'''
-        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px;">
-            <div style="font-size:28px;">⏰ {r["title"]}</div>
-            <div style="font-size:20px;color:#ffd700;">{r["deadline"]}</div>
-            <a href="/delete-reminder/{r["id"]}" onclick="return confirm('Delete?')" style="background:#e74c3c;padding:10px 20px;border-radius:10px;color:white;">🗑️ Delete</a>
-        </div>
-        '''
+        r_html += f'<div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px;"><h3>⏰ {r["title"]}</h3><p>{r["deadline"]}</p><a href="/delete-reminder/{r["id"]}" style="background:#e74c3c;color:white;padding:10px;border-radius:8px;">Delete</a></div>'
     
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>Reminders</title><style>/* CSS */</style></head>
-    <body>
-    <div class="container">
-        <h1 style="font-size:42px;margin:60px 0">⏰ Reminders</h1>
-        <form method="POST" action="/set-reminder" style="max-width:500px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;">
-            <input name="title" placeholder="Reminder Title" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;" required>
-            <input name="deadline" type="datetime-local" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;" required>
-            <button type="submit" class="btn" style="width:100%;">✅ Set Reminder</button>
-        </form>
-        {reminders_html or '<p style="font-size:24px;">No reminders set</p>'}
-    </div>
-    {get_global_alarm_js()}
-    </body>
-    </html>
-    '''
+    return f'''<!DOCTYPE html>
+<html><head><title>Reminders</title>
+<style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:20px}}.container{{max-width:800px;margin:0 auto;text-align:center}}</style>
+</head><body>
+<div class="container">
+<h1 style="font-size:42px;margin:60px 0">⏰ Reminders</h1>
+<form method="POST" action="/set-reminder" style="max-width:500px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;">
+<input name="title" placeholder="Reminder Title" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;border:none;" required>
+<input name="deadline" type="datetime-local" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;border:none;" required>
+<button type="submit" style="width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:18px;">✅ Set Reminder</button>
+</form>
+{r_html or '<p style="font-size:24px;">No reminders set</p>'}
+</div>
+{get_global_alarm_js()}
+</body></html>'''
 
 @app.route('/set-reminder', methods=['POST'])
 def set_reminder():
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     conn = get_db_connection()
-    conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)", 
-                (session['email'], request.form['title'], request.form['deadline']))
+    conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)", (session['email'], request.form['title'], request.form['deadline']))
     conn.commit()
     conn.close()
     return redirect('/reminders')
 
 @app.route('/delete-reminder/<int:rem_id>')
 def delete_reminder(rem_id):
-    if not session.get('logged_in'): return redirect('/')
+    if not session.get('logged_in'): 
+        return redirect('/')
     conn = get_db_connection()
     conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (rem_id, session['email']))
     conn.commit()
@@ -745,7 +740,8 @@ def delete_reminder(rem_id):
 
 @app.route('/api/user-alarms')
 def user_alarms():
-    if not session.get('logged_in'): return jsonify([])
+    if not session.get('logged_in'): 
+        return jsonify([])
     conn = get_db_connection()
     alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", (session['email'],)).fetchall()
     conn.close()
