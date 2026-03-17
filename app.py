@@ -232,6 +232,8 @@ event.target.classList.add('active');
 def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
+        return
+    render_template('dashboard.html')    
     
     email = session.get('email', '')
     name = session.get('name', 'User')
@@ -309,19 +311,12 @@ def check_notifications_api():
         return "🚨"
     return ""
 
-@app.route('/api/user-alarms')
-def user_alarms():
-    if not session.get('logged_in'):
-        return jsonify([])
-    conn = get_db_connection()
-    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", 
-                         (session['email'],)).fetchall()
-    conn.close()
-    return jsonify([{'id': a['id'], 'title': a['title'], 'deadline': a['deadline']} for a in alarms])
-        
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
+    return
+render_template('study.html')
+
     return '''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
@@ -610,6 +605,8 @@ def download(subject, filename):
 def goals():
     if not session.get('logged_in'): 
         return redirect('/')
+        return
+    render_template('goals.html')     
     
     if request.method == 'POST':
         conn = get_db_connection()
@@ -750,6 +747,8 @@ def view_goals():
     goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY ID DESC', 
                         (session['email'],)).fetchall()
     conn.close()
+    return
+    render_template('view_goals.html', goals=goals)
     
     goals_html = ''
     for goal in goals:
@@ -790,88 +789,86 @@ def view_goals():
     </body></html>
     '''
     
-@app.route('/reminders', methods=['GET', 'POST'])
+# ✅ COMPLETE REMINDER ROUTES
+@app.route('/reminders')
 def reminders():
-    if not session.get('logged_in'): return redirect('/')
-    
-    conn = get_db_connection()
-    email = session['email']
-    
-    if request.method == 'POST':
-        if 'delete' in request.form:
-            reminder_id = request.form['reminder_id']
-            conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
-                        (reminder_id, email))
-        else:
-            conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                        (email, request.form['title'], request.form['deadline']))
-        conn.commit()
-        return redirect('/reminders')
-    
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
-                            (email,)).fetchall()
-    conn.close()
-    
-    reminders_html = ''
-    for r in reminders:
-        reminders_html += f'''
-        <div style="background:rgba(231,76,60,0.9);padding:25px;margin:20px;border-radius:20px;
-                    display:flex;justify-content:space-between;align-items:center">
-            <div>
-                <div style="font-size:24px">⏰ {r['title']}</div>
-                <div style="color:#ffd700;font-size:18px">{r['deadline']}</div>
-            </div>
-            <form method="POST" style="display:inline">
-                <input type="hidden" name="reminder_id" value="{r['id']}">
-                <input type="hidden" name="delete" value="1">
-                <button type="submit" onclick="return confirm('Delete {r["title"]}?')"
-                        style="background:#e74c3c;color:white;border:none;padding:10px 20px;
-                               border-radius:10px;cursor:pointer;font-size:16px">🗑️ Delete</button>
-            </form>
-        </div>
-        '''
-    
-    return f'''
-    <!DOCTYPE html>
-    <html><head><title>⏰ Reminders</title>
-    <style>body{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px;font-family:'Segoe UI'}}.container{{max-width:700px;margin:0 auto}}</style>
-    </head>
-    <body>{GLOBAL_ALARM_JS}
-    <div class="container">
-        <h1 style="text-align:center;font-size:40px;margin-bottom:40px">⏰ My Reminders</h1>
-        
-        <!-- ADD NEW REMINDER -->
-        <div style="background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:30px">
-            <form method="POST">
-                <input name="title" placeholder="Reminder Title" style="width:70%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
-                <input name="deadline" type="datetime-local" style="width:28%;padding:15px;border-radius:12px;border:none;font-size:18px" required>
-                <button type="submit" style="width:100%;padding:20px;background:#ff6b6b;color:white;border:none;border-radius:20px;font-size:22px;margin-top:15px;cursor:pointer">➕ Add Reminder</button>
-            </form>
-        </div>
-        
-        {reminders_html or '<p style="text-align:center;font-size:24px;color:#f1c40f">No reminders set</p>'}
-        
-        <a href="/dashboard" style="display:block;text-align:center;margin-top:30px;color:#ffd700;font-size:20px;text-decoration:none">← Dashboard</a>
-    </div>
-    </body>
-    </html>
-    '''
-    
-@app.route('/delete-reminder/<int:reminder_id>')
-def delete_reminder(reminder_id):
+    """📋 View ALL reminders + Set new reminder form"""
     if not session.get('logged_in'): 
         return redirect('/')
     
     conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", 
-                (reminder_id, session['email']))
+    reminders_list = conn.execute("""
+        SELECT * FROM reminders 
+        WHERE email=? 
+        ORDER BY deadline ASC
+    """, (session['email'],)).fetchall()
+    conn.close()
+    
+    return render_template('reminders.html', reminders=reminders_list)
+
+@app.route('/set-reminder', methods=['POST'])
+def set_reminder():
+    """💾 SAVE new reminder to database"""
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    conn = get_db_connection()
+    title = request.form['title']
+    deadline = request.form['deadline']
+    
+    conn.execute("""
+        INSERT INTO reminders (email, title, deadline) 
+        VALUES (?, ?, ?)
+    """, (session['email'], title, deadline))
+    
+    conn.commit()
+    conn.close()
+    
+    return redirect('/reminders')
+
+@app.route('/delete-reminder/<int:rem_id>')
+def delete_reminder(rem_id):
+    """🗑️ Delete specific reminder"""
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    conn = get_db_connection()
+    conn.execute("""
+        DELETE FROM reminders 
+        WHERE id=? AND email=?
+    """, (rem_id, session['email']))
+    
     conn.commit()
     conn.close()
     return redirect('/reminders')
+# ========================================
+# ✅ ALARM API - எல்லா pages-ல work
+# ========================================
+@app.route('/api/user-alarms')
+def user_alarms():
+    if not session.get('logged_in'):
+        return jsonify([])
+    
+    conn = get_db_connection()
+    alarms = conn.execute("""
+        SELECT id, title, deadline 
+        FROM reminders 
+        WHERE email=? 
+        ORDER BY deadline ASC
+    """, (session['email'],)).fetchall()
+    conn.close()
+    
+    return jsonify([{
+        'id': a['id'], 
+        'title': a['title'], 
+        'deadline': a['deadline']
+    } for a in alarms])
     
 @app.route('/myfiles')
 def myfiles():
     if not session.get('logged_in'): return redirect('/')
+        return
+    render_template('myfiles.html')
     # List all uploaded files (implementation similar to above)
     return '''
     <!DOCTYPE html><html><head><title>My Files</title>
