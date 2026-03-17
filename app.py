@@ -78,30 +78,17 @@ def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     
-    # ✅ FIXED - Proper indentation
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS goals 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, progress INTEGER DEFAULT 0,
-                  max_score INTEGER DEFAULT 0)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS reminders 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, title TEXT, deadline TEXT)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS files 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, subject TEXT, filename TEXT, 
-                  upload_date TEXT)''')
+    # ✅ SINGLE LINE QUERIES - NO INDENTATION PROBLEM
+    c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password TEXT, name TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, goal TEXT, target_score INTEGER, progress INTEGER DEFAULT 0, max_score INTEGER DEFAULT 0)")
+    c.execute("CREATE TABLE IF NOT EXISTS reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, title TEXT, deadline TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, filename TEXT, upload_date TEXT)")
     
     conn.commit()
     conn.close()
 
+# Call init_db at start
 init_db()
-
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
