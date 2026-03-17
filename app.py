@@ -211,34 +211,36 @@ def get_db_connection():
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # ✅ AUTOMATIC REDIRECT MAGIC
+    # ✅ AUTO REDIRECT IF LOGGED IN
     if session.get('logged_in'):
-        print(f"🚀 Auto-redirecting {session['email']} to dashboard")
         return redirect('/dashboard')
     
+    # ✅ POST - Login/Register handle pannu
     if request.method == 'POST':
+        email = request.form.get('email', '').lower().strip()
+        password = request.form.get('password', '')
+        name = request.form.get('name', '').strip()
+        action = request.form.get('action', 'login')
+        
+        conn = get_db_connection()
+        
         try:
-            email = request.form.get('email', '').lower().strip()
-            password = request.form.get('password', '')
-            name = request.form.get('name', '').strip()
-            action = request.form.get('action', 'login')
-            
-            conn = get_db_connection()
-            
             if action == 'register':
+                # Check if user exists
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
                 if user:
                     conn.close()
                     return render_login_page("❌ Email already registered!")
                 
+                # Create new user
                 hashed_pw = generate_password_hash(password)
                 conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                            (email, hashed_pw, name))
+                           (email, hashed_pw, name))
                 conn.commit()
                 conn.close()
                 return render_login_page("✅ Account created! Please login.")
-                
-            else:  # login
+            
+            else:  # Login
                 user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
                 conn.close()
                 
@@ -246,87 +248,97 @@ def home():
                     session['logged_in'] = True
                     session['email'] = email
                     session['name'] = user['name']
-                    print(f"✅ LOGIN SUCCESS: {email}")
-                    return redirect('/dashboard')  # Auto dashboard!
+                    return redirect('/dashboard')
                 else:
                     return render_login_page("❌ Wrong email or password!")
                     
         except Exception as e:
-            print(f"💥 ERROR: {e}")
+            conn.close()
             return render_login_page(f"❌ Error: {str(e)}")
     
+    # ✅ GET - Login page kanbikku
     return render_login_page()
-    
+
 def render_login_page(error=""):
     error_html = f'<div class="error">{error}</div>' if error else ''
+    
     return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Study Planner</title>
-        <style>
-            *{margin:0;padding:0;box-sizing:border-box}
-            body{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-            .login-box{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}
-            .tabs{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}
-            .tab{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}
-            .tab.active{background:#667eea;color:white}
-            input{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}
-            input:focus{border-color:#667eea;outline:none}
-            button{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}
-            button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}
-            .error{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}
-        </style>
-    </head>
-    <body>
-        <div class="login-box">
-            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
-            {error_html}
-            
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('login')">Login</button>
-                <button class="tab" onclick="showTab('register')">Register</button>
-            </div>
-            
-            <!-- LOGIN FORM -->
-            <form method="POST" id="loginForm">
-                <input type="hidden" name="action" value="login">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Enter password" required>
-                <button type="submit">🚀 Login</button>
-            </form>
-            
-            <!-- REGISTER FORM -->
-            <form method="POST" id="registerForm" style="display:none">
-                <input type="hidden" name="action" value="register">
-                <input type="text" name="name" placeholder="Your Full Name" required>
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
-                <button type="submit">✅ Create Account</button>
-            </form>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎓 Study Planner</title>
+    <style>
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+        .login-box{{background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);padding:50px;border-radius:25px;box-shadow:0 25px 60px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center;position:relative;overflow:hidden}}
+        .login-box::before{{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#f093fb,#f5576c,#4facfe)}}
+        .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
+        .tab{{flex:1;padding:18px 20px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s ease}}
+        .tab.active{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;transform:translateY(-2px)}}
+        .tab:hover:not(.active){{background:#e2e8f0;transform:translateY(-1px)}}
+        input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box;transition:all 0.3s ease;background:rgba(255,255,255,0.8)}}
+        input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1);background:white;transform:translateY(-2px)}}
+        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s ease;transform:translateY(0)}}
+        button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}}
+        .error{{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;padding:15px;border-radius:12px;margin:20px 0;font-weight:500;border-left:5px solid #ef4444;box-shadow:0 4px 15px rgba(239,68,68,0.2)}}
+        h1{{font-size:42px;margin-bottom:20px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800;letter-spacing:-1px}}
+        .form{{transition:all 0.4s ease;transform:translateY(0);opacity:1}}
+        .form.hidden{{transform:translateY(20px);opacity:0;pointer-events:none}}
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>🎓 Study Planner</h1>
+        {error_html}
+        
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login')">👤 Login</button>
+            <button class="tab" onclick="showTab('register')">➕ Register</button>
         </div>
         
-        <script>
+        <!-- LOGIN FORM -->
+        <form method="POST" id="loginForm" class="form">
+            <input type="hidden" name="action" value="login">
+            <input type="email" name="email" placeholder="📧 your-email@gmail.com" required autocomplete="email">
+            <input type="password" name="password" placeholder="🔒 Enter password" required autocomplete="current-password">
+            <button type="submit">🚀 Login Now</button>
+        </form>
+        
+        <!-- REGISTER FORM -->
+        <form method="POST" id="registerForm" class="form hidden">
+            <input type="text" name="name" placeholder="👤 Your Full Name" required>
+            <input type="email" name="email" placeholder="📧 your-email@gmail.com" required autocomplete="email">
+            <input type="password" name="password" placeholder="🔐 Create Password (6+ chars)" required minlength="6" autocomplete="new-password">
+            <button type="submit">✅ Create Account</button>
+        </form>
+    </div>
+    
+    <script>
         function showTab(tabName) {{
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
             const tabs = document.querySelectorAll('.tab');
             
-            if (tabName === 'login') {{
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-            }} else {{
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-            }}
+            // Hide all forms
+            loginForm.classList.add('hidden');
+            registerForm.classList.add('hidden');
             
+            // Remove active from all tabs
             tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            if (tabName === 'login') {{
+                loginForm.classList.remove('hidden');
+                event.target.classList.add('active');
+            }} else {{
+                registerForm.classList.remove('hidden');
+                event.target.classList.add('active');
+            }}
         }}
-        </script>
-    </body>
-    </html>
-    '''
+    </script>
+</body>
+</html>
+'''
     
 @app.route('/dashboard')
 def dashboard():
