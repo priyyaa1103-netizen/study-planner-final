@@ -261,10 +261,27 @@ def dashboard():
             <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
         </div>
-    </div>
-
-    <!-- 🔥 GLOBAL ALARM - இங்க தான் work ஆகும்! 🔥 -->
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
 </body>
 </html>
 '''
@@ -284,39 +301,6 @@ def check_notifications_api():
     if count > 0:
         return "🚨"
     return ""
-
-@app.route('/api/user-alarms')
-def user_alarms():
-    if not session.get('loggedin'):
-        return jsonify([])
-    try:
-        conn = get_db_connection()
-        # fired=0 மட்டும் return
-        alarms = conn.execute(
-            "SELECT id, title, deadline FROM reminders WHERE email=? AND fired=0", 
-            (session['email'],)
-        ).fetchall()
-        conn.close()
-        return jsonify([{
-            'id': a['id'], 
-            'title': a['title'], 
-            'deadline': a['deadline']
-        } for a in alarms])
-    except:
-        return jsonify([])
-
-@app.route('/api/mark-alarm-fired', methods=['POST'])
-def mark_alarm_fired():
-    if not session.get('loggedin'):
-        return '', 401
-    data = request.get_json()
-    alarm_id = data.get('id')
-    conn = get_db_connection()
-    conn.execute("UPDATE reminders SET fired=1 WHERE id=? AND email=?", 
-                (alarm_id, session['email']))
-    conn.commit()
-    conn.close()
-    return '', 200
         
 @app.route('/study')
 def study():
@@ -346,7 +330,27 @@ def study():
         <a href="/year3" class="year-btn">🎓 3rd Year</a>
         
     </div>
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body>
     </html>
     '''
@@ -513,6 +517,28 @@ def subject(subject):
         <h1>{subject.replace('-', ' ').title()}</h1>
         {units_html}
     </div>
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
 # ============= FILE UPLOAD =============
@@ -544,6 +570,28 @@ def upload(subject, unit):
         </form>
         <a href="/subject/{subject}" style="display:inline-block;margin-top:20px;color:#f1c40f">← Back to {subject.replace('-', ' ').title()}</a>
     </div>
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
     
@@ -588,7 +636,28 @@ def myfiles_page():  # Function name change pannirukken
         <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">📁 My Files</h1>
         {files_html or "<p style='text-align:center;font-size:28px;color:#f1c40f'>No files uploaded yet!</p>"}
     </div>
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
     
@@ -642,7 +711,28 @@ def goals():
         <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
     </div>
     <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
 
@@ -706,6 +796,28 @@ def quiz(goal_id):
             <p style="font-size:24px">Progress: {new_progress}%</p>
             <a href="/view-goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block;margin-top:30px">📊 View Goals</a>
         </div>
+        <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
         </body></html>
         '''
     
@@ -736,7 +848,28 @@ def quiz(goal_id):
         </form>
         <a href="/view-goals" style="display:block;margin-top:30px;color:#f1c40f;font-size:20px;text-decoration:none">← Back to Goals</a>
     </div>
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
     
@@ -772,7 +905,28 @@ def view_goals():
         {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No goals set yet! <a href="/goals" style="color:#fff">Set goals →</a></p>'}
         <a href="/dashboard" style="position:fixed;top:30px;left:30px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600">← Dashboard</a>
     </div>
-    {GLOBAL_ALARM_JS}
+   <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
     
@@ -811,9 +965,65 @@ def reminders():
         {r_html or '<p style="text-align:center;color:#f1c40f;font-size:20px">No reminders set!</p>'}
     </div>
     <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    {GLOBAL_ALARM_JS}
+    <!-- Notification Badge + Alarm -->
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:1000;">
+    <span class="badge" style="background:#ff4444;color:white;padding:5px 10px;border-radius:20px;cursor:pointer;font-size:14px;" 
+          onclick="location.href='/reminders'">
+        ⏰ <span id="notif-count">0</span>
+    </span>
+</div>
+
+<script src="/static/alarm.js"></script>
+<script>
+initAlarm();
+setInterval(() => {
+    fetch('/api/notifications-count').then(r=>r.json()).then(data=>{
+        document.getElementById('notif-count').textContent = data.count;
+    });
+}, 5000);
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake .3s infinite;}
+</style>
     </body></html>
     '''
+
+@app.route('/api/user-alarms')
+def user_alarms():
+    if not session.get('loggedin'): return jsonify([])
+    conn = get_db_connection()
+    alarms = conn.execute(
+        "SELECT id, title, deadline FROM reminders WHERE email=? AND fired=0", 
+        (session['email'],)
+    ).fetchall()
+    conn.close()
+    return jsonify([{'id':a['id'],'title':a['title'],'deadline':a['deadline']} for a in alarms])
+
+@app.route('/api/mark-alarm-fired', methods=['POST'])
+def mark_alarm_fired():
+    if not session.get('loggedin'): return '', 401
+    data = request.get_json()
+    conn = get_db_connection()
+    conn.execute("UPDATE reminders SET fired=1 WHERE id=? AND email=?", 
+                (data['id'], session['email']))
+    conn.commit()
+    conn.close()
+    return '', 200
+
+@app.route('/api/notifications-count')
+def notifications_count():
+    if not session.get('loggedin'): return jsonify({'count': 0})
+    conn = get_db_connection()
+    email = session['email']
+    now = datetime.now().isoformat()
+    count = conn.execute(
+        "SELECT COUNT(*) FROM reminders WHERE email=? AND fired=0 AND datetime(deadline) > datetime(?)", 
+        (email, now)
+    ).fetchone()[0]
+    conn.close()
+    return jsonify({'count': count})
     
 @app.route('/delete-reminder/<int:reminder_id>')
 def delete_reminder(reminder_id):
