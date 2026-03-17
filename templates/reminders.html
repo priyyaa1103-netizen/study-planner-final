@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Reminders{% endblock %}
+{% block content %}
+<div class="container">
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <h1 style="font-size:42px;margin:60px 0 40px">⏰ Set Reminder</h1>
+    
+    <form method="POST" action="/set-reminder" style="max-width:600px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;">
+        <input name="title" placeholder="Reminder Title (ex: Maths Unit 1)" style="width:100%;padding:20px;margin:15px 0;border-radius:15px;border:none;font-size:18px;" required>
+        <input name="deadline" type="datetime-local" style="width:100%;padding:20px;margin:15px 0;border-radius:15px;border:none;font-size:18px;" required>
+        <button type="submit" class="btn" style="width:100%;background:#50c878;">✅ Set Reminder</button>
+    </form>
+    
+    {% if reminders %}
+    <h2 style="margin-top:60px;font-size:28px;">Active Reminders:</h2>
+    {% for r in reminders %}
+    <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px;">
+        <div style="font-size:28px;">⏰ {{ r.title }}</div>
+        <div style="font-size:20px;color:#ffd700;">{{ r.deadline }}</div>
+        <a href="/delete-reminder/{{ r.id }}" onclick="return confirm('Delete?')" style="background:#e74c3c;padding:10px 20px;border-radius:10px;color:white;">🗑️ Delete</a>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}
