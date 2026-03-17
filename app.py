@@ -14,40 +14,40 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
 def get_global_alarm_js():
     return '''
-    <script>
-    let firedAlarms = new Set();
-    document.addEventListener("DOMContentLoaded", function() {
-        console.log("🎵 GLOBAL ALARM LOADED!");
-        setInterval(() => {
-            fetch("/api/user-alarms").then(r => r.json()).then(data => {
-                const now = new Date();
-                data.forEach(alarm => {
-                    if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                        firedAlarms.add(alarm.id);
-                        playAlarmSound(alarm.title);
-                    }
-                });
+<script>
+let firedAlarms = new Set();
+document.addEventListener("DOMContentLoaded", function() {
+    console.log("🎵 GLOBAL ALARM LOADED!");
+    setInterval(() => {
+        fetch("/api/user-alarms").then(r => r.json()).then(data => {
+            const now = new Date();
+            data.forEach(alarm => {
+                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
+                    firedAlarms.add(alarm.id);
+                    playAlarmSound(alarm.title);
+                }
             });
-        }, 2000);
-    });
-    function playAlarmSound(title) {
-        const audio = new Audio();
-        audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";
-        audio.volume = 1; audio.play();
-        const alarmDiv = document.createElement("div");
-        alarmDiv.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 30px #fff;animation:pulse 1s infinite;";
-        alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><button onclick="this.parentElement.remove();document.body.classList.remove('shake')" style="padding:15px 30px;font-size:20px;background:#fff;color:#f00;border:none;border-radius:10px;cursor:pointer;">STOP</button>`;
-        document.body.appendChild(alarmDiv);
-        document.body.classList.add('shake');
-    }
-    </script>
-    <style>
-    @keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
-    @keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
-    body.shake {animation:shake 0.2s infinite;}
-    </style>
+        });
+    }, 2000);
+});
+function playAlarmSound(title) {
+    const audio = new Audio();
+    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";
+    audio.volume = 1; 
+    audio.play().catch(e => {});
+    const alarmDiv = document.createElement("div");
+    alarmDiv.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.9);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 30px #fff;animation:pulse 1s infinite;";
+    alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><br><button onclick="this.parentElement.remove();document.body.classList.remove('shake');document.querySelectorAll('audio').forEach(a=>a.pause());" style="padding:15px 30px;font-size:20px;background:#fff;color:#f00;border:none;border-radius:10px;cursor:pointer;font-weight:bold">STOP ALARM</button>`;
+    document.body.appendChild(alarmDiv);
+    document.body.classList.add('shake');
+}
+</script>
+<style>
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+body.shake {animation:shake 0.2s infinite;}
+</style>
     '''
-
 # Rest of your database and email setup remains same...
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
@@ -197,68 +197,37 @@ event.target.classList.add('active');
 def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
-       
-    email = session.get('email', '')
     name = session.get('name', 'User')
-        return
-    render_template('dashboard.html', name=name)
-    
-    conn = get_db_connection()
-    reminders = conn.execute("""
-        SELECT * FROM reminders WHERE email=? 
-        ORDER BY deadline ASC
-    """, (email,)).fetchall()
-    conn.close()
-    
-    # Alarm HTML + JavaScript
-    notifications = ""
-    for r in reminders:
-        notifications += f'''
-        <div class="auto-alarm" 
-             data-alarm-time="{r['deadline']}"
-             data-title="{r['title']}">
-            <div style="font-size:28px">⏰ {r['title']}</div>
-            <div style="font-size:20px;color:#ffd700">{r['deadline']}</div>
-        </div>
-        '''
-    
     return f'''
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Dashboard - Study Planner</title>
-    <style>
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:30px}}
-    .container{{max-width:900px;margin:0 auto;text-align:center}}
-    .btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}
-    .btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}
-    .notification{{background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer;border:3px solid #ff6b6b}}
-    </style>
+<head><title>Dashboard</title>
+<style>
+body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:20px}}
+.container{{max-width:800px;margin:0 auto;text-align:center}}
+h1{{font-size:36px;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}}
+h2{{font-size:24px;margin-bottom:40px}}
+.btn{{display:inline-block;padding:20px 40px;margin:15px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:white;text-decoration:none;border-radius:15px;font-size:20px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.2);transition:all 0.3s}}
+.btn:hover{{transform:translateY(-5px);box-shadow:0 15px 40px rgba(0,0,0,0.3)}}
+.welcome{{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;margin-bottom:40px;backdrop-filter:blur(10px)}}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 style="font-size:42px;margin-bottom:20px">🎓 Welcome {session.get("name", "User")}!</h1>
-        <h2 style="font-size:24px;margin-bottom:30px">Study Planner Dashboard</h2>
-        
-        <!-- Active Reminders -->
-        {notifications if "notifications" in locals() else ""}
-        
-        <div style="margin:40px 0">
-            <a href="/study" class="btn">📚 Study Dashboard</a>
-            <a href="/goals" class="btn">🎯 Set Goals</a>
-            <a href="/view-goals" class="btn">📊 View Goals</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
-            <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
-        </div>
+<div class="container">
+    <div class="welcome">
+        <h1>Welcome {name}! 🎓</h1>
+        <h2>Study Planner & Reminder App</h2>
     </div>
-
-    <!-- 🔥 GLOBAL ALARM - இங்க தான் work ஆகும்! 🔥 -->
-    {GLOBAL_ALARM_JS}
+    <a href="/study" class="btn">📚 Study Dashboard</a>
+    <a href="/goals" class="btn">🎯 Set Goal</a>
+    <a href="/view-goals" class="btn">📊 View Goals</a>
+    <a href="/reminders" class="btn">⏰ Reminders</a>
+    <a href="/myfiles" class="btn">📁 My Files</a>
+    <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+</div>
+{get_global_alarm_js()}
 </body>
-</html>
-'''
+</html>'''
     
 @app.route('/check-notifications')
 def check_notifications_api():
