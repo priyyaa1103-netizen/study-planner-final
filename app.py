@@ -12,76 +12,41 @@ from email.mime.multipart import MIMEMultipart
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
-# ✅ FIXED GLOBAL ALARM JS
-GLOBAL_ALARM_JS = '''
-<script>
-let firedAlarms = new Set();
-
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 SOUND ALARM LOADED");
-    
-    setInterval(() => {
-        fetch("/api/user-alarms")
-        .then(r => r.json())
-        .then(data => {
-            const now = new Date();
-            data.forEach(alarm => {
-                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                    firedAlarms.add(alarm.id);
-                    console.log("🚨 TRIGGER ALARM:", alarm.title);
-                    playAlarmSound(alarm.title);
-                }
+def get_global_alarm_js():
+    return '''
+    <script>
+    let firedAlarms = new Set();
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("🎵 GLOBAL ALARM LOADED!");
+        setInterval(() => {
+            fetch("/api/user-alarms").then(r => r.json()).then(data => {
+                const now = new Date();
+                data.forEach(alarm => {
+                    if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
+                        firedAlarms.add(alarm.id);
+                        playAlarmSound(alarm.title);
+                    }
+                });
             });
-        }).catch(e => console.log("Alarm check failed:", e));
-    }, 2000);
-});
-
-function playAlarmSound(title) {
-    // Fixed audio URLs
-    const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo");
-    audio.volume = 0.7;
-    audio.play().catch(e => console.log("Audio play failed:", e));
-    
-    // Visual explosion
-    document.body.innerHTML += `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
-            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
-            animation: pulse 1s infinite;" 
-            onclick="this.remove()">
-            🚨 ${title.toUpperCase()} 🚨
-        </div>
-    `;
-    
-    // Screen shake
-    document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 2000);
-}
-
-function playBeepSound() {
-    for(let i = 0; i < 3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i * 200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i * 600);
+        }, 2000);
+    });
+    function playAlarmSound(title) {
+        const audio = new Audio();
+        audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo";
+        audio.volume = 1; audio.play();
+        const alarmDiv = document.createElement("div");
+        alarmDiv.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 30px #fff;animation:pulse 1s infinite;";
+        alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><button onclick="this.parentElement.remove();document.body.classList.remove('shake')" style="padding:15px 30px;font-size:20px;background:#fff;color:#f00;border:none;border-radius:10px;cursor:pointer;">STOP</button>`;
+        document.body.appendChild(alarmDiv);
+        document.body.classList.add('shake');
     }
-}
-</script>
-<style>
-@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
-body.shake { animation: shake 0.2s infinite; }
-</style>
-'''
+    </script>
+    <style>
+    @keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+    @keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}75%{transform:translateX(10px);}}
+    body.shake {animation:shake 0.2s infinite;}
+    </style>
+    '''
 
 # Rest of your database and email setup remains same...
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
@@ -789,80 +754,67 @@ def view_goals():
     </body></html>
     '''
     
-# ✅ COMPLETE REMINDER ROUTES
 @app.route('/reminders')
 def reminders():
-    """📋 View ALL reminders + Set new reminder form"""
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+    if not session.get('logged_in'): return redirect('/')
     conn = get_db_connection()
-    reminders_list = conn.execute("""
-        SELECT * FROM reminders 
-        WHERE email=? 
-        ORDER BY deadline ASC
-    """, (session['email'],)).fetchall()
+    reminders_list = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (session['email'],)).fetchall()
     conn.close()
     
-    return render_template('reminders.html', reminders=reminders_list)
+    reminders_html = ""
+    for r in reminders_list:
+        reminders_html += f'''
+        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:20px;border-radius:20px;">
+            <div style="font-size:28px;">⏰ {r["title"]}</div>
+            <div style="font-size:20px;color:#ffd700;">{r["deadline"]}</div>
+            <a href="/delete-reminder/{r["id"]}" onclick="return confirm('Delete?')" style="background:#e74c3c;padding:10px 20px;border-radius:10px;color:white;">🗑️ Delete</a>
+        </div>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html><head><title>Reminders</title><style>/* CSS */</style></head>
+    <body>
+    <div class="container">
+        <h1 style="font-size:42px;margin:60px 0">⏰ Reminders</h1>
+        <form method="POST" action="/set-reminder" style="max-width:500px;margin:0 auto;background:rgba(255,255,255,0.1);padding:40px;border-radius:25px;">
+            <input name="title" placeholder="Reminder Title" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;" required>
+            <input name="deadline" type="datetime-local" style="width:100%;padding:20px;margin:10px 0;border-radius:15px;" required>
+            <button type="submit" class="btn" style="width:100%;">✅ Set Reminder</button>
+        </form>
+        {reminders_html or '<p style="font-size:24px;">No reminders set</p>'}
+    </div>
+    {get_global_alarm_js()}
+    </body>
+    </html>
+    '''
 
 @app.route('/set-reminder', methods=['POST'])
 def set_reminder():
-    """💾 SAVE new reminder to database"""
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+    if not session.get('logged_in'): return redirect('/')
     conn = get_db_connection()
-    title = request.form['title']
-    deadline = request.form['deadline']
-    
-    conn.execute("""
-        INSERT INTO reminders (email, title, deadline) 
-        VALUES (?, ?, ?)
-    """, (session['email'], title, deadline))
-    
+    conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)", 
+                (session['email'], request.form['title'], request.form['deadline']))
     conn.commit()
     conn.close()
-    
     return redirect('/reminders')
 
 @app.route('/delete-reminder/<int:rem_id>')
 def delete_reminder(rem_id):
-    """🗑️ Delete specific reminder"""
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+    if not session.get('logged_in'): return redirect('/')
     conn = get_db_connection()
-    conn.execute("""
-        DELETE FROM reminders 
-        WHERE id=? AND email=?
-    """, (rem_id, session['email']))
-    
+    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (rem_id, session['email']))
     conn.commit()
     conn.close()
     return redirect('/reminders')
-# ========================================
-# ✅ ALARM API - எல்லா pages-ல work
-# ========================================
+
 @app.route('/api/user-alarms')
 def user_alarms():
-    if not session.get('logged_in'):
-        return jsonify([])
-    
+    if not session.get('logged_in'): return jsonify([])
     conn = get_db_connection()
-    alarms = conn.execute("""
-        SELECT id, title, deadline 
-        FROM reminders 
-        WHERE email=? 
-        ORDER BY deadline ASC
-    """, (session['email'],)).fetchall()
+    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", (session['email'],)).fetchall()
     conn.close()
-    
-    return jsonify([{
-        'id': a['id'], 
-        'title': a['title'], 
-        'deadline': a['deadline']
-    } for a in alarms])
+    return jsonify([{'id':a['id'],'title':a['title'],'deadline':a['deadline']} for a in alarms])
     
 @app.route('/myfiles')
 def myfiles():
