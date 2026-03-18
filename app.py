@@ -17,21 +17,10 @@ GLOBAL_ALARM_JS = '''
 <script>
 
 let firedAlarms = new Set();
-let audioEnabled = false;
 
 // ✅ Page load
 document.addEventListener("DOMContentLoaded", function() {
     console.log("🎵 SOUND ALARM LOADED");
-
-    // 🔊 Enable sound button
-    document.body.innerHTML += `
-    <button onclick="enableSound()" style="
-    position:fixed;top:20px;left:20px;z-index:99999;
-    padding:10px;background:green;color:white;border:none;
-    border-radius:5px;cursor:pointer;">
-    Enable Sound 🔊
-    </button>
-    `;
     
     // ⏰ Check alarms
     setInterval(() => {
@@ -50,12 +39,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }, 2000);
 });
-
-// 🔊 Enable sound
-function enableSound() {
-    audioEnabled = true;
-    alert("Sound Enabled ✅");
-}
 
 // 🚨 Alarm trigger
 function playAlarmSound(id, title) {
@@ -92,8 +75,7 @@ function playAlarmSound(id, title) {
 
 // 🔊 Beep sound (browser restriction fix)
 function playBeepSound() {
-    if(!audioEnabled) return;
-
+    
     for(let i=0; i<3; i++) {
         setTimeout(() => {
             try {
