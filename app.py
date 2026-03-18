@@ -332,13 +332,18 @@ def set_reminder():
     check_reminders()
     return redirect(url_for('dashboard'))
 
-@app.route('/dismiss/<int:reminder_id>')
-def dismiss(reminder_id):
-    reminder = Reminders.query.get(reminder_id)
+@app.route('/dismiss/<int:id>')
+def dismiss(id):
+    reminder = Reminder.query.get(id)
     if reminder:
         reminder.is_dismissed = True
         db.session.commit()
     return redirect(url_for('dashboard'))
+
+# CREATE TABLES & START CHECKER
+with app.app_context():
+    db.create_all()
+    check_reminders()
     
 @app.route('/dashboard')
 def dashboard():
