@@ -217,62 +217,73 @@ def home():
     
     return render_login_page()
     
-def render_login_page(message=""):
+def render_login_page(error=""):
+    error_html = f'<div class="error">{error}</div>' if error else ''
     return f'''
+    <!DOCTYPE html>
     <html>
-    <body style="font-family:sans-serif;text-align:center;margin-top:80px;">
-
-    <div id="loginBox">
-        <h2>Login</h2>
-        <p style="color:red;">{message}</p>
-
-        <form method="post">
-            <input type="hidden" name="action" value="login">
-            <input name="email" placeholder="Email" required><br><br>
-            <input type="password" name="password" placeholder="Password" required><br><br>
-            <button>Login</button>
-        </form>
-
-        <p>
-            Don't have an account?
-            <span onclick="toggleBox()" style="color:blue;cursor:pointer;">Register</span>
-        </p>
-    </div>
-
-    <div id="registerBox" style="display:none;">
-        <h2>Register</h2>
-
-        <form method="post">
-            <input type="hidden" name="action" value="register">
-            <input name="name" placeholder="Name" required><br><br>
-            <input name="email" placeholder="Email" required><br><br>
-            <input type="password" name="password" placeholder="Password" required><br><br>
-            <button>Register</button>
-        </form>
-
-        <p>
-            Already have account?
-            <span onclick="toggleBox()" style="color:blue;cursor:pointer;">Login</span>
-        </p>
-    </div>
-
-    <script>
-    function toggleBox() {{
-        let l = document.getElementById("loginBox");
-        let r = document.getElementById("registerBox");
-
-        if(l.style.display === "none") {{
-            l.style.display = "block";
-            r.style.display = "none";
-        }} else {{
-            l.style.display = "none";
-            r.style.display = "block";
+    <head>
+        <title>Study Planner</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
+            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
+            .tab.active{{background:#667eea;color:white}}
+            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+            input:focus{{border-color:#667eea;outline:none}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+            {error_html}
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <!-- LOGIN FORM -->
+            <form method="POST" id="loginForm">
+                <input type="hidden" name="action" value="login">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Enter password" required>
+                <button type="submit">🚀 Login</button>
+            </form>
+            
+            <!-- REGISTER FORM -->
+            <form method="POST" id="registerForm" style="display:none">
+                <input type="hidden" name="action" value="register">
+                <input type="text" name="name" placeholder="Your Full Name" required>
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
+                <button type="submit">✅ Create Account</button>
+            </form>
+        </div>
+        
+        <script>
+        function showTab(tabName) {{
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab');
+            
+            if (tabName === 'login') {{
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            }} else {{
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }}
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
         }}
-    }}
-    </script>
-
-    {GLOBAL_ALARM_JS}
-
+        </script>
     </body>
     </html>
     '''
@@ -345,96 +356,63 @@ def mark_triggered(alarm_id):
     
     return "OK"
 
-@app.route('/reminder', methods=['GET','POST'])
-def reminder():
-
-    if not session.get('logged_in'):
-        return redirect('/')
-
-    conn = get_db_connection()
-
-    # ➕ ADD REMINDER
+@app.route('/reminders', methods=['GET', 'POST'])
+def reminders():
+    if not session.get('logged_in'): return redirect('/')
+    
     if request.method == 'POST':
-        title = request.form.get('title')
-        time = request.form.get('time')
-
-        conn.execute(
-            "INSERT INTO reminders (title, deadline) VALUES (?, ?)",
-            (title, time)
-        )
+        conn = get_db_connection()
+        conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
+                    (session['email'], request.form['title'], request.form['deadline']))
         conn.commit()
-
-    # 📥 FETCH REMINDERS
-    reminders = conn.execute("SELECT * FROM reminders ORDER BY deadline").fetchall()
+        conn.close()
+        return redirect('/reminders')
+    
+    conn = get_db_connection()
+    my_reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
+                               (session['email'],)).fetchall()
     conn.close()
-
-    # 🎨 UI HTML
-    html = f'''
-    <html>
-    <body style="font-family:sans-serif;background:#f4f6f9;padding:20px;">
-
-    <h2>⏰ Reminders</h2>
-
-    <!-- ➕ ADD FORM -->
-    <form method="post" style="
-        background:white;
-        padding:15px;
-        border-radius:10px;
-        box-shadow:0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom:20px;
-    ">
-        <input name="title" placeholder="Reminder title" required>
-        <input type="datetime-local" name="time" required>
-        <button>Add</button>
-    </form>
-    '''
-
-    # 📋 REMINDER LIST
-    for r in reminders:
-        html += f'''
-        <div style="
-            background:white;
-            margin-bottom:10px;
-            padding:15px;
-            border-radius:10px;
-            box-shadow:0 2px 8px rgba(0,0,0,0.1);
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        ">
-            <div>
-                <b>{r['title']}</b><br>
-                <small>{r['deadline']}</small>
-            </div>
-
-            <a href="/delete-reminder/{r['id']}" 
-               style="color:red;text-decoration:none;font-size:18px;">
-               ❌
-            </a>
+    
+    reminders_html = ""
+    for r in my_reminders:
+        reminders_html += f'''
+        <div style="background:rgba(255,255,255,0.2);padding:20px;margin:15px;border-radius:15px">
+            <strong>{r['title']}</strong> - {r['deadline']}
+            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete?')" 
+               style="float:right;color:#ff6b6b;font-weight:bold">🗑️</a>
         </div>
         '''
-
-    html += f'''
-
-    <br>
-    <a href="/dashboard">⬅ Back to Dashboard</a>
-
-    {GLOBAL_ALARM_JS}
-
-    </body>
-    </html>
-    '''
-
-    return html
-
-@app.route('/delete-reminder/<int:id>')
-def delete_reminder(id):
+    
+    return f'''
+<!DOCTYPE html>
+<html><head><title>Reminders</title>
+<style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px}}.form-box{{background:rgba(255,255,255,0.15);padding:40px;border-radius:25px;max-width:600px;margin:0 auto}}.input-group input{{width:100%;padding:15px;margin:10px 0;border-radius:12px;border:none;font-size:16px}}</style></head>
+<body>
+<div class="form-box">
+    <h1 style="text-align:center;font-size:36px;margin-bottom:30px">⏰ Set Reminder</h1>
+    <form method="POST">
+        <div class="input-group">
+            <input name="title" placeholder="Reminder Title (ex: Math Exam)" required>
+            <input name="deadline" type="datetime-local" required>
+            <button style="width:100%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer">✅ Add Reminder</button>
+        </div>
+    </form>
+    <h2 style="margin-top:40px">Your Reminders:</h2>
+    {reminders_html or '<p style="text-align:center;color:#f1c40f">No reminders set</p>'}
+    <a href="/dashboard" style="display:block;margin-top:30px;padding:15px;background:#f39c12;color:white;text-decoration:none;border-radius:12px;text-align:center;font-weight:600">← Dashboard</a>
+</div>
+{GLOBAL_ALARM_JS}
+</body></html>
+'''
+    
+@app.route('/delete-reminder/<int:reminder_id>')
+def delete_reminder(reminder_id):
+    if not session.get('logged_in'): return redirect('/')
     conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=?", (id,))
+    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (reminder_id, session['email']))
     conn.commit()
     conn.close()
-
-    return redirect('/reminder')
+    return redirect('/reminders')
     
 @app.route('/check-notifications')
 def check_notifications_api():
