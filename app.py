@@ -15,11 +15,25 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = '''
 <script>
-let firedAlarms = new Set();
 
+let firedAlarms = new Set();
+let audioEnabled = false;
+
+// ✅ Page load
 document.addEventListener("DOMContentLoaded", function() {
     console.log("🎵 SOUND ALARM LOADED");
+
+    // 🔊 Enable sound button
+    document.body.innerHTML += `
+    <button onclick="enableSound()" style="
+    position:fixed;top:20px;left:20px;z-index:99999;
+    padding:10px;background:green;color:white;border:none;
+    border-radius:5px;cursor:pointer;">
+    Enable Sound 🔊
+    </button>
+    `;
     
+    // ⏰ Check alarms
     setInterval(() => {
         fetch("/api/user-alarms")
         .then(r => r.json())
@@ -29,8 +43,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
                     firedAlarms.add(alarm.id);
                     console.log("🚨 TRIGGER ALARM:", alarm.title);
-                    
-                    // ✅ ID + title pass pannuren
+
                     playAlarmSound(alarm.id, alarm.title);
                 }
             });
@@ -38,34 +51,49 @@ document.addEventListener("DOMContentLoaded", function() {
     }, 2000);
 });
 
-// ✅ ID receive pannum
+// 🔊 Enable sound
+function enableSound() {
+    audioEnabled = true;
+    alert("Sound Enabled ✅");
+}
+
+// 🚨 Alarm trigger
 function playAlarmSound(id, title) {
 
-    // 🔥 IMPORTANT: delete from DB
+    // 🔥 Delete from DB (IMPORTANT)
     fetch("/mark-triggered/" + id, {method: "POST"});
 
+    // 🔊 Main sound
     const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
     audio.volume = 1.0;
     audio.play().catch(e => console.log("Audio play failed:", e));
     
+    // 🔊 Beep backup
     playBeepSound();
-    
+
+    // 🔴 Red alert screen
     document.body.innerHTML += `
         <div style="
             position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
-            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
+            background:rgba(255,0,0,0.8);z-index:99999;
+            display:flex;align-items:center;justify-content:center;
+            font-size:50px;font-weight:bold;color:white;
+            text-shadow:0 0 20px #fff;
             animation: pulse 1s infinite;" 
             onclick="this.remove()">
             🚨 ${title.toUpperCase()} 🚨
         </div>
     `;
-    
+
+    // 📳 Shake effect
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 2000);
 }
 
+// 🔊 Beep sound (browser restriction fix)
 function playBeepSound() {
+    if(!audioEnabled) return;
+
     for(let i=0; i<3; i++) {
         setTimeout(() => {
             try {
@@ -76,11 +104,13 @@ function playBeepSound() {
                 o.type = "sine";
                 g.gain.setValueAtTime(0.3, ctx.currentTime);
                 g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
+                o.start(ctx.currentTime);
+                o.stop(ctx.currentTime + 0.5);
             } catch(e) {}
         }, i*600);
     }
 }
+
 </script>
 
 <style>
@@ -649,29 +679,15 @@ def view_pdf(subject, filename):
         return redirect('/')
     
     return f'''
-    <!DOCTYPE html>
     <html>
-    <head>
-        <title>View PDF</title>
-        <style>
-        body {{
-            margin:0;
-            background:#000;
-        }}
-        iframe {{
-            width:100%;
-            height:100vh;
-            border:none;
-        }}
-        </style>
-    </head>
     <body>
 
-        <!-- 📄 PDF Viewer -->
-        <iframe src="/static/uploads/{subject}/{filename}"></iframe>
+    <!-- 📄 PDF -->
+    <iframe src="/static/uploads/{subject}/{filename}" 
+            style="width:100%; height:100vh;"></iframe>
 
-        <!-- 🔥 Alarm JS -->
-        {GLOBAL_ALARM_JS}
+    <!-- 🔥 இத தான் IMPORTANT -->
+    {GLOBAL_ALARM_JS}
 
     </body>
     </html>
