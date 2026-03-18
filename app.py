@@ -76,115 +76,93 @@ def render_login_page(error=""):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if session.get('logged_in'):
-        return redirect('/dashboard')
-    
     if request.method == 'POST':
-        email = request.form.get('email', '').lower().strip()
-        password = request.form.get('password', '')
-        name = request.form.get('name', '').strip()
+        email = request.form['email'].lower().strip()
+        password = request.form['password']
+        name = request.form.get('name', 'User').strip()
         action = request.form.get('action', 'login')
         
-        print(f"DEBUG: Action={action}, Email={email}")  # Terminal-la varum
+        print(f"🔍 DEBUG: {action} - {email}")  # Terminal check
         
-        conn = get_db_connection()
-        try:
-            if action == 'register':
-                # Check existing
-                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                print(f"DEBUG: Existing user: {user['name'] if user else 'None'}")
-                if user:
-                    conn.close()
-                    return render_login_page("❌ Email already registered!")
-                
-                # Create user
-                hashed_pw = generate_password_hash(password)
-                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                             (email, hashed_pw, name))
-                conn.commit()
-                print("DEBUG: User created successfully")
+        conn = get_db()
+        
+        if action == 'register':
+            # Check duplicate
+            user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+            if user:
                 conn.close()
-                return render_login_page("✅ Account created! Please login.")
+                return render_login("❌ Email already exists!")
             
-            # Login
-            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            print(f"DEBUG: Login user found: {user['name'] if user else 'None'}")
+            # Register
+            hashed = generate_password_hash(password)
+            conn.execute('INSERT INTO users VALUES (?, ?, ?)', (email, hashed, name))
+            conn.commit()
+            print(f"✅ REGISTERED: {email}")
             conn.close()
-            
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['email'] = email
-                session['name'] = user['name']
-                print("DEBUG: Login SUCCESS")
-                return redirect('/dashboard')
-            else:
-                print("DEBUG: Login FAILED - hash mismatch")
-                return render_login_page("❌ Wrong email or password!")
-                
-        except Exception as e:
-            print(f"DEBUG ERROR: {e}")
-            conn.close()
-            return render_login_page(f"❌ Error: {str(e)}")
+            return render_login("✅ Registered! Now login.")
+        
+        # Login
+        user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        conn.close()
+        
+        if user and check_password_hash(user['password'], password):
+            session['logged_in'] = True
+            session['email'] = email
+            session['name'] = user['name']
+            print("✅ LOGIN SUCCESS")
+            return redirect('/dashboard')
+        else:
+            print("❌ LOGIN FAILED")
+            return render_login("❌ Wrong email/password!")
     
-    return render_login_page()
-    
+    return render_login()
+
+def render_login(msg=""):
     return f'''
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Study Planner</title>
-    <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-        .login-box{{background:rgba(255,255,255,0.95);padding:50px;border-radius:25px;box-shadow:0 25px 60px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
-        .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
-        .tab{{flex:1;padding:18px 20px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s ease}}
-        .tab.active{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;transform:translateY(-2px)}}
-        .tab:hover:not(.active){{background:#e2e8f0}}
-        input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box;transition:all 0.3s ease}}
-        input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}}
-        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s ease}}
-        button:hover{{transform:translateY(-3px);box-shadow:0 15px 35px rgba(102,126,234,0.4)}}
-        .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:12px;margin:20px 0;font-weight:500;border-left:5px solid #ef4444}}
-        h1{{font-size:42px;margin-bottom:20px;color:#333;font-weight:800}}
-    </style>
+<head><title>Login</title>
+<style>body{{background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial}}
+.login{{background:white;padding:40px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.3);width:90%;max-width:400px}}
+input{{width:100%;padding:15px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}}
+button{{width:100%;padding:15px;background:#50c878;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}}
+button:hover{{background:#27ae60}}
+.error{{background:#fee;color:#c33;padding:10px;border-radius:5px;margin:10px 0}}
+.tabs{{display:flex;margin:20px 0}}
+.tab{{flex:1;padding:15px;background:#f0f0f0;border:none;cursor:pointer}}
+.tab.active{{background:#667eea;color:white}}</style>
 </head>
 <body>
-    <div class="login-box">
-        <h1>Study Planner</h1>
-        {error_html}
-        
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">Login</button>
-            <button class="tab" onclick="showTab('register')">Register</button>
-        </div>
-        
-        <form method="POST" id="loginForm">
-            <input type="hidden" name="action" value="login">
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="Enter password" required>
-            <button type="submit">Login</button>
-        </form>
-        
-        <form method="POST" id="registerForm" style="display:none">
-            <input type="text" name="name" placeholder="Your Full Name" required>
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="Create Password" required>
-            <button type="submit">Create Account</button>
-        </form>
-    </div>
-    
-    <script>
-        function showTab(tabName) {{
-            document.getElementById('loginForm').style.display = tabName === 'login' ? 'block' : 'none';
-            document.getElementById('registerForm').style.display = tabName === 'register' ? 'block' : 'none';
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-        }}
-    </script>
+<div class="login">
+<h2>📚 Study Planner</h2>
+{msg and f'<div class="error">{msg}</div>' or ''}
+<div class="tabs">
+<button class="tab active" onclick="show(\'login\')">Login</button>
+<button class="tab" onclick="show(\'register\')">Register</button>
+</div>
+<form method=POST id=login style="display:block">
+<input type=hidden name=action value=login>
+<input name=email placeholder=your@email.com required>
+<input type=password name=password placeholder=password required>
+<button>Login</button>
+</form>
+<form method=POST id=register style="display:none">
+<input name=name placeholder=Your Name required>
+<input name=email placeholder=your@email.com required>
+<input type=password name=password placeholder=Create Password required>
+<button>Register</button>
+</form>
+</div>
+<script>
+function show(t){ 
+    document.getElementById('login').style.display = t=='login'?'block':'none';
+    document.getElementById('register').style.display = t=='register'?'block':'none';
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+</script>
 </body>
-</html>
-'''
+</html>'''
     
 @app.route('/dashboard')
 def dashboard():
