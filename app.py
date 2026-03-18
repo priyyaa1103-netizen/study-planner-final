@@ -41,6 +41,7 @@ function playAlarmSound(title) {
     const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
     audio.volume = 1.0;
     audio.play().catch(e => console.log("Audio play failed:", e));
+    fetch("/mark-triggered/" + alarm.id, {method: "POST"});
     
     // Backup beep sound
     playBeepSound();
@@ -110,7 +111,10 @@ def init_db():
                   max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  email TEXT, title TEXT, deadline TEXT)''')
+                  email TEXT, 
+                  title TEXT, 
+                  deadline TEXT,
+                  triggered INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS files 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   email TEXT, subject TEXT, filename TEXT, 
@@ -311,10 +315,28 @@ def user_alarms():
     if not session.get('logged_in'):
         return jsonify([])
     conn = get_db_connection()
-    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", 
-                         (session['email'],)).fetchall()
+    alarms = conn.execute("""
+    SELECT id, title, deadline 
+    FROM reminders 
+    WHERE email=? AND triggered=0
+""", (session['email'],)).fetchall()
     conn.close()
     return jsonify([{'id': a['id'], 'title': a['title'], 'deadline': a['deadline']} for a in alarms])
+
+@app.route('/mark-triggered/<int:alarm_id>', methods=['POST'])
+def mark_triggered(alarm_id):
+    if not session.get('logged_in'):
+        return "Unauthorized", 401
+    
+    conn = get_db_connection()
+    conn.execute("""
+        DELETE FROM reminders
+        WHERE id=? AND email=?
+    """, (alarm_id, session['email']))
+    conn.commit()
+    conn.close()
+    
+    return "OK"
 
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
