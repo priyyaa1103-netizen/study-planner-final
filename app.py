@@ -345,93 +345,96 @@ def mark_triggered(alarm_id):
     
     return "OK"
 
-@app.route('/reminders', methods=['GET', 'POST'])
-def reminders():
-    if not session.get('logged_in'): return redirect('/')
-    
-    if request.method == 'POST':
-        conn = get_db_connection()
-        conn.execute("INSERT INTO reminders (email, title, deadline) VALUES (?, ?, ?)",
-                    (session['email'], request.form['title'], request.form['deadline']))
-        conn.commit()
-        conn.close()
-        return redirect('/reminders')
-    
+@app.route('/reminder', methods=['GET','POST'])
+def reminder():
+
+    if not session.get('logged_in'):
+        return redirect('/')
+
     conn = get_db_connection()
-    my_reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", 
-                               (session['email'],)).fetchall()
+
+    # ➕ ADD REMINDER
+    if request.method == 'POST':
+        title = request.form.get('title')
+        time = request.form.get('time')
+
+        conn.execute(
+            "INSERT INTO reminders (title, deadline) VALUES (?, ?)",
+            (title, time)
+        )
+        conn.commit()
+
+    # 📥 FETCH REMINDERS
+    reminders = conn.execute("SELECT * FROM reminders ORDER BY deadline").fetchall()
     conn.close()
-    
-    reminders_html = ""
-    for r in my_reminders:
-        reminders_html += f'''
-        <div style="background:rgba(255,255,255,0.2);padding:20px;margin:15px;border-radius:15px">
-            <strong>{r['title']}</strong> - {r['deadline']}
-            <a href="/delete-reminder/{r['id']}" onclick="return confirm('Delete?')" 
-               style="float:right;color:#ff6b6b;font-weight:bold">🗑️</a>
-        </div>
-        '''
-    
-    return f'''
-<html>
-<body style="font-family:sans-serif;background:#f4f6f9;padding:20px;">
 
-<h2>⏰ Reminders</h2>
+    # 🎨 UI HTML
+    html = f'''
+    <html>
+    <body style="font-family:sans-serif;background:#f4f6f9;padding:20px;">
 
-<form method="post" style="
-    background:white;
-    padding:15px;
-    border-radius:10px;
-    box-shadow:0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom:20px;
-">
-    <input name="title" placeholder="Reminder title" required>
-    <input type="datetime-local" name="time" required>
-    <button>Add</button>
-</form>
+    <h2>⏰ Reminders</h2>
 
-<div>
-'''
-
-for r in reminders:
-    html += f'''
-    <div style="
+    <!-- ➕ ADD FORM -->
+    <form method="post" style="
         background:white;
-        margin-bottom:10px;
         padding:15px;
         border-radius:10px;
-        box-shadow:0 2px 8px rgba(0,0,0,0.1);
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
+        box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom:20px;
     ">
-        <div>
-            <b>{r['title']}</b><br>
-            <small>{r['deadline']}</small>
-        </div>
-
-        <a href="/delete/{r['id']}" 
-           style="color:red;text-decoration:none;">❌</a>
-    </div>
+        <input name="title" placeholder="Reminder title" required>
+        <input type="datetime-local" name="time" required>
+        <button>Add</button>
+    </form>
     '''
 
-html += f'''
-</div>
+    # 📋 REMINDER LIST
+    for r in reminders:
+        html += f'''
+        <div style="
+            background:white;
+            margin-bottom:10px;
+            padding:15px;
+            border-radius:10px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.1);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        ">
+            <div>
+                <b>{r['title']}</b><br>
+                <small>{r['deadline']}</small>
+            </div>
 
-{GLOBAL_ALARM_JS}
+            <a href="/delete-reminder/{r['id']}" 
+               style="color:red;text-decoration:none;font-size:18px;">
+               ❌
+            </a>
+        </div>
+        '''
 
-</body>
-</html>
-'''
+    html += f'''
 
-@app.route('/delete-reminder/<int:reminder_id>')
-def delete_reminder(reminder_id):
-    if not session.get('logged_in'): return redirect('/')
+    <br>
+    <a href="/dashboard">⬅ Back to Dashboard</a>
+
+    {GLOBAL_ALARM_JS}
+
+    </body>
+    </html>
+    '''
+
+    return html
+
+@app.route('/delete-reminder/<int:id>')
+def delete_reminder(id):
     conn = get_db_connection()
-    conn.execute("DELETE FROM reminders WHERE id=? AND email=?", (reminder_id, session['email']))
+    conn.execute("DELETE FROM reminders WHERE id=?", (id,))
     conn.commit()
     conn.close()
-    return redirect('/reminders')
+
+    return redirect('/reminder')
     
 @app.route('/check-notifications')
 def check_notifications_api():
