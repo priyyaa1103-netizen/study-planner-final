@@ -55,20 +55,6 @@ def check_reminders():
         check_thread = threading.Thread(target=loop, daemon=True)
         check_thread.start()
 
-# Routes
-@app.route('/')
-def home():
-    return '''
-    <h1>📚 Study Reminder</h1>
-    <form action="/set-reminder" method="post">
-        Task: <input type="text" name="task" required>
-        Seconds: <input type="number" name="seconds" value="30" required>
-        <button>Set Reminder</button>
-    </form>
-    <a href="/dashboard">Dashboard</a>
-    '''
-    return app
-
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = '''
 <script>
@@ -225,34 +211,39 @@ def dismiss(id):
 with app.app_context():
     db.create_all()
     check_reminders()
+
+@app.route('/')
+def home():
+    recent = Reminder.query.order_by(Reminder.id.desc()).limit(5).all()
+    return f'''
+    <h1>📚 Study Reminder</h1>
+    <form action="/set-reminder" method="post">
+        Task: <input name="task" required>
+        Seconds: <input name="seconds" value="30" required>
+        <button>Set</button>
+    </form>
+    <h3>Recent: {len(recent)}</h3>
+    <a href="/dashboard">Dashboard</a>
+    '''
     
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'): 
         return redirect('/')
     
-    email = session['email']
-    conn = get_db_connection()
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
-    conn.close()
-
+    # SQLAlchemy reminders
     now = datetime.utcnow()
-    pending = Reminder.query.filter(
+    reminders_sql = Reminder.query.filter(
         Reminder.trigger_time <= now,
         Reminder.is_triggered == True,
         Reminder.is_dismissed == False
     ).all()
     
-    return render_template('dashboard.html', pending=pending)
-    
-    notifications = ""
-    for r in reminders[:5]:  # Show top 5
-        notifications += f'''
-        <div class="notification" style="background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer">
-            <div style="font-size:28px">⏰ {r["title"]}</div>
-            <div style="font-size:20px;color:#ffd700">{r["deadline"]}</div>
-        </div>
-        '''
+    # SQLite reminders  
+    conn = get_db_connection()
+    reminders_sqlite = conn.execute("SELECT * FROM reminders WHERE email=?", 
+                                   (session.get('email',''),)).fetchall()
+    conn.close()
     
     return f'''
 <!DOCTYPE html>
