@@ -313,8 +313,6 @@ def dashboard():
         <a href="/view-goals" class="btn">📊 View Goals</a>
         <a href="/reminders" class="btn">⏰ Reminders</a>
         <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
-<button onclick="localStorage.removeItem('firedAlarms');location.reload();" 
-</button>
     </div>
 </div>
 {GLOBAL_ALARM_JS}
