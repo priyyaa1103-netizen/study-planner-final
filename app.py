@@ -13,86 +13,94 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
-GLOBAL_ALARM_JS = '''
+GLOBAL_ALARM_JS = """
 <script>
 
-let firedAlarms = new Set();
+// ✅ Prevent multiple runs
+if(window.alarmRunning){
+    console.log("Alarm already running");
+} else {
+    window.alarmRunning = true;
 
-// ✅ Page load
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 SOUND ALARM LOADED");
-    
-    // ⏰ Check alarms
+    let firedAlarms = new Set();
+
+    console.log("🎵 GLOBAL ALARM ACTIVE");
+
+    // ⏰ Check every 2 sec
     setInterval(() => {
         fetch("/api/user-alarms")
         .then(r => r.json())
         .then(data => {
             const now = new Date();
+
             data.forEach(alarm => {
                 if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
                     firedAlarms.add(alarm.id);
-                    console.log("🚨 TRIGGER ALARM:", alarm.title);
+                    console.log("🚨 TRIGGER:", alarm.title);
 
                     playAlarmSound(alarm.id, alarm.title);
                 }
             });
-        });
+        })
+        .catch(err => console.log("Alarm fetch error:", err));
+
     }, 2000);
-});
 
-// 🚨 Alarm trigger
-function playAlarmSound(id, title) {
 
-    // 🔥 Delete from DB (IMPORTANT)
-    fetch("/mark-triggered/" + id, {method: "POST"});
+    // 🚨 Alarm function
+    function playAlarmSound(id, title) {
 
-    // 🔊 Main sound
-    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-    audio.volume = 1.0;
-    audio.play().catch(e => console.log("Audio play failed:", e));
-    
-    // 🔊 Beep backup
-    playBeepSound();
+        // 🔥 Delete from DB
+        fetch("/mark-triggered/" + id, {method: "POST"});
 
-    // 🔴 Red alert screen
-    document.body.innerHTML += `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:rgba(255,0,0,0.8);z-index:99999;
-            display:flex;align-items:center;justify-content:center;
-            font-size:50px;font-weight:bold;color:white;
-            text-shadow:0 0 20px #fff;
-            animation: pulse 1s infinite;" 
-            onclick="this.remove()">
-            🚨 ${title.toUpperCase()} 🚨
-        </div>
-    `;
+        // 🔊 Main sound
+        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+        audio.volume = 1.0;
+        audio.play().catch(e => console.log("Audio blocked:", e));
 
-    // 📳 Shake effect
-    document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 2000);
-}
+        // 🔊 Backup beep
+        playBeepSound();
 
-// 🔊 Beep sound (browser restriction fix)
-function playBeepSound() {
-    
-    for(let i=0; i<3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i*200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime);
-                o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i*600);
+        // 🔴 Red alert screen
+        document.body.innerHTML += `
+            <div style="
+                position:fixed;top:0;left:0;width:100vw;height:100vh;
+                background:rgba(255,0,0,0.8);z-index:99999;
+                display:flex;align-items:center;justify-content:center;
+                font-size:50px;font-weight:bold;color:white;
+                text-shadow:0 0 20px #fff;
+                animation: pulse 1s infinite;" 
+                onclick="this.remove()">
+                🚨 ${title.toUpperCase()} 🚨
+            </div>
+        `;
+
+        // 📳 Shake effect
+        document.body.classList.add('shake');
+        setTimeout(() => document.body.classList.remove('shake'), 2000);
     }
-}
 
+
+    // 🔊 Beep sound
+    function playBeepSound() {
+        for(let i=0; i<3; i++) {
+            setTimeout(() => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.connect(g); g.connect(ctx.destination);
+                    o.frequency.value = 800 + i*200;
+                    o.type = "sine";
+                    g.gain.setValueAtTime(0.3, ctx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    o.start(ctx.currentTime);
+                    o.stop(ctx.currentTime + 0.5);
+                } catch(e) {}
+            }, i*600);
+        }
+    }
+
+}
 </script>
 
 <style>
@@ -107,7 +115,7 @@ function playBeepSound() {
 }
 body.shake { animation: shake 0.2s infinite; }
 </style>
-'''
+"""
 
 GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
 GMAIL_PASS = os.getenv("GMAIL_PASS", "")
@@ -449,6 +457,7 @@ def study():
         <a href="/year3" class="year-btn">🎓 3rd Year</a>
         
     </div>
+    {GLOBAL_ALARM_JS}
     </body>
     </html>
     '''
@@ -461,7 +470,7 @@ def year1():
     <!DOCTYPE html><html><head><title>1st Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 1st Year</h1><a href="/sem1" class="btn">Semester 1</a><a href="/sem2" class="btn">Semester 2</a>
-    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem1')
@@ -475,7 +484,7 @@ def sem1():
     <a href="/subject/python" class="btn">Python</a>
     <a href="/subject/tamil-1" class="btn">Tamil-1</a>
     <a href="/subject/english-1" class="btn">English-1</a>
-    <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem2')
@@ -489,7 +498,7 @@ def sem2():
     <a href="/subject/physics" class="btn">Physics-2</a>
     <a href="/subject/tamil-2" class="btn">Tamil-2</a>
     <a href="/subject/english-2" class="btn">english-2</a>
-    <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year1" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 # ===== 2nd YEAR =====
@@ -500,7 +509,7 @@ def year2():
     <!DOCTYPE html><html><head><title>2nd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 2nd Year</h1><a href="/sem3" class="btn">Semester 3</a><a href="/sem4" class="btn">Semester 4</a>
-    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem3')
@@ -514,7 +523,7 @@ def sem3():
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
     <a href="/subject/tamil-3" class="btn">Tamil-3</a>
     <a href="/subject/english-3" class="btn">English-3</a>
-    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem4')
@@ -528,7 +537,7 @@ def sem4():
     <a href="/subject/statistics" class="btn">Statistics-2</a>
     <a href="/subject/tamil-4" class="btn">Tamil-4</a>
     <a href="/subject/english-4" class="btn">English-4</a>
-    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year2" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 # ===== 3rd YEAR =====
@@ -539,7 +548,7 @@ def year3():
     <!DOCTYPE html><html><head><title>3rd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 3rd Year</h1><a href="/sem5" class="btn">Semester 5</a><a href="/sem6" class="btn">Semester 6</a>
-    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem5')
@@ -553,7 +562,7 @@ def sem5():
     <a href="/subject/RDBMS" class="btn">Relational database management system</a>
     <a href="/subject/Software_Engineering" class="btn">Software engineering</a>
     <a href="/subject/DMW" class="btn">Data mining and warehousing</a>
-    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/sem6')
@@ -566,7 +575,7 @@ def sem6():
     <a href="/subject/ASP.net" class="btn">Programming in ASP.net</a>
     <a href="/subject/Data_Science" class="btn">Data science</a>
     <a href="/subject/Cloud_Computing" class="btn">Cloud computing</a>
-    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a></body></html>
+    <br><a href="/year3" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
 
 @app.route('/subject/<subject>', methods=['GET'])
