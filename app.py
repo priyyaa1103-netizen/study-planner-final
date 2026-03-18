@@ -170,8 +170,9 @@ def get_db_connection():
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
+    session.clear()
     # ✅ AUTOMATIC REDIRECT MAGIC
-    if session.get('logged_in'):
+    if session.get('logged_in') and session.get('email'):
         print(f"🚀 Auto-redirecting {session['email']} to dashboard")
         return redirect('/dashboard')
     
