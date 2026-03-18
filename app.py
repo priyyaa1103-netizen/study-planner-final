@@ -814,7 +814,7 @@ def quiz(goal_id):
     {"q": "Which operator is for power?", "options": ["^", "**", "*", "//"], "answer": "**"},
     {"q": "Which keyword is used for condition?", "options": ["loop", "if", "case", "switch"], "answer": "if"}
 ],
-        'tamil-1' = [
+        'tamil-1': [
     {"q": "தமிழ் மொழி எது?", "options": ["வடமொழி", "தென்மொழி", "ஆங்கிலம்", "ஹிந்தி"], "answer": "தென்மொழி"},
     {"q": "உயிரெழுத்துகள் எத்தனை?", "options": ["10", "12", "18", "5"], "answer": "12"},
     {"q": "மெய்யெழுத்துகள் எத்தனை?", "options": ["12", "18", "10", "5"], "answer": "18"},
@@ -826,7 +826,7 @@ def quiz(goal_id):
     {"q": "உயிர்மெய்யெழுத்து உதாரணம்?", "options": ["அ", "க்", "க", "ம்"], "answer": "க"},
     {"q": "தமிழின் பழமையான நூல்?", "options": ["திருக்குறள்", "சிலப்பதிகாரம்", "தொல்காப்பியம்", "ராமாயணம்"], "answer": "தொல்காப்பியம்"}
 ],
-         'english-1' = [
+         'english-1': [
     {"q": "What is a noun?", "options": ["Action", "Name", "Quality", "None"], "answer": "Name"},
     {"q": "Verb means?", "options": ["Action", "Place", "Thing", "Person"], "answer": "Action"},
     {"q": "He ___ going to school.", "options": ["is", "are", "am", "be"], "answer": "is"},
@@ -838,7 +838,7 @@ def quiz(goal_id):
     {"q": "Fill: She ___ a song.", "options": ["sing", "sings", "sang", "singing"], "answer": "sings"},
     {"q": "Article for 'apple'?", "options": ["a", "an", "the", "none"], "answer": "an"}
 ],
-         'maths2' = [
+         'maths2': [
     {"q": "What is the rank of a matrix?", "options": ["No. of rows", "No. of columns", "Max no. of independent rows/columns", "Determinant"], "answer": "Max no. of independent rows/columns"},
     {"q": "Eigenvalues are found using?", "options": ["|A|", "|A - λI| = 0", "A+B", "A²"], "answer": "|A - λI| = 0"},
     {"q": "Derivative of sinx is?", "options": ["cosx", "-cosx", "tanx", "secx"], "answer": "cosx"},
@@ -850,7 +850,7 @@ def quiz(goal_id):
     {"q": "∂/∂x (x² + y²) = ?", "options": ["2x", "2y", "x+y", "0"], "answer": "2x"},
     {"q": "L'Hospital rule is used for?", "options": ["Integration", "Indeterminate forms", "Matrix", "Trigonometry"], "answer": "Indeterminate forms"}
 ],
-         'tamil-2' = [
+         'tamil-2': [
     {"q": "இலக்கியம் என்றால்?", "options": ["விளையாட்டு", "எழுத்து படைப்புகள்", "கணக்கு", "அறிவு"], "answer": "எழுத்து படைப்புகள்"},
     {"q": "சங்க இலக்கியம் எத்தனை காலம்?", "options": ["மூன்று", "இரண்டு", "நான்கு", "ஐந்து"], "answer": "மூன்று"},
     {"q": "புறநானூறு என்ன வகை நூல்?", "options": ["அகநூல்", "புறநூல்", "இலக்கணம்", "கவிதை இல்லை"], "answer": "புறநூல்"},
@@ -862,7 +862,7 @@ def quiz(goal_id):
     {"q": "பாரதியார் யார்?", "options": ["கவிஞர்", "அரசர்", "விஞ்ஞானி", "ஆசிரியர்"], "answer": "கவிஞர்"},
     {"q": "தமிழ் இலக்கண நூல்?", "options": ["திருக்குறள்", "தொல்காப்பியம்", "ராமாயணம்", "மகாபாரதம்"], "answer": "தொல்காப்பியம்"}
 ],
-          'english-2' = [
+          'english-2': [
     {"q": "What is a sentence?", "options": ["Group of words", "Complete meaning", "Letters", "None"], "answer": "Complete meaning"},
     {"q": "Types of sentences?", "options": ["4", "2", "3", "5"], "answer": "4"},
     {"q": "What is an adverb?", "options": ["Describes noun", "Describes verb", "Name", "Action"], "answer": "Describes verb"},
@@ -874,7 +874,7 @@ def quiz(goal_id):
     {"q": "Which is a preposition?", "options": ["in", "run", "big", "he"], "answer": "in"},
     {"q": "She ___ playing.", "options": ["is", "are", "am", "be"], "answer": "is"}
 ],
-          'java' = [
+          'java': [
     {"q": "Java is a ?", "options": ["Programming Language", "OS", "Browser", "Database"], "answer": "Programming Language"},
     {"q": "Which keyword is used to create class?", "options": ["class", "define", "struct", "new"], "answer": "class"},
     {"q": "Main method syntax?", "options": ["public static void main(String[] args)","main()","void main()","static main()"], "answer": "public static void main(String[] args)"},
@@ -886,7 +886,7 @@ def quiz(goal_id):
     {"q": "JVM stands for?", "options": ["Java Virtual Machine", "Java Variable Method", "Joint Virtual Machine", "Java Verified Machine"], "answer": "Java Virtual Machine"},
     {"q": "Java is platform ?", "options": ["dependent", "independent", "semi", "none"], "answer": "independent"}
 ],
-         'statistics-1' = [
+         'statistics-1': [
     {"q": "Statistics is the study of?", "options": ["Data", "Numbers only", "Words", "None"], "answer": "Data"},
     {"q": "Mean formula?", "options": ["Σx/n", "Σx", "n/x", "x²"], "answer": "Σx/n"},
     {"q": "Median is?", "options": ["Middle value", "Average", "Highest", "Lowest"], "answer": "Middle value"},
@@ -898,7 +898,7 @@ def quiz(goal_id):
     {"q": "Graph used in statistics?", "options": ["Bar chart", "Circle", "Line", "All"], "answer": "All"},
     {"q": "Population means?", "options": ["Whole data", "Sample", "Part", "None"], "answer": "Whole data"}
 ],
-         'tamil-3' = [
+         'tamil-3': [
     {"q": "சங்க காலம் எதை குறிக்கிறது?", "options": ["பழமையான தமிழ் இலக்கியம்", "இசை", "கணக்கு", "விளையாட்டு"], "answer": "பழமையான தமிழ் இலக்கியம்"},
     {"q": "புறநானூறு எந்த வகை?", "options": ["புறநூல்", "அகநூல்", "இலக்கணம்", "கவிதை இல்லை"], "answer": "புறநூல்"},
     {"q": "அகநானூறு எதைச் சொல்கிறது?", "options": ["காதல்", "போர்", "அரசு", "வரலாறு"], "answer": "காதல்"},
@@ -910,7 +910,7 @@ def quiz(goal_id):
     {"q": "தமிழ் இலக்கண நூல்?", "options": ["தொல்காப்பியம்", "திருக்குறள்", "ராமாயணம்", "மகாபாரதம்"], "answer": "தொல்காப்பியம்"},
     {"q": "உரைநடை என்றால்?", "options": ["சாதாரண மொழி", "கவிதை", "பாடல்", "இசை"], "answer": "சாதாரண மொழி"}
 ],
-         'english-3' = [
+         'english-3': [
     {"q": "What is a paragraph?", "options": ["Group of sentences", "Word", "Letter", "None"], "answer": "Group of sentences"},
     {"q": "What is a synonym?", "options": ["Same meaning", "Opposite", "Action", "Name"], "answer": "Same meaning"},
     {"q": "Opposite of 'fast'?", "options": ["slow", "quick", "speed", "run"], "answer": "slow"},
@@ -922,7 +922,7 @@ def quiz(goal_id):
     {"q": "Plural of 'man'?", "options": ["mans", "men", "man", "mens"], "answer": "men"},
     {"q": "She ___ reading.", "options": ["is", "are", "am", "be"], "answer": "is"}
 ],
-          'data_structures' = [
+          'data_structures': [
     {"q": "Data structure is?", "options": ["Way of storing data", "Program", "Language", "OS"], "answer": "Way of storing data"},
     {"q": "Which is linear data structure?", "options": ["Tree", "Graph", "Array", "Heap"], "answer": "Array"},
     {"q": "Stack follows?", "options": ["FIFO", "LIFO", "Random", "None"], "answer": "LIFO"},
@@ -934,7 +934,7 @@ def quiz(goal_id):
     {"q": "Binary tree max children?", "options": ["1", "2", "3", "4"], "answer": "2"},
     {"q": "Linked list uses?", "options": ["Contiguous memory", "Pointers", "Index only", "None"], "answer": "Pointers"}
 ],
-          'statistics-2' = [
+          'statistics-2': [
     {"q": "Probability value range?", "options": ["0 to 1", "-1 to 1", "0 to 10", "1 to 100"], "answer": "0 to 1"},
     {"q": "P(A) + P(A') = ?", "options": ["1", "0", "2", "A"], "answer": "1"},
     {"q": "Independent events mean?", "options": ["No effect on each other", "Same event", "Dependent", "None"], "answer": "No effect on each other"},
@@ -946,7 +946,7 @@ def quiz(goal_id):
     {"q": "Correlation coefficient range?", "options": ["-1 to 1", "0 to 1", "0 to 10", "-10 to 10"], "answer": "-1 to 1"},
     {"q": "Regression is used for?", "options": ["Prediction", "Counting", "Sorting", "None"], "answer": "Prediction"}
 ],
-          'tamil-4' = [
+          'tamil-4': [
     {"q": "நவீன தமிழ் இலக்கியம் என்றால்?", "options": ["புதிய படைப்புகள்", "பழைய நூல்கள்", "இசை", "கணக்கு"], "answer": "புதிய படைப்புகள்"},
     {"q": "பாரதியார் என்ன புகழ்?", "options": ["தேசியக் கவிஞர்", "அரசர்", "விஞ்ஞானி", "ஆசிரியர்"], "answer": "தேசியக் கவிஞர்"},
     {"q": "புதுக்கவிதை என்றால்?", "options": ["புதிய வடிவ கவிதை", "பழைய கவிதை", "பாடல்", "இசை"], "answer": "புதிய வடிவ கவிதை"},
@@ -958,7 +958,7 @@ def quiz(goal_id):
     {"q": "இலக்கியத்தின் நோக்கம்?", "options": ["அறிவு & மகிழ்ச்சி", "கணக்கு", "விளையாட்டு", "None"], "answer": "அறிவு & மகிழ்ச்சி"},
     {"q": "தமிழ் வளர்ச்சி எதனால்?", "options": ["இலக்கியம்", "கணக்கு", "விளையாட்டு", "None"], "answer": "இலக்கியம்"}
 ],
-          'english-4' = [
+          'english-4': [
     {"q": "What is an essay?", "options": ["Short writing", "Long writing", "Word", "Letter"], "answer": "Long writing"},
     {"q": "What is a letter?", "options": ["Communication", "Story", "Poem", "None"], "answer": "Communication"},
     {"q": "Formal letter is used for?", "options": ["Official purpose", "Friends", "Story", "None"], "answer": "Official purpose"},
@@ -970,7 +970,7 @@ def quiz(goal_id):
     {"q": "Past tense of 'eat'?", "options": ["eated", "ate", "eat", "eaten"], "answer": "ate"},
     {"q": "She ___ going to college.", "options": ["is", "are", "am", "be"], "answer": "is"}
 ],
-          'operating_system' = [
+          'operating_system': [
     {"q": "Operating System is?", "options": ["Interface between user & hardware", "Application", "Compiler", "Language"], "answer": "Interface between user & hardware"},
     {"q": "Which is not an OS?", "options": ["Windows", "Linux", "Oracle", "Android"], "answer": "Oracle"},
     {"q": "Process is?", "options": ["Program in execution", "Program", "File", "Memory"], "answer": "Program in execution"},
@@ -982,7 +982,7 @@ def quiz(goal_id):
     {"q": "File system manages?", "options": ["Files", "CPU", "Memory", "Network"], "answer": "Files"},
     {"q": "Kernel is?", "options": ["Core of OS", "Application", "File", "None"], "answer": "Core of OS"}
 ],
-          'rdbms' = [
+          'rdbms': [
     {"q": "RDBMS stands for?", "options": ["Relational Database Management System", "Random Data System", "Real DB System", "None"], "answer": "Relational Database Management System"},
     {"q": "Table is also called?", "options": ["Relation", "Row", "Column", "Key"], "answer": "Relation"},
     {"q": "Primary key is?", "options": ["Unique identifier", "Duplicate", "Null", "None"], "answer": "Unique identifier"},
@@ -994,7 +994,7 @@ def quiz(goal_id):
     {"q": "Normalization is?", "options": ["Reduce redundancy", "Increase data", "Delete data", "None"], "answer": "Reduce redundancy"},
     {"q": "JOIN is used for?", "options": ["Combine tables", "Delete", "Update", "Insert"], "answer": "Combine tables"}
 ],
-          'software_engineering' = [
+          'software_engineering': [
     {"q": "Software Engineering is?", "options": ["Systematic development", "Random coding", "Hardware", "None"], "answer": "Systematic development"},
     {"q": "SDLC stands for?", "options": ["Software Development Life Cycle", "System Design Logic Cycle", "Software Data Life Cycle", "None"], "answer": "Software Development Life Cycle"},
     {"q": "First phase of SDLC?", "options": ["Requirement", "Testing", "Coding", "Maintenance"], "answer": "Requirement"},
@@ -1006,7 +1006,7 @@ def quiz(goal_id):
     {"q": "UML is used for?", "options": ["Design", "Coding", "Testing", "None"], "answer": "Design"},
     {"q": "Version control?", "options": ["Track changes", "Delete code", "Run program", "None"], "answer": "Track changes"}
 ],
-          'DMW'= [
+          'DMW': [
     {"q": "Data mining is?", "options": ["Extract knowledge", "Delete data", "Store data", "None"], "answer": "Extract knowledge"},
     {"q": "Data warehouse is?", "options": ["Central storage", "Temporary data", "File", "None"], "answer": "Central storage"},
     {"q": "OLAP stands for?", "options": ["Online Analytical Processing","Online Application Program","Offline Data","None"], "answer": "Online Analytical Processing"},
@@ -1018,7 +1018,7 @@ def quiz(goal_id):
     {"q": "Warehouse stores?", "options": ["Historical data", "Current only", "None", "Temporary"], "answer": "Historical data"},
     {"q": "Data mart is?", "options": ["Subset of warehouse", "Full DB", "File", "None"], "answer": "Subset of warehouse"}
 ],
-           'asp' = [
+           'asp': [
     {"q": "ASP.NET is?", "options": ["Web framework", "OS", "Database", "Language"], "answer": "Web framework"},
     {"q": "ASP stands for?", "options": ["Active Server Pages","Advanced Server Program","Application Server Page","None"], "answer": "Active Server Pages"},
     {"q": ".NET is developed by?", "options": ["Microsoft", "Google", "Apple", "IBM"], "answer": "Microsoft"},
@@ -1030,7 +1030,7 @@ def quiz(goal_id):
     {"q": "MVC stands for?", "options": ["Model View Controller", "Main View Control", "Model Version Control", "None"], "answer": "Model View Controller"},
     {"q": "Web.config file is used for?", "options": ["Configuration", "Coding", "Design", "None"], "answer": "Configuration"}
 ],
-          'data_science' = [
+          'data_science': [
     {"q": "Data Science is?", "options": ["Study of data", "Hardware", "Network", "None"], "answer": "Study of data"},
     {"q": "Which language is popular in Data Science?", "options": ["Python", "HTML", "CSS", "XML"], "answer": "Python"},
     {"q": "Data analysis means?", "options": ["Process data", "Delete data", "Store data", "None"], "answer": "Process data"},
@@ -1042,7 +1042,7 @@ def quiz(goal_id):
     {"q": "Algorithm is?", "options": ["Step by step process", "Random", "None", "Data"], "answer": "Step by step process"},
     {"q": "AI stands for?", "options": ["Artificial Intelligence", "Automatic Input", "Advanced Internet", "None"], "answer": "Artificial Intelligence"}
 ],  
-          'cloud_computing' = [
+          'cloud_computing': [
     {"q": "Cloud computing is?", "options": ["Internet-based computing", "Local system", "Hardware", "None"], "answer": "Internet-based computing"},
     {"q": "Cloud provides?", "options": ["Services", "Only storage", "Only CPU", "None"], "answer": "Services"},
     {"q": "IaaS stands for?", "options": ["Infrastructure as a Service", "Internet as Service", "Internal Service", "None"], "answer": "Infrastructure as a Service"},
