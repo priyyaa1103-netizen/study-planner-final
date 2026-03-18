@@ -267,18 +267,6 @@ def render_login_page(error=""):
     </html>
     '''
 
-@app.route('/')
-def home():
-    return '''
-    <h1>Study Reminder App</h1>
-    <form action="/set-reminder" method="post">
-        <input type="text" name="task" placeholder="Study Python" required>
-        <input type="number" name="seconds" placeholder="30" required> seconds
-        <button>Set Reminder</button>
-    </form>
-    <h3>Active Reminders: {{len_timers}}</h3>
-    '''
-
 @app.route('/set-reminder', methods=['POST'])
 def set_reminder():
     task = request.form['task']
