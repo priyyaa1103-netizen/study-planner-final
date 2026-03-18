@@ -645,9 +645,37 @@ def upload(subject, unit):
     
 @app.route('/view-pdf/<subject>/<filename>')
 def view_pdf(subject, filename):
-    if not session.get('logged_in'): return redirect('/')
-    return send_from_directory(f'static/uploads/{subject}', filename, mimetype='application/pdf')
+    if not session.get('logged_in'): 
+        return redirect('/')
+    
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>View PDF</title>
+        <style>
+        body {{
+            margin:0;
+            background:#000;
+        }}
+        iframe {{
+            width:100%;
+            height:100vh;
+            border:none;
+        }}
+        </style>
+    </head>
+    <body>
 
+        <!-- 📄 PDF Viewer -->
+        <iframe src="/static/uploads/{subject}/{filename}"></iframe>
+
+        <!-- 🔥 Alarm JS -->
+        {GLOBAL_ALARM_JS}
+
+    </body>
+    </html>
+    '''
 # ===== MY FILES PAGE (COMPLETE VERSION) =====
 @app.route('/myfiles')
 def myfiles_page():  # Function name change pannirukken
