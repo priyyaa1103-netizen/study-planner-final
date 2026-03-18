@@ -789,7 +789,7 @@ def quiz(goal_id):
     
     # Subject-specific questions
     subject = goal['subject'].lower()
-    questions = {
+    all_questions = {
         'mathematics': [
     {"q": "What is |−10| ?", "options": ["-10", "10", "0", "1"], "answer": "10"},
     {"q": "If A = {1,2,3} and B = {2,3,4}, what is A ∩ B?", "options": ["{1,2}", "{2,3}", "{3,4}", "{1,4}"], "answer": "{2,3}"},
@@ -1055,6 +1055,10 @@ def quiz(goal_id):
     {"q": "Hybrid cloud is?", "options": ["Mix of public & private", "Only public", "Only private", "None"], "answer": "Mix of public & private"}
 ]
     }
+    questions= all_questions.get(subject)
+
+    if not questions:
+        return"No questions found"
     
     if request.method == 'POST':
         score = 0
