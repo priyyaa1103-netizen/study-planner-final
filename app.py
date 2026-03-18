@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify 
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify, url_for 
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
@@ -6,8 +6,6 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import threading
@@ -18,58 +16,57 @@ app = Flask(__name__)
 db = SQLAlchemy()
 
 # Config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///reminders.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'your-secret-key'
+
 db.init_app(app)
 
-def reminder_job(message):
-    print(f"🔔 REMINDER: {message} - {time.strftime('%H:%M:%S')}")
+class Reminder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task = db.Column(db.String(100), nullable=False)
+    seconds = db.Column(db.Integer, nullable=False)
+    trigger_time = db.Column(db.DateTime)
+    is_triggered = db.Column(db.Boolean, default=False)
+    is_dismissed = db.Column(db.Boolean, default=False)
 
-# app.py TOP-ல இந்த imports add பண்ணுங்க
-import threading
-import time
-from datetime import datetime
+# Background thread
 check_thread = None
 
-# Background checker function
 def check_reminders():
     global check_thread
     def loop():
         while True:
             try:
                 now = datetime.utcnow()
-                # Trigger time வந்தது but triggered இல்லாத reminders
-                due_reminders = Reminder.query.filter(
+                due = Reminder.query.filter(
                     Reminder.trigger_time <= now,
                     Reminder.is_triggered == False
                 ).all()
-                
-                for reminder in due_reminders:
-                    print(f"🔔 TRIGGERED: {reminder.task} at {now}")
-                    reminder.is_triggered = True  # Status update
+                for r in due:
+                    print(f"🔔 {r.task}")
+                    r.is_triggered = True
                     db.session.commit()
-                
-                time.sleep(3)  # 3 seconds wait
-            except Exception as e:
-                print(f"Checker error: {e}")
+                time.sleep(3)
+            except:
                 time.sleep(5)
     
-    # Thread already running-னா start பண்ணாது
     if check_thread is None or not check_thread.is_alive():
         check_thread = threading.Thread(target=loop, daemon=True)
         check_thread.start()
-        print("✅ Background checker started!")
 
-# App create ஆனதும் auto start
-def create_app():
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)
-    
-    with app.app_context():
-        db.create_all()
-        check_reminders()  # ← இது முக்கியம்!
-    
+# Routes
+@app.route('/')
+def home():
+    return '''
+    <h1>📚 Study Reminder</h1>
+    <form action="/set-reminder" method="post">
+        Task: <input type="text" name="task" required>
+        Seconds: <input type="number" name="seconds" value="30" required>
+        <button>Set Reminder</button>
+    </form>
+    <a href="/dashboard">Dashboard</a>
+    '''
     return app
 
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
@@ -177,14 +174,6 @@ def init_db():
                   upload_date TEXT)''')
     conn.commit()
     conn.close()
-
-init_db()
-# இத replace பண்ணுங்க
-db = SQLAlchemy()
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
 def send_email(to_email, subject, body):
     try:
@@ -340,6 +329,7 @@ def set_reminder():
     db.session.add(reminder)
     db.session.commit()
     
+    check_reminders()
     return redirect(url_for('dashboard'))
 
 @app.route('/dismiss/<int:reminder_id>')
