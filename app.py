@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
+check_thread = None
 
 app = Flask(__name__)
 active_timers = []
@@ -125,6 +126,17 @@ def init_db():
     conn.close()
 
 init_db()
+
+db = SQLAlchemy()
+
+class Reminder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task = db.Column(db.String(100), nullable=False)
+    seconds = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    trigger_time = db.Column(db.DateTime)
+    is_triggered = db.Column(db.Boolean, default=False)
+    is_dismissed = db.Column(db.Boolean, default=False)
 
 def send_email(to_email, subject, body):
     try:
@@ -271,16 +283,25 @@ def render_login_page(error=""):
 def set_reminder():
     task = request.form['task']
     seconds = int(request.form['seconds'])
+    trigger_time = datetime.now() + timedelta(seconds=seconds)
     
-    def job():
-        reminder_job(task)
-        active_timers[:] = [t for t in active_timers if t != job]
+    # Database-ல save
+    reminder = Reminders(task=task, trigger_time=trigger_time)
+    db.session.add(reminder)
+    db.session.commit()
     
-    timer = threading.Timer(seconds, job)
-    timer.start()
-    active_timers.append(timer)
+    # Background check start பண்ணுங்க
+    check_reminders()
     
-    return f'<h2>✅ Reminder set for "{task}" in {seconds}s</h2>'
+    return redirect(url_for('dashboard'))
+
+@app.route('/dismiss/<int:reminder_id>')
+def dismiss(reminder_id):
+    reminder = Reminders.query.get(reminder_id)
+    if reminder:
+        reminder.is_dismissed = True
+        db.session.commit()
+    return redirect(url_for('dashboard'))
     
 @app.route('/dashboard')
 def dashboard():
@@ -291,6 +312,15 @@ def dashboard():
     conn = get_db_connection()
     reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
     conn.close()
+
+    now = datetime.utcnow()
+    pending = Reminder.query.filter(
+        Reminder.trigger_time <= now,
+        Reminder.is_triggered == True,
+        Reminder.is_dismissed == False
+    ).all()
+    
+    return render_template('dashboard.html', pending=pending)
     
     notifications = ""
     for r in reminders[:5]:  # Show top 5
