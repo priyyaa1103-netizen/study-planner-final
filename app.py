@@ -1,17 +1,107 @@
-from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify 
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
 from datetime import datetime, timedelta
 import sqlite3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import threading
+import time
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Fixed[web:3]
+active_timers = []
+app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 
-GMAIL_USER = os.getenv('GMAIL_USER', 'your-email@gmail.com')
-GMAIL_PASS = os.getenv('GMAIL_PASS', '')
+def reminder_job(message):
+    print(f"🔔 REMINDER: {message} - {time.strftime('%H:%M:%S')}")
 
+# Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
+GLOBAL_ALARM_JS = '''
+<script>
+let firedAlarms = new Set();
+
+document.addEventListener("DOMContentLoaded", function() {
+    console.log("🎵 SOUND ALARM LOADED");
+    
+    setInterval(() => {
+        fetch("/api/user-alarms")
+        .then(r => r.json())
+        .then(data => {
+            const now = new Date();
+            data.forEach(alarm => {
+                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
+                    firedAlarms.add(alarm.id);
+                    console.log("🚨 TRIGGER ALARM:", alarm.title);
+                    playAlarmSound(alarm.title);
+                }
+            });
+        });
+    }, 2000);
+});
+
+function playAlarmSound(title) {
+    // Fixed audio URLs
+    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+    audio.volume = 1.0;
+    audio.play().catch(e => console.log("Audio play failed:", e));
+    
+    // Backup beep sound
+    playBeepSound();
+    
+    // VISUAL EXPLOSION
+    document.body.innerHTML += `
+        <div style="
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:rgba(255,0,0,0.8);z-index:9999;display:flex;align-items:center;
+            justify-content:center;font-size:50px;font-weight:bold;text-shadow:0 0 20px #fff;
+            animation: pulse 1s infinite;" 
+            onclick="this.remove()">
+            🚨 ${title.toUpperCase()} 🚨
+        </div>
+    `;
+    
+    // Screen shake
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 2000);
+}
+
+function playBeepSound() {
+    for(let i=0; i<3; i++) {
+        setTimeout(() => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.connect(g); g.connect(ctx.destination);
+                o.frequency.value = 800 + i*200;
+                o.type = "sine";
+                g.gain.setValueAtTime(0.3, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
+            } catch(e) {}
+        }, i*600);
+    }
+}
+</script>
+
+<style>
+@keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+@keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+body.shake { animation: shake 0.2s infinite; }
+</style>
+'''
+
+GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
+GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
 
 def init_db():
@@ -20,160 +110,208 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, goal TEXT, 
-                  targetscore INTEGER, progress INTEGER DEFAULT 0, maxscore INTEGER DEFAULT 0)''')
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  email TEXT, subject TEXT, goal TEXT, 
+                  target_score INTEGER, progress INTEGER DEFAULT 0,
+                  max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, title TEXT, deadline TEXT)''')
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, title TEXT, deadline TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS files 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  email TEXT, subject TEXT, filename TEXT, 
+                  upload_date TEXT)''')
     conn.commit()
     conn.close()
-init_db()  # Fixed SQL with * and quotes[web:4]
+
+init_db()
+
+def send_email(to_email, subject, body):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = GMAIL_USER
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_PASS)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except:
+        return False
 
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    # ✅ AUTOMATIC REDIRECT MAGIC
+    if session.get('logged_in'):
+        print(f"🚀 Auto-redirecting {session['email']} to dashboard")
+        return redirect('/dashboard')
+    
+    if request.method == 'POST':
+        try:
+            email = request.form.get('email', '').lower().strip()
+            password = request.form.get('password', '')
+            name = request.form.get('name', '').strip()
+            action = request.form.get('action', 'login')
+            
+            conn = get_db_connection()
+            
+            if action == 'register':
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                if user:
+                    conn.close()
+                    return render_login_page("❌ Email already registered!")
+                
+                hashed_pw = generate_password_hash(password)
+                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                            (email, hashed_pw, name))
+                conn.commit()
+                conn.close()
+                return render_login_page("✅ Account created! Please login.")
+                
+            else:  # login
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                conn.close()
+                
+                if user and check_password_hash(user['password'], password):
+                    session['logged_in'] = True
+                    session['email'] = email
+                    session['name'] = user['name']
+                    print(f"✅ LOGIN SUCCESS: {email}")
+                    return redirect('/dashboard')  # Auto dashboard!
+                else:
+                    return render_login_page("❌ Wrong email or password!")
+                    
+        except Exception as e:
+            print(f"💥 ERROR: {e}")
+            return render_login_page(f"❌ Error: {str(e)}")
+    
+    return render_login_page()
+    
 def render_login_page(error=""):
     error_html = f'<div class="error">{error}</div>' if error else ''
     return f'''
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Study Planner</title>
-    <style> /* Your original CSS here - kept same */ </style>
-</head>
-<body>
-    <div class="login-box">
-        <h1>Study Planner</h1>
-        {error_html}
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">Login</button>
-            <button class="tab" onclick="showTab('register')">Register</button>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Study Planner</title>
+        <style>
+            *{{margin:0;padding:0;box-sizing:border-box}}
+            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
+            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
+            .tab.active{{background:#667eea;color:white}}
+            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+            input:focus{{border-color:#667eea;outline:none}}
+            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+            {error_html}
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <!-- LOGIN FORM -->
+            <form method="POST" id="loginForm">
+                <input type="hidden" name="action" value="login">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Enter password" required>
+                <button type="submit">🚀 Login</button>
+            </form>
+            
+            <!-- REGISTER FORM -->
+            <form method="POST" id="registerForm" style="display:none">
+                <input type="hidden" name="action" value="register">
+                <input type="text" name="name" placeholder="Your Full Name" required>
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
+                <button type="submit">✅ Create Account</button>
+            </form>
         </div>
-        <form method="POST" id="loginForm">
-            <input type="hidden" name="action" value="login">
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="Enter password" required>
-            <button type="submit">Login</button>
-        </form>
-        <form method="POST" id="registerForm" style="display:none">
-            <input type="text" name="name" placeholder="Your Full Name" required>
-            <input type="email" name="email" placeholder="your-email@gmail.com" required>
-            <input type="password" name="password" placeholder="Create Password" required>
-            <button type="submit">Create Account</button>
-        </form>
-    </div>
-    <script>
+        
+        <script>
         function showTab(tabName) {{
-            document.getElementById('loginForm').style.display = tabName === 'login' ? 'block' : 'none';
-            document.getElementById('registerForm').style.display = tabName === 'register' ? 'block' : 'none';
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab');
+            
+            if (tabName === 'login') {{
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            }} else {{
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }}
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
             event.target.classList.add('active');
         }}
-    </script>
-</body>
-</html>'''
+        </script>
+    </body>
+    </html>
+    '''
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def home():
-    if request.method == 'POST':
-        email = request.form['email'].lower().strip()
-        password = request.form['password']
-        name = request.form.get('name', 'User').strip()
-        action = request.form.get('action', 'login')
-        
-        print(f"🔍 DEBUG: {action} - {email}")  # Terminal check
-        
-        conn = get_db()
-        
-        if action == 'register':
-            # Check duplicate
-            user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-            if user:
-                conn.close()
-                return render_login("❌ Email already exists!")
-            
-            # Register
-            hashed = generate_password_hash(password)
-            conn.execute('INSERT INTO users VALUES (?, ?, ?)', (email, hashed, name))
-            conn.commit()
-            print(f"✅ REGISTERED: {email}")
-            conn.close()
-            return render_login("✅ Registered! Now login.")
-        
-        # Login
-        user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-        conn.close()
-        
-        if user and check_password_hash(user['password'], password):
-            session['logged_in'] = True
-            session['email'] = email
-            session['name'] = user['name']
-            print("✅ LOGIN SUCCESS")
-            return redirect('/dashboard')
-        else:
-            print("❌ LOGIN FAILED")
-            return render_login("❌ Wrong email/password!")
-    
-    return render_login()
+    return '''
+    <h1>Study Reminder App</h1>
+    <form action="/set-reminder" method="post">
+        <input type="text" name="task" placeholder="Study Python" required>
+        <input type="number" name="seconds" placeholder="30" required> seconds
+        <button>Set Reminder</button>
+    </form>
+    <h3>Active Reminders: {{len_timers}}</h3>
+    '''
 
-def render_login(msg=""):
-    return f'''
-<!DOCTYPE html>
-<html>
-<head><title>Login</title>
-<style>body{{background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:Arial}}
-.login{{background:white;padding:40px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.3);width:90%;max-width:400px}}
-input{{width:100%;padding:15px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}}
-button{{width:100%;padding:15px;background:#50c878;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}}
-button:hover{{background:#27ae60}}
-.error{{background:#fee;color:#c33;padding:10px;border-radius:5px;margin:10px 0}}
-.tabs{{display:flex;margin:20px 0}}
-.tab{{flex:1;padding:15px;background:#f0f0f0;border:none;cursor:pointer}}
-.tab.active{{background:#667eea;color:white}}</style>
-</head>
-<body>
-<div class="login">
-<h2>📚 Study Planner</h2>
-{msg and f'<div class="error">{msg}</div>' or ''}
-<div class="tabs">
-<button class="tab active" onclick="show(\'login\')">Login</button>
-<button class="tab" onclick="show(\'register\')">Register</button>
-</div>
-<form method=POST id=login style="display:block">
-<input type=hidden name=action value=login>
-<input name=email placeholder=your@email.com required>
-<input type=password name=password placeholder=password required>
-<button>Login</button>
-</form>
-<form method=POST id=register style="display:none">
-<input name=name placeholder=Your Name required>
-<input name=email placeholder=your@email.com required>
-<input type=password name=password placeholder=Create Password required>
-<button>Register</button>
-</form>
-</div>
-<script>
-function show(t){ 
-    document.getElementById('login').style.display = t=='login'?'block':'none';
-    document.getElementById('register').style.display = t=='register'?'block':'none';
-    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
-}
-</script>
-</body>
-</html>'''
+@app.route('/set-reminder', methods=['POST'])
+def set_reminder():
+    task = request.form['task']
+    seconds = int(request.form['seconds'])
+    
+    def job():
+        reminder_job(task)
+        active_timers[:] = [t for t in active_timers if t != job]
+    
+    timer = threading.Timer(seconds, job)
+    timer.start()
+    active_timers.append(timer)
+    
+    return f'<h2>✅ Reminder set for "{task}" in {seconds}s</h2>'
     
 @app.route('/dashboard')
 def dashboard():
-    if not session.get('logged_in'):
+    if not session.get('logged_in'): 
         return redirect('/')
+    
     email = session['email']
     conn = get_db_connection()
-    reminders = conn.execute('SELECT * FROM reminders WHERE email = ? ORDER BY deadline ASC', (email,)).fetchall()
+    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
     conn.close()
-    notifications = ''.join([f'<div class="notification"><div style="font-size:28px">{r["title"]}</div><div style="font-size:20px;color:#ffd700">{r["deadline"]}</div></div>' 
-                             for r in reminders[:5]])
+    
+    notifications = ""
+    for r in reminders[:5]:  # Show top 5
+        notifications += f'''
+        <div class="notification" style="background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer">
+            <div style="font-size:28px">⏰ {r["title"]}</div>
+            <div style="font-size:20px;color:#ffd700">{r["deadline"]}</div>
+        </div>
+        '''
     
     return f'''
 <!DOCTYPE html>
@@ -205,26 +343,12 @@ def dashboard():
 def user_alarms():
     if not session.get('logged_in'):
         return jsonify([])
-    
-    try:
-        conn = get_db_connection()
-        # 🔥 FIXED: Use proper datetime comparison
-        alarms = conn.execute("""
-            SELECT id, title, deadline 
-            FROM reminders WHERE email=? AND datetime(deadline) >= datetime('now', '-1 minute')
-            ORDER BY deadline ASC
-        """, (session['email'],)).fetchall()
-        conn.close()
-        
-        return jsonify([{
-            'id': a['id'],
-            'title': a['title'],
-            'deadline': a['deadline']  # ISO format works fine now
-        } for a in alarms])
-    except Exception as e:
-        print(f"API Error: {e}")
-        return jsonify([])
-        
+    conn = get_db_connection()
+    alarms = conn.execute("SELECT id, title, deadline FROM reminders WHERE email=?", 
+                         (session['email'],)).fetchall()
+    conn.close()
+    return jsonify([{'id': a['id'], 'title': a['title'], 'deadline': a['deadline']} for a in alarms])
+
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if not session.get('logged_in'): return redirect('/')
@@ -815,4 +939,4 @@ def logout():
 # 🔥 RENDER.COM PORT FIX 🔥
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
