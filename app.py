@@ -314,7 +314,6 @@ def dashboard():
         <a href="/reminders" class="btn">⏰ Reminders</a>
         <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
 <button onclick="localStorage.removeItem('firedAlarms');location.reload();" 
-        style="background:orange;color:white;padding:20px;border-radius:15px;font-size:18px">
 </button>
     </div>
 </div>
