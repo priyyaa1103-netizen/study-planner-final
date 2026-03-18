@@ -29,24 +29,27 @@ document.addEventListener("DOMContentLoaded", function() {
                 if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
                     firedAlarms.add(alarm.id);
                     console.log("🚨 TRIGGER ALARM:", alarm.title);
-                    playAlarmSound(alarm.title);
+                    
+                    // ✅ ID + title pass pannuren
+                    playAlarmSound(alarm.id, alarm.title);
                 }
             });
         });
     }, 2000);
 });
 
-function playAlarmSound(title) {
-    // Fixed audio URLs
+// ✅ ID receive pannum
+function playAlarmSound(id, title) {
+
+    // 🔥 IMPORTANT: delete from DB
+    fetch("/mark-triggered/" + id, {method: "POST"});
+
     const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
     audio.volume = 1.0;
     audio.play().catch(e => console.log("Audio play failed:", e));
-    fetch("/mark-triggered/" + alarm.id, {method: "POST"});
     
-    // Backup beep sound
     playBeepSound();
     
-    // VISUAL EXPLOSION
     document.body.innerHTML += `
         <div style="
             position:fixed;top:0;left:0;width:100vw;height:100vh;
@@ -58,7 +61,6 @@ function playAlarmSound(title) {
         </div>
     `;
     
-    // Screen shake
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 2000);
 }
