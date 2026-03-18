@@ -78,40 +78,55 @@ def render_login_page(error=""):
 def home():
     if session.get('logged_in'):
         return redirect('/dashboard')
+    
     if request.method == 'POST':
         email = request.form.get('email', '').lower().strip()
         password = request.form.get('password', '')
         name = request.form.get('name', '').strip()
         action = request.form.get('action', 'login')
+        
+        print(f"DEBUG: Action={action}, Email={email}")  # Terminal-la varum
+        
         conn = get_db_connection()
         try:
             if action == 'register':
-                user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()  # Fixed *[file:1]
+                # Check existing
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                print(f"DEBUG: Existing user: {user['name'] if user else 'None'}")
                 if user:
                     conn.close()
-                    return render_login_page('Email already registered!')
+                    return render_login_page("❌ Email already registered!")
+                
+                # Create user
                 hashed_pw = generate_password_hash(password)
-                conn.execute('INSERT INTO users (email, password, name) VALUES (?, ?, ?)', 
-                            (email, hashed_pw, name))
+                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
+                             (email, hashed_pw, name))
                 conn.commit()
+                print("DEBUG: User created successfully")
                 conn.close()
-                return render_login_page('Account created! Please login.')
-            else:  # login
-                user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-                conn.close()
-                if user and check_password_hash(user['password'], password):
-                    session['logged_in'] = True
-                    session['email'] = email
-                    session['name'] = user['name']  # Fixed undefined user[web:4]
-                    return redirect('/dashboard')
-                else:
-                    return render_login_page('Wrong email or password!')
-        except Exception as e:
+                return render_login_page("✅ Account created! Please login.")
+            
+            # Login
+            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+            print(f"DEBUG: Login user found: {user['name'] if user else 'None'}")
             conn.close()
-            return render_login_page(f'Error: {str(e)}')
+            
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['email'] = email
+                session['name'] = user['name']
+                print("DEBUG: Login SUCCESS")
+                return redirect('/dashboard')
+            else:
+                print("DEBUG: Login FAILED - hash mismatch")
+                return render_login_page("❌ Wrong email or password!")
+                
+        except Exception as e:
+            print(f"DEBUG ERROR: {e}")
+            conn.close()
+            return render_login_page(f"❌ Error: {str(e)}")
+    
     return render_login_page()
-def render_login_page(error=""):
-    error_html = f'<div class="error">{error}</div>' if error else ''
     
     return f'''
 <!DOCTYPE html>
