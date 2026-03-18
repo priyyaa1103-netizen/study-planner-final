@@ -616,6 +616,7 @@ def subject(subject):
         <h1>{subject.replace('-', ' ').title()}</h1>
         {units_html}
     </div>
+    {GLOBAL_ALARM_JS}
     </body></html>
     '''
 # ============= FILE UPLOAD =============
@@ -647,6 +648,7 @@ def upload(subject, unit):
         </form>
         <a href="/subject/{subject}" style="display:inline-block;margin-top:20px;color:#f1c40f">← Back to {subject.replace('-', ' ').title()}</a>
     </div>
+    {GLOBAL_ALARM_JS}
     </body></html>
     '''
     
@@ -852,6 +854,7 @@ def quiz(goal_id):
             <p style="font-size:20px">Total Progress: {new_progress}%</p>
             <a href="/view-goals" style="padding:20px 50px;background:#50c878;color:white;text-decoration:none;border-radius:20px;font-size:24px;font-weight:600;display:inline-block;margin-top:30px">📊 View Goals</a>
         </div>
+        {GLOBAL_ALARM_JS}
         </body></html>
         '''
     
@@ -883,6 +886,7 @@ def quiz(goal_id):
         </form>
         <a href="/view-goals" style="display:block;text-align:center;margin-top:20px;color:#f1c40f;font-size:20px;font-weight:600">← Back to Goals</a>
     </div>
+    {GLOBAL_ALARM_JS}
     </body></html>
     '''
     
@@ -916,6 +920,7 @@ def view_goals():
     <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
     {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No goals set yet! <a href="/goals" style="color:#50c878">Create one →</a></p>'}
 </div>
+{GLOBAL_ALARM_JS}
 </body></html>
 '''
     
