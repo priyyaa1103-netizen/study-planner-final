@@ -1182,36 +1182,58 @@ def quiz(goal_id):
 @app.route('/view-goals')
 def view_goals():
     if not session.get('logged_in'): return redirect('/')
+    
     conn = get_db_connection()
-    goals = conn.execute("SELECT * FROM goals WHERE email=? ORDER BY progress DESC", 
+    goals = conn.execute('SELECT * FROM goals WHERE email=? ORDER BY id DESC', 
                         (session['email'],)).fetchall()
     conn.close()
     
-    goals_html = ""
+    goals_html = ''
     for goal in goals:
-        progress_bar = f'<div style="background:#ddd;height:25px;border-radius:12px;overflow:hidden"><div style="background:linear-gradient(90deg,#50c878,#27ae60);width:{goal["progress"]}% height:100%;transition:width 0.5s"></div></div>'
+        progress_width = goal['progress']
+        progress_color = '#2ecc71' if progress_width >= 80 else '#f39c12' if progress_width >= 50 else '#e67e22'
+        
         goals_html += f'''
-        <div style="background:rgba(255,255,255,0.2);padding:30px;margin:20px;border-radius:20px">
-            <h3>{goal["subject"]} - {goal["goal"]}</h3>
-            <p>Target: {goal["target_score"]}% | Progress: {goal["progress"]}% | Best: {goal["max_score"]}/10</p>
-            {progress_bar}
-            <a href="/quiz/{goal['id']}" style="padding:12px 25px;background:#3498db;color:white;text-decoration:none;border-radius:10px;margin-top:15px;display:inline-block">📝 Take Quiz</a>
+        <div style="background:rgba(255,255,255,0.15);padding:30px;margin:20px;border-radius:25px;box-shadow:0 15px 35px rgba(0,0,0,0.2);backdrop-filter:blur(15px);text-align:left">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+                <h3 style="font-size:26px;margin:0">{goal['subject']}</h3>
+                <a href="/delete_goal/{goal['id']}" style="color:#e74c3c;font-size:24px;text-decoration:none" onclick="return confirm('Delete Goal?')">🗑️</a>
+            </div>
+            <p style="font-size:18px;margin-bottom:20px;color:#f1c40f"><strong>Goal:</strong> {goal['goal']}</p>
+            <p style="font-size:18px;margin-bottom:25px"><strong>Target Score:</strong> {goal['target_score']}</p>
+            
+            <div style="margin-bottom:20px">
+                <div style="background:#34495e;border-radius:25px;padding:3px;margin-bottom:10px">
+                    <div style="background:{progress_color};height:25px;border-radius:20px;width:{progress_width}%;transition:all 0.5s;box-shadow:0 5px 15px rgba(0,0,0,0.3)"></div>
+                </div>
+                <p style="text-align:center;font-size:20px;font-weight:600">
+                    Progress: {goal['progress']}% 
+                    ({goal['max_score']}/10 quizzes completed)
+                </p>
+            </div>
+            
+            <div style="text-align:center">
+                <a href="/quiz/{goal['id']}" style="padding:15px 35px;background:#9b59b6;color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;display:inline-block;box-shadow:0 8px 25px rgba(155,89,182,0.4);margin:5px">🧠 Take Quiz</a>
+            </div>
         </div>
         '''
     
     return f'''
-<!DOCTYPE html>
-<html><head><title>My Goals</title>
-<style>body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto}}</style></head>
-<body>
-<a href="/dashboard" style="position:fixed;top:20px;left:20px;padding:15px 25px;background:#f39c12;color:white;text-decoration:none;border-radius:15px;font-weight:600">← Dashboard</a>
-<div class="container">
-    <h1 style="text-align:center;font-size:42px;margin:80px 0 40px">🎯 My Study Goals</h1>
-    {goals_html or '<p style="text-align:center;font-size:28px;color:#f1c40f">No goals set yet! <a href="/goals" style="color:#50c878">Create one →</a></p>'}
-</div>
-{GLOBAL_ALARM_JS}
-</body></html>
-'''
+    <!DOCTYPE html>
+    <html><head><title>Your Goals</title>
+    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px}}
+    .container{{max-width:900px;margin:0 auto}}</style></head>
+    <body>
+    <div class="container">
+        <h1 style="font-size:42px;text-align:center;margin-bottom:50px">📊 Your Goals</h1>
+        {goals_html or '<div style="text-align:center;font-size:28px;padding:80px;background:rgba(255,255,255,0.1);border-radius:25px"><p>No goals set yet!</p><a href="/goals" style="color:#f1c40f;font-size:32px;font-weight:600">🎯 Set goals now!</a></div>'}
+        <div style="text-align:center;margin-top:50px">
+            <a href="/dashboard" style="padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:22px;font-weight:600;display:inline-block">← Back to Dashboard</a>
+        </div>
+    </div>
+    {GLOBAL_ALARM_JS}
+    </body></html>
+    '''
     
 @app.route('/myfiles')
 def myfiles():
