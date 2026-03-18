@@ -1,21 +1,26 @@
 from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify 
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 import json
-from datetime import datetime, timedelta
 import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, render_template, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timedelta
 import threading
 import time
-
-check_thread = None
+import os
 
 app = Flask(__name__)
-active_timers = []
-app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
+db = SQLAlchemy()
+
+# Config
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
 def reminder_job(message):
     print(f"🔔 REMINDER: {message} - {time.strftime('%H:%M:%S')}")
@@ -174,17 +179,12 @@ def init_db():
     conn.close()
 
 init_db()
-
+# இத replace பண்ணுங்க
 db = SQLAlchemy()
 
-class Reminder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    task = db.Column(db.String(100), nullable=False)
-    seconds = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    trigger_time = db.Column(db.DateTime)
-    is_triggered = db.Column(db.Boolean, default=False)
-    is_dismissed = db.Column(db.Boolean, default=False)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
 def send_email(to_email, subject, body):
     try:
