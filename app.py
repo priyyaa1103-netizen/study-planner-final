@@ -19,6 +19,53 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 def reminder_job(message):
     print(f"🔔 REMINDER: {message} - {time.strftime('%H:%M:%S')}")
 
+# app.py TOP-ல இந்த imports add பண்ணுங்க
+import threading
+import time
+from datetime import datetime
+check_thread = None
+
+# Background checker function
+def check_reminders():
+    global check_thread
+    def loop():
+        while True:
+            try:
+                now = datetime.utcnow()
+                # Trigger time வந்தது but triggered இல்லாத reminders
+                due_reminders = Reminder.query.filter(
+                    Reminder.trigger_time <= now,
+                    Reminder.is_triggered == False
+                ).all()
+                
+                for reminder in due_reminders:
+                    print(f"🔔 TRIGGERED: {reminder.task} at {now}")
+                    reminder.is_triggered = True  # Status update
+                    db.session.commit()
+                
+                time.sleep(3)  # 3 seconds wait
+            except Exception as e:
+                print(f"Checker error: {e}")
+                time.sleep(5)
+    
+    # Thread already running-னா start பண்ணாது
+    if check_thread is None or not check_thread.is_alive():
+        check_thread = threading.Thread(target=loop, daemon=True)
+        check_thread.start()
+        print("✅ Background checker started!")
+
+# App create ஆனதும் auto start
+def create_app():
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///reminders.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+    
+    with app.app_context():
+        db.create_all()
+        check_reminders()  # ← இது முக்கியம்!
+    
+    return app
+
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = '''
 <script>
@@ -283,15 +330,14 @@ def render_login_page(error=""):
 def set_reminder():
     task = request.form['task']
     seconds = int(request.form['seconds'])
-    trigger_time = datetime.now() + timedelta(seconds=seconds)
     
-    # Database-ல save
-    reminder = Reminders(task=task, trigger_time=trigger_time)
+    reminder = Reminder(
+        task=task,
+        seconds=seconds,
+        trigger_time=datetime.utcnow() + timedelta(seconds=seconds)
+    )
     db.session.add(reminder)
     db.session.commit()
-    
-    # Background check start பண்ணுங்க
-    check_reminders()
     
     return redirect(url_for('dashboard'))
 
