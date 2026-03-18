@@ -1110,10 +1110,9 @@ elif subject in ['cloud computing', 'cloud']:
     {"q": "Hybrid cloud is?", "options": ["Mix of public & private", "Only public", "Only private", "None"], "answer": "Mix of public & private"}
 ]
     }
-    questions= all_questions.get(subject)
-
-    if not questions:
-        return"No questions found"
+    quiz_questions = questions.get(subject, [])
+if not quiz_questions:
+    return "No questions found for this subject."
     
     if request.method == 'POST':
         score = 0
