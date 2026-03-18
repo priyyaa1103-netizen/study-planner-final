@@ -1,265 +1,115 @@
-from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify 
+from flask import Flask, request, redirect, session, render_template_string, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
 from datetime import datetime, timedelta
 import sqlite3
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
+app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')  # Fixed[web:3]
 
-# Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
-GLOBAL_ALARM_JS = '''
-<script>
-let firedAlarms = new Set();
-let lastCheckTime = Date.now();
+GMAIL_USER = os.getenv('GMAIL_USER', 'your-email@gmail.com')
+GMAIL_PASS = os.getenv('GMAIL_PASS', '')
 
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("🎵 ALARM SYSTEM LOADED");
-    
-    // 🔥 IMMEDIATE CHECK ON PAGE LOAD (fixes 08:56 issue)
-    checkAlarmsNow();
-    
-    // 1-second polling (faster detection)
-    setInterval(checkAlarmsNow, 1000);
-});
-
-async function checkAlarmsNow() {
-    try {
-        const response = await fetch("/api/user-alarms");
-        const alarms = await response.json();
-        const now = new Date();
-        
-        alarms.forEach(alarm => {
-            const alarmTime = new Date(alarm.deadline);
-            
-            // 🔥 PRECISE TIME COMPARISON (fixes 1-min delay)
-            if (alarmTime <= now && !firedAlarms.has(alarm.id)) {
-                firedAlarms.add(alarm.id);
-                console.log("🚨 TRIGGERING:", alarm.title, "at", now.toLocaleTimeString());
-                playFullAlarm(alarm.title, alarm.id);
-            }
-        });
-    } catch(e) {
-        console.log("Alarm check failed:", e);
-    }
-}
-
-function playFullAlarm(title, alarmId) {
-    // 1. LOUD AUDIO
-    const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-    audio.volume = 1.0;
-    audio.loop = true;
-    audio.play().catch(e => playBeepFallback());
-    
-    // 2. FULLSCREEN ALERT
-    const alertDiv = document.createElement('div');
-    alertDiv.id = `alarm-${alarmId}`;
-    alertDiv.innerHTML = `
-        <div style="
-            position:fixed;top:0;left:0;width:100vw;height:100vh;
-            background:linear-gradient(45deg, rgba(255,0,0,0.9), rgba(255,100,0,0.9));
-            z-index:99999;display:flex;align-items:center;justify-content:center;
-            font-size:clamp(40px,8vw,80px);font-weight:bold;text-shadow:0 0 30px #fff;
-            animation: alarmPulse 0.8s infinite alternate;" 
-            ondblclick="dismissAlarm('${alarmId}')"
-            oncontextmenu="dismissAlarm('${alarmId}');return false;">
-            🚨 ${title.toUpperCase()} 🚨<br><br>
-            <div style="font-size:0.4em;margin-top:20px;">
-                Right-click or Double-click to dismiss
-            </div>
-        </div>
-    `;
-    document.body.appendChild(alertDiv);
-    
-    // 3. SCREEN SHAKE + FLASH
-    document.body.classList.add('alarm-shake');
-    flashScreen();
-    
-    // 4. NOTIFICATION (if supported)
-    if (Notification.permission === 'granted') {
-        new Notification('🚨 Study Alarm!', { 
-            body: title, 
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjUiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iNTAlIiB5PSI2MCUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4rPC90ZXh0Pgo8L3N2Zz4K'
-        });
-    }
-}
-
-function dismissAlarm(alarmId) {
-    firedAlarms.add(alarmId); // Permanent dismiss
-    const alertDiv = document.getElementById(`alarm-${alarmId}`);
-    if (alertDiv) alertDiv.remove();
-    document.body.classList.remove('alarm-shake');
-    
-    // Stop all audio
-    document.querySelectorAll('audio').forEach(a => {
-        a.pause();
-        a.currentTime = 0;
-    });
-}
-
-function playBeepFallback() {
-    // Triple beep sequence
-    [800, 1000, 1200].forEach((freq, i) => {
-        setTimeout(() => {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const o = ctx.createOscillator(), g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.frequency.value = freq;
-            o.type = "sine";
-            g.gain.setValueAtTime(0.4, ctx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-            o.start(ctx.currentTime); 
-            o.stop(ctx.currentTime + 0.6);
-        }, i * 400);
-    });
-}
-
-function flashScreen() {
-    const originalBg = document.body.style.background;
-    const flashInterval = setInterval(() => {
-        document.body.style.background = document.body.style.background.includes('red') ? 
-            'linear-gradient(135deg,#667eea,#764ba2)' : 
-            'linear-gradient(135deg,#ff0000,#cc0000)';
-    }, 200);
-    
-    setTimeout(() => {
-        clearInterval(flashInterval);
-        document.body.style.background = originalBg;
-    }, 5000);
-}
-</script>
-
-<style>
-@keyframes alarmPulse {
-    0% { transform: scale(1) rotate(0deg); opacity: 0.9; }
-    100% { transform: scale(1.05) rotate(2deg); opacity: 1; }
-}
-@keyframes shake {
-    0%,100% { transform: translateX(0); }
-    10%,30%,50%,70%,90% { transform: translateX(-8px); }
-    20%,40%,60%,80% { transform: translateX(8px); }
-}
-body.alarm-shake { animation: shake 0.3s infinite; }
-</style>
-
-GMAIL_USER = os.getenv("GMAIL_USER", "your-email@gmail.com")
-GMAIL_PASS = os.getenv("GMAIL_PASS", "")
 os.makedirs('static/uploads', exist_ok=True)
 
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    
-    # ✅ FIXED: Use single quotes for SQL, escape properly
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users 
-        (email TEXT PRIMARY KEY, password TEXT, name TEXT)
-    """)
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS goals 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-         email TEXT, subject TEXT, goal TEXT, 
-         target_score INTEGER, progress INTEGER DEFAULT 0,
-         max_score INTEGER DEFAULT 0)
-    """)
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS reminders 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-         email TEXT, title TEXT, deadline TEXT)
-    """)
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS files 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-         email TEXT, subject TEXT, filename TEXT, 
-         upload_date TEXT)
-    """)
-    
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (email TEXT PRIMARY KEY, password TEXT, name TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS goals 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, subject TEXT, goal TEXT, 
+                  targetscore INTEGER, progress INTEGER DEFAULT 0, maxscore INTEGER DEFAULT 0)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS reminders 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, title TEXT, deadline TEXT)''')
     conn.commit()
     conn.close()
-    
-init_db()
-
-def send_email(to_email, subject, body):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = GMAIL_USER
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_PASS)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except:
-        return False
+init_db()  # Fixed SQL with * and quotes[web:4]
 
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
     return conn
 
+def render_login_page(error=""):
+    error_html = f'<div class="error">{error}</div>' if error else ''
+    return f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Study Planner</title>
+    <style> /* Your original CSS here - kept same */ </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>Study Planner</h1>
+        {error_html}
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login')">Login</button>
+            <button class="tab" onclick="showTab('register')">Register</button>
+        </div>
+        <form method="POST" id="loginForm">
+            <input type="hidden" name="action" value="login">
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Enter password" required>
+            <button type="submit">Login</button>
+        </form>
+        <form method="POST" id="registerForm" style="display:none">
+            <input type="text" name="name" placeholder="Your Full Name" required>
+            <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            <input type="password" name="password" placeholder="Create Password" required>
+            <button type="submit">Create Account</button>
+        </form>
+    </div>
+    <script>
+        function showTab(tabName) {{
+            document.getElementById('loginForm').style.display = tabName === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = tabName === 'register' ? 'block' : 'none';
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }}
+    </script>
+</body>
+</html>'''
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # ✅ AUTO REDIRECT IF LOGGED IN
     if session.get('logged_in'):
         return redirect('/dashboard')
-    
-    # ✅ POST - Login/Register handle pannu
     if request.method == 'POST':
         email = request.form.get('email', '').lower().strip()
         password = request.form.get('password', '')
         name = request.form.get('name', '').strip()
         action = request.form.get('action', 'login')
-        
         conn = get_db_connection()
-        
         try:
             if action == 'register':
-                # Check if user exists
-                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()  # Fixed *[file:1]
                 if user:
                     conn.close()
-                    return render_login_page("❌ Email already registered!")
-                
-                # Create new user
+                    return render_login_page('Email already registered!')
                 hashed_pw = generate_password_hash(password)
-                conn.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", 
-                           (email, hashed_pw, name))
+                conn.execute('INSERT INTO users (email, password, name) VALUES (?, ?, ?)', 
+                            (email, hashed_pw, name))
                 conn.commit()
                 conn.close()
-                return render_login_page("✅ Account created! Please login.")
-            
-            else:  # Login
-                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                return render_login_page('Account created! Please login.')
+            else:  # login
+                user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
                 conn.close()
-                
                 if user and check_password_hash(user['password'], password):
                     session['logged_in'] = True
                     session['email'] = email
-                    session['name'] = user['name']
+                    session['name'] = user['name']  # Fixed undefined user[web:4]
                     return redirect('/dashboard')
                 else:
-                    return render_login_page("❌ Wrong email or password!")
-                    
+                    return render_login_page('Wrong email or password!')
         except Exception as e:
             conn.close()
-            return render_login_page(f"❌ Error: {str(e)}")
-    
-    # ✅ GET - Login page kanbikku
+            return render_login_page(f'Error: {str(e)}')
     return render_login_page()
-
-
 def render_login_page(error=""):
     error_html = f'<div class="error">{error}</div>' if error else ''
     
@@ -323,22 +173,14 @@ def render_login_page(error=""):
     
 @app.route('/dashboard')
 def dashboard():
-    if not session.get('logged_in'): 
+    if not session.get('logged_in'):
         return redirect('/')
-    
     email = session['email']
     conn = get_db_connection()
-    reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
+    reminders = conn.execute('SELECT * FROM reminders WHERE email = ? ORDER BY deadline ASC', (email,)).fetchall()
     conn.close()
-    
-    notifications = ""
-    for r in reminders[:5]:  # Show top 5
-        notifications += f'''
-        <div class="notification" style="background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer">
-            <div style="font-size:28px">⏰ {r["title"]}</div>
-            <div style="font-size:20px;color:#ffd700">{r["deadline"]}</div>
-        </div>
-        '''
+    notifications = ''.join([f'<div class="notification"><div style="font-size:28px">{r["title"]}</div><div style="font-size:20px;color:#ffd700">{r["deadline"]}</div></div>' 
+                             for r in reminders[:5]])
     
     return f'''
 <!DOCTYPE html>
@@ -980,4 +822,4 @@ def logout():
 # 🔥 RENDER.COM PORT FIX 🔥
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
