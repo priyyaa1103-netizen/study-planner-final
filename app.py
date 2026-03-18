@@ -1110,9 +1110,14 @@ elif subject in ['cloud computing', 'cloud']:
     {"q": "Hybrid cloud is?", "options": ["Mix of public & private", "Only public", "Only private", "None"], "answer": "Mix of public & private"}
 ]
     }
+    
     quiz_questions = questions.get(subject, [])
-if not quiz_questions:
-    return "No questions found for this subject."
+    if not quiz_questions:
+        # ✅ function உள்ஆக return பண்ணணும்
+        return render_template_string("<h3>No questions found for this subject.</h3>")
+
+    # render quiz template (example)
+    return render_template('quiz.html', questions=quiz_questions, subject=subject)
     
     if request.method == 'POST':
         score = 0
