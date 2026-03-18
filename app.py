@@ -432,7 +432,7 @@ def check_notifications_api():
 @app.route('/study')
 def study():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
     <style>
@@ -466,7 +466,7 @@ def study():
 @app.route('/year1')
 def year1():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>1st Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 1st Year</h1><a href="/sem1" class="btn">Semester 1</a><a href="/sem2" class="btn">Semester 2</a>
@@ -476,7 +476,7 @@ def year1():
 @app.route('/sem1')
 def sem1():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 1</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 1</h1>
@@ -490,7 +490,7 @@ def sem1():
 @app.route('/sem2')
 def sem2():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 2</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 2</h1>
@@ -505,7 +505,7 @@ def sem2():
 @app.route('/year2')
 def year2():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>2nd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 2nd Year</h1><a href="/sem3" class="btn">Semester 3</a><a href="/sem4" class="btn">Semester 4</a>
@@ -515,7 +515,7 @@ def year2():
 @app.route('/sem3')
 def sem3():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 3</h1>
@@ -529,7 +529,7 @@ def sem3():
 @app.route('/sem4')
 def sem4():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 4</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 4</h1>
@@ -544,7 +544,7 @@ def sem4():
 @app.route('/year3')
 def year3():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>3rd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📚 3rd Year</h1><a href="/sem5" class="btn">Semester 5</a><a href="/sem6" class="btn">Semester 6</a>
@@ -554,7 +554,7 @@ def year3():
 @app.route('/sem5')
 def sem5():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 5</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 5</h1>
@@ -568,7 +568,7 @@ def sem5():
 @app.route('/sem6')
 def sem6():
     if not session.get('logged_in'): return redirect('/')
-    return '''
+    return f'''
     <!DOCTYPE html><html><head><title>Semester 6</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
     .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
     <body><h1>📖 Semester 6</h1>
