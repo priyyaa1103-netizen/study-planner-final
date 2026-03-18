@@ -1111,19 +1111,6 @@ def quiz(goal_id):
     quiz_questions = all_questions.get(subject, [])
     if not quiz_questions:
         return render_template_string("<h3>No questions found for this subject.</h3>")
-        # render quiz template (example)
-       return render_template_string("""
-<h3>Quiz: {{subject}}</h3>
-<form method="POST">
-    {% for q in questions %}
-        <p>{{loop.index}}. {{q.q}}</p>
-        {% for opt in q.options %}
-            <input type="radio" name="q{{loop.parent.index}}" value="{{opt}}">{{opt}}<br>
-        {% endfor %}
-    {% endfor %}
-    <button type="submit">Submit</button>
-</form>
-""", questions=quiz_questions, subject=subject)
     
     if request.method == 'POST':
         score = 0
