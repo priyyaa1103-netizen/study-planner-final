@@ -436,15 +436,15 @@ def study():
     <!DOCTYPE html>
     <html><head><title>Study Dashboard</title>
     <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}
-    .container{max-width:800px;width:100%}
-    h1{font-size:48px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}
-    .year-btn{display:block;width:100%;max-width:500px;margin:30px auto;padding:30px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;text-decoration:none;border-radius:25px;font-size:28px;font-weight:600;box-shadow:0 20px 40px rgba(80,200,120,0.4);transition:all 0.4s ease;transform:translateY(0)}
-    .year-btn:hover{transform:translateY(-10px);box-shadow:0 30px 60px rgba(80,200,120,0.6)}
-    .back-btn{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000;animation:fadeInLeft 0.8s ease}
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;text-align:center}}
+    .container{{max-width:800px;width:100%}}
+    h1{{font-size:48px;margin-bottom:80px;text-shadow:0 3px 15px rgba(0,0,0,0.3);animation:fadeInUp 1s ease}}
+    .year-btn{{display:block;width:100%;max-width:500px;margin:30px auto;padding:30px;background:linear-gradient(135deg,#50c878,#27ae60);color:white;text-decoration:none;border-radius:25px;font-size:28px;font-weight:600;box-shadow:0 20px 40px rgba(80,200,120,0.4);transition:all 0.4s ease;transform:translateY(0)}}
+    .year-btn:hover{{transform:translateY(-10px);box-shadow:0 30px 60px rgba(80,200,120,0.6)}}
+    .back-btn{{position:fixed;top:25px;left:25px;padding:18px 30px;background:#f39c12;color:white;text-decoration:none;border-radius:18px;font-size:20px;font-weight:600;z-index:1000;animation:fadeInLeft 0.8s ease}}
+    @keyframes fadeInUp{{from{{opacity:0;transform:translateY(30px)}}to{{opacity:1;transform:translateY(0)}}
+    @keyframes fadeInLeft{{from{{opacity:0;transform:translateX(-30px)}}to{{opacity:1;transform:translateX(0)}}
     </style>
     </head>
     <body>
@@ -467,8 +467,8 @@ def study():
 def year1():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>1st Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>1st Year</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📚 1st Year</h1><a href="/sem1" class="btn">Semester 1</a><a href="/sem2" class="btn">Semester 2</a>
     <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
@@ -477,8 +477,8 @@ def year1():
 def sem1():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 1</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 1</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 1</h1>
     <a href="/subject/maths" class="btn">Mathematics-1</a>
     <a href="/subject/python" class="btn">Python</a>
@@ -491,8 +491,8 @@ def sem1():
 def sem2():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 2</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 2</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 2</h1>
     <a href="/subject/maths2" class="btn">Maths-2</a>
     <a href="/subject/physics" class="btn">Physics-2</a>
@@ -506,8 +506,8 @@ def sem2():
 def year2():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>2nd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>2nd Year</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📚 2nd Year</h1><a href="/sem3" class="btn">Semester 3</a><a href="/sem4" class="btn">Semester 4</a>
     <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
@@ -516,8 +516,8 @@ def year2():
 def sem3():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 3</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 3</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 3</h1>
     <a href="/subject/java_programming" class="btn">Java Programming</a>
     <a href="/subject/statistics-1" class="btn">Statistics-1</a>
@@ -530,8 +530,8 @@ def sem3():
 def sem4():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 4</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 4</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 4</h1>
     <a href="/subject/data_structures" class="btn">Data structures</a>
     <a href="/subject/statistics" class="btn">Statistics-2</a>
@@ -545,8 +545,8 @@ def sem4():
 def year3():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>3rd Year</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>3rd Year</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📚 3rd Year</h1><a href="/sem5" class="btn">Semester 5</a><a href="/sem6" class="btn">Semester 6</a>
     <br><a href="/study" class="btn" style="background:#f39c12">← Back</a>{GLOBAL_ALARM_JS}</body></html>
     '''
@@ -555,8 +555,8 @@ def year3():
 def sem5():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 5</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 5</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 5</h1>
     <a href="/subject/0perating_System" class="btn">Operating System</a>
     <a href="/subject/RDBMS" class="btn">Relational database management system</a>
@@ -569,8 +569,8 @@ def sem5():
 def sem6():
     if not session.get('logged_in'): return redirect('/')
     return f'''
-    <!DOCTYPE html><html><head><title>Semester 6</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}
-    .btn{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}h1{font-size:32px;margin-bottom:40px}</style></head>
+    <!DOCTYPE html><html><head><title>Semester 6</title><style>body{{font-family:Arial;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
+    .btn{{padding:15px 30px;margin:10px;background:#50c878;color:white;text-decoration:none;border-radius:10px;font-size:18px;display:inline-block}}h1{{font-size:32px;margin-bottom:40px}}</style></head>
     <body><h1>📖 Semester 6</h1>
     <a href="/subject/ASP.net" class="btn">Programming in ASP.net</a>
     <a href="/subject/Data_Science" class="btn">Data science</a>
