@@ -787,62 +787,59 @@ def quiz(goal_id):
     if not goal:
         return redirect('/view-goals')
     
-    # Subject-specific questions
     subject = goal['subject'].strip().lower()
-
-# 1st sem
-if subject in ['maths', 'math', 'mathematics']:
-    subject = 'mathematics'
-elif subject in ['tamil', 'tamil-1', 'tamil1']:
-    subject = 'tamil-1'
-elif subject in ['english', 'english-1', 'eng1']:
-    subject = 'english-1'
+    if subject in ['maths', 'math', 'mathematics']:
+         subject = 'mathematics'
+    elif subject in ['tamil', 'tamil-1', 'tamil1']:
+         subject = 'tamil-1'
+    elif subject in ['english', 'english-1', 'eng1']:
+         subject = 'english-1'
 
 # 2nd sem
-elif subject in ['maths-2', 'math-2', 'mathematics-2']:
-    subject = 'mathematics-2'
-elif subject in ['tamil-2']:
-    subject = 'tamil-2'
-elif subject in ['english-2']:
-    subject = 'english-2'
+    elif subject in ['maths-2', 'math-2', 'mathematics-2']:
+         subject = 'mathematics-2'
+    elif subject in ['tamil-2']:
+         subject = 'tamil-2'
+    elif subject in ['english-2']:
+         subject = 'english-2'
 
 # 3rd sem
-elif subject in ['java', 'java programming', 'java-programming']:
-    subject = 'java-programming'
-elif subject in ['statistics-1', 'stats1']:
-    subject = 'statistics-1'
-elif subject in ['tamil-3']:
-    subject = 'tamil-3'
-elif subject in ['english-3']:
-    subject = 'english-3'
-
+    elif subject in ['java', 'java programming', 'java-programming']:
+         subject = 'java-programming'
+    elif subject in ['statistics-1', 'stats1']:
+         subject = 'statistics-1'
+    elif subject in ['tamil-3']:
+         subject = 'tamil-3'
+    elif subject in ['english-3']:
+         subject = 'english-3'
+ 
 # 4th sem
-elif subject in ['data structure', 'data-structure']:
-    subject = 'data-structure'
-elif subject in ['statistics-2', 'stats2']:
-    subject = 'statistics-2'
-elif subject in ['tamil-4']:
-    subject = 'tamil-4'
-elif subject in ['english-4']:
-    subject = 'english-4'
+    elif subject in ['data structure', 'data-structure']:
+         subject = 'data-structure'
+    elif subject in ['statistics-2', 'stats2']:
+         subject = 'statistics-2'
+    elif subject in ['tamil-4']:
+         subject = 'tamil-4'
+    elif subject in ['english-4']:
+         subject = 'english-4'
 
 # 5th sem
-elif subject in ['operating system', 'os']:
-    subject = 'operating-system'
-elif subject in ['rdbms']:
-    subject = 'rdbms'
-elif subject in ['software engineering', 'se']:
-    subject = 'software-engineering'
-elif subject in ['data mining', 'data-warehousing', 'dm', 'dw']:
-    subject = 'data-mining-warehousing'
+    elif subject in ['operating system', 'os']:
+         subject = 'operating-system'
+    elif subject in ['rdbms']:
+         subject = 'rdbms'
+    elif subject in ['software engineering', 'se']:
+         subject = 'software-engineering'
+    elif subject in ['data mining', 'data-warehousing', 'dm', 'dw']:
+         subject = 'data-mining-warehousing'
 
 # 6th sem
-elif subject in ['asp.net', 'programming in asp.net']:
-    subject = 'asp-net'
-elif subject in ['data science']:
-    subject = 'data-science'
-elif subject in ['cloud computing', 'cloud']:
-    subject = 'cloud-computing'
+    elif subject in ['asp.net', 'programming in asp.net']:
+         subject = 'asp-net'
+    elif subject in ['data science']:
+         subject = 'data-science'
+    elif subject in ['cloud computing', 'cloud']:
+         subject = 'cloud-computing'
     
     all_questions = {
         'mathematics': [
@@ -1112,12 +1109,12 @@ elif subject in ['cloud computing', 'cloud']:
     }
     
     quiz_questions = questions.get(subject, [])
+    
     if not quiz_questions:
         # ✅ function உள்ஆக return பண்ணணும்
         return render_template_string("<h3>No questions found for this subject.</h3>")
-
-    # render quiz template (example)
-    return render_template('quiz.html', questions=quiz_questions, subject=subject)
+        # render quiz template (example)
+        return render_template('quiz.html', questions=quiz_questions, subject=subject)
     
     if request.method == 'POST':
         score = 0
