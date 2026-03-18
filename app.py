@@ -449,7 +449,6 @@ def study():
         <a href="/year3" class="year-btn">🎓 3rd Year</a>
         
     </div>
-    {GLOBAL_ALARM_JS}
     </body>
     </html>
     '''
