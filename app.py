@@ -319,61 +319,9 @@ def dashboard():
         </div>
         '''
     
-    return f'''
-<!DOCTYPE html>
+    return f'''<!DOCTYPE html>
 <html><head><title>Study Dashboard</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Segoe UI',sans-serif;background:#0a0a23;background-image:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 40% 40%,rgba(120,219,255,0.3) 0%,transparent 50%);background-size:800px 800px,600px 600px,400px 400px;position:relative;overflow:hidden;min-height:100vh;color:white;padding:40px}}
-body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0a23 0%,#1a1a3e 50%,#0a0a23 100%);z-index:1}}
-.stars{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2}}
-.star{{position:absolute;background:#ffd700;border-radius:50%;box-shadow:0 0 10px #ffd700;animation:twinkle 3s ease-in-out infinite}}
-@keyframes twinkle{{0%,100%{{opacity:0.3;transform:scale(1)}}50%{{opacity:1;transform:scale(1.2)}}}}
-.container{{max-width:1000px;margin:0 auto;text-align:center;position:relative;z-index:10}}
-h1{{font-size:50px;margin-bottom:20px;font-weight:900;background:linear-gradient(45deg,#ffd700,#fff,#ffd700);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:glow 2s ease-in-out infinite alternate;letter-spacing:3px;text-shadow:0 0 30px rgba(255,215,0,0.5)}}
-@keyframes glow{{from{{filter:drop-shadow(0 0 20px #ffd700)}}to{{filter:drop-shadow(0 0 40px #ffd700)}}}}
-h2{{font-size:24px;margin-bottom:50px;color:#e2e8f0;font-weight:500;letter-spacing:1px;text-shadow:0 0 10px rgba(255,255,255,0.5)}}
-.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:60px 0;padding:50px;background:rgba(255,255,255,0.05);backdrop-filter:blur(25px);border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1)}}
-.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 15px 40px rgba(102,126,234,0.4);transition:all 0.4s ease;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.2)}}
-.btn:nth-child(2){{background:linear-gradient(135deg,#48bb78,#38a169)}}
-.btn:nth-child(3){{background:linear-gradient(135deg,#ed8936,#dd6b20)}}
-.btn:nth-child(4){{background:linear-gradient(135deg,#f56565,#e53e3e)}}
-.btn:nth-child(5){{background:linear-gradient(135deg,#9f7aea,#805ad5)}}
-.btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 25px 60px rgba(0,0,0,0.6)}}
-
-/* COLORED SCATTERED BOOKS EVERYWHERE */
-.floating-books{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3}}
-.colored-book{{position:absolute;width:25px;height:40px;border-radius:3px 3px 1px 1px;box-shadow:2px 4px 12px rgba(0,0,0,0.3);animation:floatBook 6s ease-in-out infinite;border:1px solid rgba(255,255,255,0.3);transform:rotate(var(--rotation))}}
-.colored-book:nth-child(odd){{background:linear-gradient(45deg,#ff6b6b,#ee5a52);--rotation:-5deg}}
-.colored-book:nth-child(even){{background:linear-gradient(45deg,#4ecdc4,#44a08d);--rotation:5deg}}
-.colored-book.blue{{background:linear-gradient(45deg,#667eea,#764ba2)}}
-.colored-book.green{{background:linear-gradient(45deg,#48bb78,#38a169)}}
-.colored-book.orange{{background:linear-gradient(45deg,#ed8936,#dd6b20)}}
-.colored-book.purple{{background:linear-gradient(45deg,#9f7aea,#805ad5)}}
-@keyframes floatBook{{0%,100%{{transform:translateY(0) translateX(0) rotate(var(--rotation))}}25%{{transform:translateY(-15px) translateX(10px) rotate(calc(var(--rotation) + 2deg))}}75%{{transform:translateY(-8px) translateX(-8px) rotate(calc(var(--rotation) - 2deg))}}}}
-</style></head>
-<body>
-    <div class="stars" id="stars"></div>
-    <div class="floating-books" id="books"></div>
-    
-    <div class="container">
-        <h1>⭐ Welcome {session.get("name", "User")}</h1>
-        <h2>Launch Your Study Mission</h2>
-        
-        {notifications}
-        
-        <div class="btn-grid">
-            <a href="/study" class="btn">📚 Study Materials</a>
-            <a href="/goals" class="btn">🎯 Set Goals</a>
-            <a href="/view-goals" class="btn">📊 Track Progress</a>
-            <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/logout" class="btn">🚪 Logout</a>
-        </div>
-    </div>
-    
-    <script>
-        // Twinkling stars
-        for(let i = 0; i
+<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI',sans-serif;background:#0a0a23;background-image:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 40% 40%,rgba(120,219,255,0.3) 0%,transparent 50%);background-size:800px 800px,600px 600px,400px 400px;position:relative;overflow:hidden;min-height:100vh;color:white;padding:40px}}body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0a23 0%,#1a1a3e 50%,#0a0a23 100%);z-index:1}}.stars{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2}}.star{{position:absolute;background:#ffd700;border-radius:50%;box-shadow:0 0 10px #ffd700;animation:twinkle 3s ease-in-out infinite}}@keyframes twinkle{{0%,100%{{opacity:0.3;transform:scale(1)}}50%{{opacity:1;transform:scale(1.2)}}}}.container{{max-width:1000px;margin:0 auto;text-align:center;position:relative;z-index:10}}h1{{font-size:50px;margin-bottom:20px;font-weight:900;background:linear-gradient(45deg,#ffd700,#fff,#ffd700);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:glow 2s ease-in-out infinite alternate;letter-spacing:3px;text-shadow:0 0 30px rgba(255,215,0,0.5)}}@keyframes glow{{from{{filter:drop-shadow(0 0 20px #ffd700)}}to{{filter:drop-shadow(0 0 40px #ffd700)}}}}h2{{font-size:24px;margin-bottom:50px;color:#e2e8f0;font-weight:500;letter-spacing:1px;text-shadow:0 0 10px rgba(255,255,255,0.5)}}.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:60px 0;padding:50px;background:rgba(255,255,255,0.05);backdrop-filter:blur(25px);border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1)}}.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 15px 40px rgba(102,126,234,0.4);transition:all 0.4s ease;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.2)}}.btn:nth-child(2){{background:linear-gradient(135deg,#48bb78,#38a169)}}.btn:nth-child(3){{background:linear-gradient(135deg,#ed8936,#dd6b20)}}.btn:nth-child(4){{background:linear-gradient(135deg,#f56565,#e53e3e)}}.btn:nth-child(5){{background:linear-gradient(135deg,#9f7aea,#805ad5)}}.btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 25px 60px rgba(0,0,0,0.6)}}.floating-books{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3}}.colored-book{{position:absolute;width:25px;height:40px;border-radius:3px 3px 1px 1px;box-shadow:2px 4px 12px rgba(0,0,0,0.3);animation:floatBook 6s ease-in-out infinite;border:1px solid rgba(255,255,255,0.3);transform:rotate(var(--rotation))}}.colored-book:nth-child(odd){{background:linear-gradient(45deg,#ff6b6b,#ee5a52);--rotation:-5deg}}.colored-book:nth-child(even){{background:linear-gradient(45deg,#4ecdc4,#44a08d);--rotation:5deg}}@keyframes floatBook{{0%,100%{{transform:translateY(0) translateX(0) rotate(var(--rotation))}}25%{{transform:translateY(-15px) translateX(10px) rotate(calc(var(--rotation) + 2deg))}}75%{{transform:translateY(-8px) translateX(-8px) rotate(calc(var(--rotation) - 2deg))}}}}</style></head><body><div class="stars" id="stars"></div><div class="floating-books" id="books"></div><div class="container"><h1>⭐ Welcome {session.get("name", "User")}</h1><h2>Launch Your Study Mission</h2>{notifications}<div class="btn-grid"><a href="/study" class="btn">📚 Study Materials</a><a href="/goals" class="btn">🎯 Set Goals</a><a href="/view-goals" class="btn">📊 Track Progress</a><a href="/reminders" class="btn">⏰ Reminders</a><a href="/logout" class="btn">🚪 Logout</a></div></div><script>for(let i = 0; i < 100; i++) {{const star = document.createElement("div");star.className = "star";star.style.left = Math.random() * 100 + "%";star.style.top = Math.random() * 100 + "%";star.style.width = star.style.height = (Math.random() * 4 + 1) + "px";star.style.animationDelay = Math.random() * 3 + "s";star.style.animationDuration = (Math.random() * 2 + 2) + "s";document.getElementById("stars").appendChild(star);}}for(let i = 0; i < 25; i++) {{const book = document.createElement("div");book.className = "colored-book";book.style.left = Math.random() * 100 + "%";book.style.top = (Math.random() * 80 + 10) + "%";book.style.animationDelay = Math.random() * 6 + "s";book.style.animationDuration = (5 + Math.random() * 3) + "s";if(i%5===0) book.classList.add("blue");else if(i%5===1) book.classList.add("green");else if(i%5===2) book.classList.add("orange");else if(i%5===3) book.classList.add("purple");document.getElementById("books").appendChild(book);}}</script>{GLOBAL_ALARM_JS}</body></html>'''
 
 @app.route('/api/user-alarms')
 def user_alarms():
