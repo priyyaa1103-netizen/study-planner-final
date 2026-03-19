@@ -314,50 +314,49 @@ def dashboard():
     notifications = ""
     for r in reminders[:3]:
         notifications += f'''
-        <div style="background:linear-gradient(135deg,rgba(255,255,255,0.2),rgba(255,215,0,0.3));padding:25px;border-radius:25px;margin:20px auto;max-width:500px;box-shadow:0 20px 50px rgba(0,0,0,0.3);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2)">
-            <div style="font-size:28px;font-weight:bold">⏰ {r['title']}</div>
-            <div style="font-size:20px;color:#ffd700;margin-top:10px">{r['deadline']}</div>
+        <div style="background:linear-gradient(135deg,#d4a574,#e6c68a);padding:25px;border-radius:25px;margin:20px auto;max-width:500px;box-shadow:0 15px 40px rgba(212,165,116,0.4);border:2px solid #f4e4bc">
+            <div style="font-size:28px;font-weight:bold;color:#8b4513">⏰ {r['title']}</div>
+            <div style="font-size:20px;color:#654321;margin-top:10px">{r['deadline']}</div>
         </div>
         '''
     
     return f'''
 <!DOCTYPE html>
-<html><head><title>Dashboard - StudyHub</title>
+<html><head><title>Study Dashboard</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(-45deg,#8b5cf6,#ec4899,#f59e0b,#10b981);background-size:600% 600%;animation:gradientShift 20s ease infinite;color:#fff;min-height:100vh;padding:30px;position:relative;overflow-x:hidden}}
-@keyframes gradientShift{{0%,100%{{background-position:0% 50%}}33%{{background-position:100% 0%}}66%{{background-position:0% 100%}}}}
-body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 40% 40%,rgba(120,219,255,0.3) 0%,transparent 50%);animation:particles 15s ease-in-out infinite;pointer-events:none;z-index:1}}
-@keyframes particles{{0%,100%{{transform:scale(1) rotate(0deg)}}33%{{transform:scale(1.1) rotate(120deg)}}66%{{transform:scale(0.9) rotate(240deg)}}}}
+body{{font-family:'Georgia','Times New Roman',serif;background:#f8f1e4 url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4a574' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;background-color:#fdf8e8;background-size:60px 60px;position:relative;overflow-x:hidden;min-height:100vh;padding:40px}}
+body::before{{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 60% 40% at 20% 20%,rgba(255,219,112,0.1) 0%,transparent 50%),radial-gradient(ellipse 50% 30% at 80% 80%,rgba(212,165,116,0.08) 0%,transparent 50%),linear-gradient(135deg,rgba(248,241,228,0.8) 0%,rgba(253,248,232,0.9) 100%);z-index:1}}
 .container{{max-width:1200px;margin:0 auto;text-align:center;position:relative;z-index:10}}
-h1{{font-size:55px;margin-bottom:15px;font-weight:900;text-shadow:3px 3px 10px rgba(0,0,0,0.5);animation:glowPulse 3s ease-in-out infinite alternate;background:linear-gradient(45deg,#ffd700,#ffed4a,#f59e0b);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:300% 300%;animation:textGradient 8s ease infinite}}
-@keyframes glowPulse{{from{{text-shadow:3px 3px 10px rgba(0,0,0,0.5),0 0 40px rgba(255,215,0,0.8)}}to{{text-shadow:3px 3px 15px rgba(0,0,0,0.7),0 0 60px rgba(255,215,0,1)}}}}
-@keyframes textGradient{{0%,100%{{background-position:0% 50%}}50%{{background-position:100% 50%}}}}
-h2{{font-size:28px;margin-bottom:50px;color:#fff;font-weight:600;text-shadow:2px 2px 8px rgba(0,0,0,0.5)}}
-.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:50px 0;max-width:1000px}}
-.stat-card{{background:linear-gradient(145deg,rgba(255,255,255,0.15),rgba(255,255,255,0.05));backdrop-filter:blur(25px);padding:40px;border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);transition:all 0.5s ease;transform:translateY(0);position:relative;overflow:hidden}}
-.stat-card::before{{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#ffd700,#ffed4a,#f59e0b)}}
-.stat-card:hover{{transform:translateY(-15px) scale(1.05);box-shadow:0 40px 80px rgba(0,0,0,0.4);background:linear-gradient(145deg,rgba(255,255,255,0.25),rgba(255,255,255,0.1))}}
-.stat-number{{font-size:50px;font-weight:900;color:#ffd700;margin-bottom:15px;text-shadow:2px 2px 8px rgba(0,0,0,0.5)}}
-.stat-label{{font-size:20px;color:#e8f5e8;font-weight:500;letter-spacing:1px}}
-.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:25px;margin:60px 0;padding:40px;background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border-radius:40px;border:1px solid rgba(255,255,255,0.15);max-width:1100px;margin-left:auto;margin-right:auto}}
-.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#ec4899,#f59e0b);color:#fff;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 20px 50px rgba(236,72,153,0.4);transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);position:relative;overflow:hidden;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer}}
-.btn:nth-child(2){{background:linear-gradient(135deg,#10b981,#34d399)}}
-.btn:nth-child(3){{background:linear-gradient(135deg,#3b82f6,#60a5fa)}}
-.btn:nth-child(4){{background:linear-gradient(135deg,#f59e0b,#fbbf24)}}
-.btn:nth-child(5){{background:linear-gradient(135deg,#8b5cf6,#a78bfa)}}
-.btn:nth-child(6){{background:linear-gradient(135deg,#ef4444,#f87171)}}
-.btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 30px 70px rgba(0,0,0,0.5)}}
+h1{{font-size:52px;margin-bottom:20px;font-weight:900;color:#654321;text-shadow:3px 3px 8px rgba(101,67,33,0.3);background:linear-gradient(45deg,#8b4513,#a0522d,#d2691e);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}}
+h2{{font-size:26px;margin-bottom:50px;color:#8b4513;font-weight:600;text-shadow:1px 1px 3px rgba(139,69,19,0.3);letter-spacing:1px}}
+.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:35px;margin:60px 0}}
+.stat-card{{background:linear-gradient(145deg,#fdf2d9,#f9e4c1);padding:45px;border-radius:25px;box-shadow:0 25px 60px rgba(212,165,116,0.25);border:3px solid #f4e4bc;border-image:linear-gradient(45deg,#d4a574,#f4e4bc) 1;backdrop-filter:blur(10px);position:relative;overflow:hidden;transition:all 0.4s ease}}
+.stat-card::before{{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,219,112,0.2) 0%,transparent 70%);animation:cardGlow 4s ease-in-out infinite}}
+@keyframes cardGlow{{0%,100%{{transform:scale(1) rotate(0deg);opacity:0.7}}50%{{transform:scale(1.1) rotate(180deg);opacity:1}}}}
+.stat-card:hover{{transform:translateY(-12px) scale(1.03);box-shadow:0 35px 80px rgba(212,165,116,0.4)}}
+.stat-number{{font-size:55px;font-weight:900;color:#d2691e;margin-bottom:18px;text-shadow:2px 2px 6px rgba(210,105,30,0.3)}}
+.stat-label{{font-size:22px;color:#8b4513;font-weight:600;letter-spacing:1px}}
+.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:30px;margin:70px 0;padding:50px;background:linear-gradient(145deg,#fdf2d9,#f9e4c1);backdrop-filter:blur(15px);border-radius:40px;border:4px solid transparent;border-image:linear-gradient(45deg,#d4a574,#f4e4bc,#d4a574) 1;min-height:120px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap}}
+.btn{{display:inline-flex;align-items:center;justify-content:center;padding:28px 35px;background:linear-gradient(135deg,#8b4513 0%,#a0522d 50%,#cd853f 100%);color:#fdf8e8;text-decoration:none;border-radius:22px;font-size:20px;font-weight:800;box-shadow:0 18px 45px rgba(139,69,19,0.4);transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);position:relative;overflow:hidden;min-width:220px;height:80px;text-transform:uppercase;letter-spacing:1px;border:2px solid rgba(255,248,232,0.3);backdrop-filter:blur(10px)}}
+.btn:nth-child(2){{background:linear-gradient(135deg,#228b22,#32cd32,#90ee90)}}
+.btn:nth-child(3){{background:linear-gradient(135deg,#4169e1,#6495ed,#b0c4de)}}
+.btn:nth-child(4){{background:linear-gradient(135deg,#ff6347,#ff7f50,#ffa07a)}}
+.btn:nth-child(5){{background:linear-gradient(135deg,#9932cc,#8a2be2,#dda0dd)}}
+.btn:nth-child(6){{background:linear-gradient(135deg,#b22222,#dc143c,#f08080)}}
+.btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 30px 70px rgba(0,0,0,0.4);color:#fff}}
 .btn:active{{transform:translateY(-5px) scale(1.02)}}
-.particles{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:0.1}}
-.particle{{position:absolute;width:6px;height:6px;background:#ffd700;border-radius:50%;animation:particleFloat 20s linear infinite}}
-@keyframes particleFloat{{0%{{transform:translateY(100vh) scale(0);opacity:1}}100%{{transform:translateY(-100px) scale(1);opacity:0}}}}
+.bookshelf{{position:fixed;bottom:0;left:0;right:0;height:120px;background:linear-gradient(to top,#d4a574 0%,#c19a5e 30%,transparent 70%);z-index:2}}
+.book{{position:absolute;bottom:0;width:40px;height:80px;background:linear-gradient(45deg,#8b4513,#a0522d);border-radius:5px 5px 0 0;box-shadow:2px 5px 15px rgba(139,69,19,0.4);animation:bookFloat 6s ease-in-out infinite}}
+@keyframes bookFloat{{0%,100%{{transform:translateY(0)}}50%{{transform:translateY(-8px)}}}}
+.paper-plane{{position:absolute;font-size:24px;color:rgba(139,69,19,0.6);animation:fly 15s linear infinite}}
+@keyframes fly{{0%{{transform:translateX(-100px) translateY(50px);opacity:0}}10%{{opacity:1}}90%{{opacity:1}}100%{{transform:translateX(100vw) translateY(-20px);opacity:0}}}}
 </style></head>
 <body>
-    <div class="particles" id="particles"></div>
+    <div class="bookshelf" id="bookshelf"></div>
     <div class="container">
-        <h1>🎓 Welcome {session.get("name", "User")}!</h1>
-        <h2 style="font-size:24px">Your Study Dashboard ✨</h2>
+        <h1>📚 Welcome {session.get("name", "User")}</h1>
+        <h2>Your Study Dashboard ✨</h2>
         
         <div class="stats-grid">
             <div class="stat-card">
@@ -373,26 +372,37 @@ h2{{font-size:28px;margin-bottom:50px;color:#fff;font-weight:600;text-shadow:2px
         {notifications}
         
         <div class="btn-grid">
-            <a href="/study" class="btn">📚 Study</a>
-            <a href="/goals" class="btn">🎯 Goals</a>
+            <a href="/study" class="btn">📚 Study Materials</a>
+            <a href="/goals" class="btn">🎯 Set Goals</a>
             <a href="/view-goals" class="btn">📊 Progress</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 Files</a>
+            <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/logout" class="btn">🚪 Logout</a>
         </div>
     </div>
+    
     <script>
-        // Floating particles
-        function createParticle() {{
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
-            particle.style.animationDelay = Math.random() * 5 + 's';
-            document.getElementById('particles').appendChild(particle);
-            setTimeout(() => particle.remove(), 35000);
+        // Bookshelf books
+        for(let i=0; i<15; i++) {{
+            const book = document.createElement('div');
+            book.className = 'book';
+            book.style.left = i*8 + '%';
+            book.style.animationDelay = i*0.3 + 's';
+            book.style.background = `linear-gradient(45deg,hsl(${{(i*15)%360}},60%,40%),hsl(${{(i*20+30)%360}},50%,35%))`;
+            document.getElementById('bookshelf').appendChild(book);
         }}
-        setInterval(createParticle, 300);
+        
+        // Flying paper planes
+        setInterval(() => {{
+            const plane = document.createElement('div');
+            plane.className = 'paper-plane';
+            plane.innerHTML = '✈️';
+            plane.style.top = Math.random()*60 + 20 + '%';
+            plane.style.left = '0';
+            plane.style.animationDuration = (Math.random()*10 + 15) + 's';
+            document.body.appendChild(plane);
+            setTimeout(() => plane.remove(), 25000);
+        }}, 4000);
     </script>
     {GLOBAL_ALARM_JS}
 </body></html>'''
