@@ -204,11 +204,11 @@ def render_login_page(error=""):
         .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
         .tab.active{{background:#667eea;color:white}}
         .input-group{{position:relative;margin:15px 0}}
-        input{{width:100%;padding:18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+        input{{width:100%;padding:18px 50px 18px 18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
         input:focus{{border-color:#667eea;outline:none}}
-        .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:20px;background:none;border:none}}
-        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
-        button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+        .password-toggle{{position:absolute;right:18px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:18px;background:none;border:none;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}}
+        button:not(.password-toggle){{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+        button:not(.password-toggle):hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
         .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
         .hidden{{display:none !important}}
     </style>
