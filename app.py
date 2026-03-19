@@ -769,6 +769,7 @@ def goals():
         <form method="POST">
             <input name="subject" placeholder="Subject (ex: Mathematics)" required>
             <input name="goal" placeholder="Goal Description" required>
+            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
             <button type="submit">✅ Save Goal</button>
         </form>
         <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
