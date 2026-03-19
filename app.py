@@ -198,56 +198,72 @@ def render_login_page(error=""):
     <title>Study Planner</title>
     <style>
         *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-        .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
-        .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
-        .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
-        .tab.active{{background:#667eea;color:white}}
-        .input-group{{position:relative;margin:15px 0}}
-        input{{width:100%;padding:18px 50px 18px 18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
-        input:focus{{border-color:#667eea;outline:none}}
-        .password-toggle{{position:absolute;right:18px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:18px;background:none;border:none;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}}
-        button:not(.password-toggle){{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
-        button:not(.password-toggle):hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-        .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        body{{font-family:'Segoe UI';background:linear-gradient(-45deg,#667eea,#764ba2,#f093fb,#f5576c);background-size:400% 400%;animation:gradientBG 15s ease infinite;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+        @keyframes gradientBG{{0%{{background-position:0% 50%}}50%{{background-position:100% 50%}}100%{{background-position:0% 50%}}}}
+        .login-box{{background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);padding:60px;border-radius:30px;box-shadow:0 30px 60px rgba(0,0,0,0.3);width:90%;max-width:480px;text-align:center;position:relative;overflow:hidden}}
+        .login-box::before{{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);animation:shine 3s infinite}}
+        @keyframes shine{{0%{{left:-100%}}100%{{left:100%}}}}
+        .tabs{{display:flex;margin:25px 0;background:rgba(255,255,255,0.2);border-radius:50px;padding:4px;box-shadow:0 10px 30px rgba(0,0,0,0.2)}}
+        .tab{{flex:1;padding:18px 25px;background:none;border:none;font-weight:700;font-size:17px;color:#666;cursor:pointer;transition:all 0.4s;border-radius:50px;position:relative;overflow:hidden}}
+        .tab.active{{background:#667eea;color:white;transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+        .input-group{{position:relative;margin:20px 0}}
+        input{{width:100%;padding:20px 50px 20px 20px;margin:0;border:2px solid #e8ecf4;border-radius:20px;font-size:17px;box-sizing:border-box;transition:all 0.3s;background:rgba(255,255,255,0.9)}}
+        input:focus{{border-color:#667eea;outline:none;box-shadow:0 0 20px rgba(102,126,234,0.3);transform:translateY(-2px)}}
+        .password-toggle{{position:absolute;right:18px;top:50%;transform:translateY(-50%);cursor:pointer;color:#888;font-size:18px;background:none;border:none;padding:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.3s}}
+        .password-toggle:hover{{background:rgba(102,126,234,0.1);color:#667eea}}
+        .submit-btn{{width:100%;padding:22px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:25px;font-size:20px;font-weight:700;cursor:pointer;margin:15px 0;transition:all 0.4s;box-shadow:0 15px 35px rgba(102,126,234,0.4)}}
+        .submit-btn:hover{{transform:translateY(-4px);box-shadow:0 25px 50px rgba(102,126,234,0.6)}}
+        .error{{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;padding:18px;border-radius:15px;margin:20px 0;font-weight:600;border-left:5px solid #ef4444}}
         .hidden{{display:none !important}}
+        .floating-shapes{{position:absolute;width:100%;height:100%;overflow:hidden;z-index:0}}
+        .shape{{position:absolute;background:linear-gradient(45deg,rgba(102,126,234,0.1),rgba(245,87,108,0.1));border-radius:50%;animation:float 6s ease-in-out infinite}}
+        .shape:nth-child(1){{top:10%;right:10%;width:80px;height:80px;animation-delay:0s}}
+        .shape:nth-child(2){{bottom:15%;left:10%;width:60px;height:60px;animation-delay:2s}}
+        .shape:nth-child(3){{top:50%;right:15%;width:40px;height:40px;animation-delay:4s}}
+        @keyframes float{{0%,100%{{transform:translateY(0px) rotate(0deg)}}50%{{transform:translateY(-20px) rotate(180deg)}}}}
     </style>
 </head>
 <body>
+    <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    
     <div class="login-box">
-        <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+        <h1 style="font-size:45px;margin-bottom:25px;color:#333;font-weight:800;text-shadow:2px 2px 4px rgba(0,0,0,0.1)">🎓 StudyHub</h1>
         {error_html}
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('login')">Login</button>
-            <button class="tab" onclick="showTab('register')">Register</button>
+            <button class="tab active" onclick="showTab('login')">👤 Login</button>
+            <div class="tab" onclick="showTab('register')">➕ Register</div>
         </div>
         
         <form method="POST" id="loginForm">
             <input type="hidden" name="action" value="login">
             <div class="input-group">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="email" name="email" placeholder="📧 your-email@gmail.com" required>
             </div>
             <div class="input-group">
-                <input type="password" name="password" id="loginPassword" placeholder="Enter password" required>
+                <input type="password" name="password" id="loginPassword" placeholder="🔐 Enter password" required>
                 <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">👁️</button>
             </div>
-            <button type="submit">🚀 Login</button>
+            <button type="submit" class="submit-btn">🚀 Get Started</button>
         </form>
         
         <form method="POST" id="registerForm" class="hidden">
             <input type="hidden" name="action" value="register">
             <div class="input-group">
-                <input type="text" name="name" placeholder="Your Full Name" required>
+                <input type="text" name="name" placeholder="👋 Your Full Name" required>
             </div>
             <div class="input-group">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                <input type="email" name="email" placeholder="📧 your-email@gmail.com" required>
             </div>
             <div class="input-group">
-                <input type="password" name="password" id="registerPassword" placeholder="Create Password (6+ chars)" required>
+                <input type="password" name="password" id="registerPassword" placeholder="🔐 Create Password (6+ chars)" required>
                 <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">👁️</button>
             </div>
-            <button type="submit">✅ Create Account</button>
+            <button type="submit" class="submit-btn">✅ Create Account</button>
         </form>
     </div>
     
