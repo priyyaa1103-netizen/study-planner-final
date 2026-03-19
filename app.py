@@ -1185,7 +1185,11 @@ def quiz(goal_id):
     # GET request → show quiz
     return render_template("quiz.html", quiz_questions=quiz_questions, subject=subject)
         
-        return f'''
+    import textwrap
+
+    def my_function():
+    # HTML or multiline string proper indentation use panni return panrathu
+        return textwrap.dedent(f'''    
         <!DOCTYPE html>
         <html><head><title>Quiz Result</title>
         <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
