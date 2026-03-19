@@ -313,9 +313,9 @@ def dashboard():
     notifications = ""
     for r in reminders[:3]:
         notifications += f'''
-        <div style="background:linear-gradient(135deg,#667eea,#764ba2);padding:25px;border-radius:25px;margin:20px auto;max-width:500px;box-shadow:0 20px 50px rgba(102,126,234,0.4);border:1px solid rgba(255,255,255,0.2);backdrop-filter:blur(15px)">
-            <div style="font-size:26px;font-weight:bold;color:white">⏰ {r['title']}</div>
-            <div style="font-size:18px;color:#ffd700;margin-top:8px">{r['deadline']}</div>
+        <div style="background:linear-gradient(135deg,rgba(255,255,255,0.2),rgba(255,215,0,0.2));padding:25px;border-radius:20px;margin:20px auto;max-width:500px;box-shadow:0 15px 40px rgba(255,215,0,0.3);backdrop-filter:blur(10px)">
+            <div style="font-size:26px;font-weight:bold;color:#1a1a1a">⏰ {r['title']}</div>
+            <div style="font-size:18px;color:#d4af37;margin-top:8px">{r['deadline']}</div>
         </div>
         '''
     
@@ -324,33 +324,36 @@ def dashboard():
 <html><head><title>Study Dashboard</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Segoe UI',sans-serif;background:#0a0a23;background-image:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 40% 40%,rgba(120,219,255,0.3) 0%,transparent 50%);background-size:800px 800px,600px 600px,400px 400px;position:relative;overflow:hidden;min-height:100vh;color:white;padding:40px}}
-body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0a23 0%,#1a1a3e 50%,#0a0a23 100%);z-index:1}}
+body{{font-family:'Segoe UI',sans-serif;background:#0f0f23;background-image:radial-gradient(circle at 25% 25%,rgba(255,255,255,0.15) 0%,transparent 50%),radial-gradient(circle at 75% 75%,rgba(255,215,0,0.1) 0%,transparent 50%),radial-gradient(circle at 50% 50%,rgba(120,219,255,0.08) 0%,transparent 50%);background-size:400px 400px,300px 300px,200px 200px;min-height:100vh;padding:40px;position:relative;overflow:hidden;color:#fff}}
+body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,rgba(15,15,35,0.95) 0%,rgba(25,25,55,0.98) 100%);z-index:1}}
 .stars{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2}}
-.star{{position:absolute;background:white;border-radius:50%;box-shadow:0 0 10px rgba(255,255,255,0.8);animation:twinkle 3s ease-in-out infinite}}
-@keyframes twinkle{{0%,100%{{opacity:0.3;transform:scale(1)}}50%{{opacity:1;transform:scale(1.2)}}}}
+.star{{position:absolute;background:#ffd700;border-radius:50%;box-shadow:0 0 8px #ffd700;animation:twinkle 4s ease-in-out infinite}}
+@keyframes twinkle{{0%,100%{{opacity:0.4;transform:scale(1)}}50%{{opacity:1;transform:scale(1.3)}}}}
+.books{{position:fixed;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to top,rgba(139,69,19,0.9) 0%,rgba(139,69,19,0.3) 50%,transparent 100%);z-index:3}}
+.book{{position:absolute;bottom:0;width:35px;height:70px;background:linear-gradient(45deg,#8b4513,#a0522d);border-radius:4px 4px 0 0;box-shadow:3px 6px 15px rgba(139,69,19,0.5);border-top:2px solid #d2b48c;animation:bookFloat 5s ease-in-out infinite}}
+@keyframes bookFloat{{0%,100%{{transform:translateY(0) rotate(0deg)}}50%{{transform:translateY(-12px) rotate(3deg)}}}}
 .container{{max-width:1000px;margin:0 auto;text-align:center;position:relative;z-index:10}}
-h1{{font-size:50px;margin-bottom:20px;font-weight:900;background:linear-gradient(45deg,#ffd700,#fff,#ffd700);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:glow 2s ease-in-out infinite alternate;letter-spacing:3px;text-shadow:0 0 30px rgba(255,215,0,0.5)}}
-@keyframes glow{{from{{filter:drop-shadow(0 0 20px #ffd700)}}to{{filter:drop-shadow(0 0 40px #ffd700)}}}}
-h2{{font-size:24px;margin-bottom:50px;color:#e2e8f0;font-weight:500;letter-spacing:1px;text-shadow:0 0 10px rgba(255,255,255,0.5)}}
-.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:60px 0;padding:50px;background:rgba(255,255,255,0.05);backdrop-filter:blur(25px);border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1)}}
-.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 15px 40px rgba(102,126,234,0.4);transition:all 0.4s ease;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.2)}}
-.btn:nth-child(2){{background:linear-gradient(135deg,#48bb78,#38a169)}}
-.btn:nth-child(3){{background:linear-gradient(135deg,#ed8936,#dd6b20)}}
-.btn:nth-child(4){{background:linear-gradient(135deg,#f56565,#e53e3e)}}
-.btn:nth-child(5){{background:linear-gradient(135deg,#9f7aea,#805ad5)}}
-.btn:nth-child(6){{background:linear-gradient(135deg,#f56565,#e53e3e)}}
+h1{{font-size:50px;margin-bottom:20px;font-weight:900;background:linear-gradient(45deg,#ffd700,#fff,#d4af37);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:glow 3s ease-in-out infinite alternate;letter-spacing:2px}}
+@keyframes glow{{from{{text-shadow:0 0 20px rgba(255,215,0,0.8)}}to{{text-shadow:0 0 40px rgba(255,215,0,1)}}}}
+h2{{font-size:24px;margin-bottom:50px;color:#e2e8f0;font-weight:600;letter-spacing:1px;text-shadow:0 0 10px rgba(255,255,255,0.3)}}
+.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:60px 0;padding:50px;background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15)}}
+.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#ff6b6b,#ee5a52);color:white;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 15px 40px rgba(255,107,107,0.4);transition:all 0.4s ease;border:1px solid rgba(255,255,255,0.2);position:relative;overflow:hidden}}
+.btn:nth-child(2){{background:linear-gradient(135deg,#4ecdc4,#44a08d)}}
+.btn:nth-child(3){{background:linear-gradient(135deg,#f7b733,#f9934b)}}
+.btn:nth-child(4){{background:linear-gradient(135deg,#667eea,#764ba2)}}
+.btn:nth-child(5){{background:linear-gradient(135deg,#e74c3c,#c0392b)}}
 .btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 25px 60px rgba(0,0,0,0.6)}}
-.rocket{{position:absolute;bottom:20px;right:20px;font-size:80px;animation:rocketFloat 6s ease-in-out infinite;filter:drop-shadow(0 10px 20px rgba(255,255,255,0.3));z-index:5}}
-@keyframes rocketFloat{{0%,100%{{transform:translateY(0) rotate(-2deg)}}50%{{transform:translateY(-20px) rotate(2deg)}}}}
+.floating-note{{position:absolute;top:10%;right:10%;font-size:35px;animation:floatNote 8s ease-in-out infinite;filter:drop-shadow(0 5px 10px rgba(255,255,255,0.3));z-index:5}}
+@keyframes floatNote{{0%,100%{{transform:translateY(0) rotate(0deg)}}33%{{transform:translateY(-20px) rotate(5deg)}}66%{{transform:translateY(-10px) rotate(-3deg)}}}}
 </style></head>
 <body>
     <div class="stars" id="stars"></div>
-    <div class="rocket">🚀</div>
+    <div class="books" id="books"></div>
+    <div class="floating-note">📄</div>
     
     <div class="container">
-        <h1>⭐ Welcome {session.get("name", "User")}</h1>
-        <h2>Launch Your Study Mission</h2>
+        <h1>🌟 Welcome {session.get("name", "User")}</h1>
+        <h2>Your Study Universe</h2>
         
         {notifications}
         
@@ -359,36 +362,36 @@ h2{{font-size:24px;margin-bottom:50px;color:#e2e8f0;font-weight:500;letter-spaci
             <a href="/goals" class="btn">🎯 Set Goals</a>
             <a href="/view-goals" class="btn">📊 Track Progress</a>
             <a href="/reminders" class="btn">⏰ Reminders</a>
-            <a href="/myfiles" class="btn">📁 My Files</a>
             <a href="/logout" class="btn">🚪 Logout</a>
         </div>
     </div>
     
     <script>
-        // Create twinkling stars
-        for(let i = 0; i < 100; i++) {{
+        // Twinkling stars
+        for(let i = 0; i < 80; i++) {{
             const star = document.createElement('div');
             star.className = 'star';
             star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 100 + '%';
-            star.style.width = star.style.height = (Math.random() * 4 + 1) + 'px';
-            star.style.animationDelay = Math.random() * 3 + 's';
-            star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            star.style.top = Math.random() * 70 + '%';
+            star.style.width = star.style.height = (Math.random() * 3 + 1) + 'px';
+            star.style.animationDelay = Math.random() * 4 + 's';
+            star.style.animationDuration = (Math.random() * 3 + 3) + 's';
             document.getElementById('stars').appendChild(star);
         }}
         
-        // Shooting star effect
-        setInterval(() => {{
-            const shootingStar = document.createElement('div');
-            shootingStar.style.cssText = `
-                position:fixed;top:10%;left:-50px;width:3px;height:3px;background:linear-gradient(90deg,transparent,#fff,#ffd700);border-radius:50%;box-shadow:0 0 20px #ffd700;animation:shoot 2s linear forwards;z-index:10
-            `;
-            document.body.appendChild(shootingStar);
-            setTimeout(() => shootingStar.remove(), 2000);
-        }}, 5000);
+        // Bookshelf books
+        for(let i = 0; i < 12; i++) {{
+            const book = document.createElement('div');
+            book.className = 'book';
+            book.style.left = (i * 8) + '%';
+            book.style.animationDelay = (i * 0.4) + 's';
+            book.style.animationDuration = (4 + Math.random() * 2) + 's';
+            document.getElementById('books').appendChild(book);
+        }}
     </script>
     {GLOBAL_ALARM_JS}
 </body></html>'''
+
 
 @app.route('/api/user-alarms')
 def user_alarms():
