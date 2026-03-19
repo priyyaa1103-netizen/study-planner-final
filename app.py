@@ -48,35 +48,33 @@ if(window.alarmRunning){
 
 
     function playAlarmSound(id, title) {
-  // Delete from DB first
-  fetch(`/mark-triggered/${id}`, {method: 'POST'});
-  
-  // Main sound
-  const audio = new Audio('https://freesound.org/data/previews/316/316847_4939433-lq.mp3');
-  audio.volume = 1.0;
-  audio.play().catch(e => console.log('Audio blocked', e));
-  
-  // Backup beep
+  fetch(`/mark-triggered/${id}`, {method: "POST"});
+
+  // Sound
+  const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+  audio.volume = 1.0; 
+  audio.play().catch(e => {});
+
   playBeepSound();
-  
-  // Red alert - LOCAL overlay (full screen but removable)
+
+  // ✅ RED OVERLAY - CREATE ELEMENT use pannunga (safe!)
   const overlay = document.createElement('div');
+  overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
   overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(255,0,0,0.9); z-index: 999999;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 50px; font-weight: bold; color: white;
-    text-shadow: 0 0 20px #fff; animation: pulse 1s infinite;
-    cursor: pointer;
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    background:rgba(255,0,0,0.9); z-index:999999 !important;
+    display:flex; align-items:center; justify-content:center;
+    font-size:60px; font-weight:bold; color:white;
+    text-shadow:0 0 30px #fff; cursor:pointer;
+    animation: pulse 1s infinite;
   `;
-  overlay.textContent = title.toUpperCase();
-  overlay.onclick = () => document.body.removeChild(overlay);
-  document.body.appendChild(overlay);  // append pannunga, innerHTML = replace pannadhu!
-  
-  // Shake
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);  // append pannunga!
+
   document.body.classList.add('shake');
   setTimeout(() => document.body.classList.remove('shake'), 2000);
 }
+
 
     // 🔊 Beep sound
     function playBeepSound() {
@@ -664,19 +662,17 @@ def view_pdf(subject, filename):
         return redirect('/')
     
     return f'''
-    <html>
+    <!DOCTYPE html>
+    <html><head><title>PDF Viewer</title>
+    <style>body{{margin:0;height:100vh}}</style></head>
     <body>
-
-    <!-- 📄 PDF -->
     <iframe src="/static/uploads/{subject}/{filename}" 
-            style="width:100%; height:100vh;"></iframe>
-
-    <!-- 🔥 இத தான் IMPORTANT -->
+            style="width:100%;height:100vh;border:none"
+            sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
     {GLOBAL_ALARM_JS}
-
-    </body>
-    </html>
+    </body></html>
     '''
+    
 # ===== MY FILES PAGE (COMPLETE VERSION) =====
 @app.route('/myfiles')
 def myfiles_page():  # Function name change pannirukken
