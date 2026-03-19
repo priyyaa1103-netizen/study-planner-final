@@ -47,39 +47,36 @@ if(window.alarmRunning){
     }, 2000);
 
 
-    // 🚨 Alarm function
     function playAlarmSound(id, title) {
-
-        // 🔥 Delete from DB
-        fetch("/mark-triggered/" + id, {method: "POST"});
-
-        // 🔊 Main sound
-        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log("Audio blocked:", e));
-
-        // 🔊 Backup beep
-        playBeepSound();
-
-        // 🔴 Red alert screen
-        document.body.innerHTML += `
-            <div style="
-                position:fixed;top:0;left:0;width:100vw;height:100vh;
-                background:rgba(255,0,0,0.8);z-index:99999;
-                display:flex;align-items:center;justify-content:center;
-                font-size:50px;font-weight:bold;color:white;
-                text-shadow:0 0 20px #fff;
-                animation: pulse 1s infinite;" 
-                onclick="this.remove()">
-                🚨 ${title.toUpperCase()} 🚨
-            </div>
-        `;
-
-        // 📳 Shake effect
-        document.body.classList.add('shake');
-        setTimeout(() => document.body.classList.remove('shake'), 2000);
-    }
-
+  // Delete from DB first
+  fetch(`/mark-triggered/${id}`, {method: 'POST'});
+  
+  // Main sound
+  const audio = new Audio('https://freesound.org/data/previews/316/316847_4939433-lq.mp3');
+  audio.volume = 1.0;
+  audio.play().catch(e => console.log('Audio blocked', e));
+  
+  // Backup beep
+  playBeepSound();
+  
+  // Red alert - LOCAL overlay (full screen but removable)
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(255,0,0,0.9); z-index: 999999;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 50px; font-weight: bold; color: white;
+    text-shadow: 0 0 20px #fff; animation: pulse 1s infinite;
+    cursor: pointer;
+  `;
+  overlay.textContent = title.toUpperCase();
+  overlay.onclick = () => document.body.removeChild(overlay);
+  document.body.appendChild(overlay);  // append pannunga, innerHTML = replace pannadhu!
+  
+  // Shake
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 2000);
+}
 
     // 🔊 Beep sound
     function playBeepSound() {
