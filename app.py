@@ -102,7 +102,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS goals 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   email TEXT, subject TEXT, goal TEXT, 
-                  target_score INTEGER, progress INTEGER DEFAULT 0,
+                  progress INTEGER DEFAULT 0,
                   max_score INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS reminders 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -303,43 +303,99 @@ def render_login_page(error=""):
     
 @app.route('/dashboard')
 def dashboard():
-    if not session.get('logged_in'): 
-        return redirect('/')
+    if not session.get('logged_in'): return redirect('/')
     
     email = session['email']
     conn = get_db_connection()
     reminders = conn.execute("SELECT * FROM reminders WHERE email=? ORDER BY deadline ASC", (email,)).fetchall()
+    goals = conn.execute("SELECT COUNT(*) FROM goals WHERE email=?", (email,)).fetchone()[0]
     conn.close()
     
     notifications = ""
-    for r in reminders[:5]:  # Show top 5
+    for r in reminders[:3]:
         notifications += f'''
-        <div class="notification" style="background:rgba(231,76,60,0.95);padding:25px;border-radius:20px;margin:20px auto;max-width:600px;box-shadow:0 15px 40px rgba(231,76,60,0.5);cursor:pointer">
-            <div style="font-size:28px">⏰ {r["title"]}</div>
-            <div style="font-size:20px;color:#ffd700">{r["deadline"]}</div>
+        <div style="background:linear-gradient(135deg,rgba(255,255,255,0.2),rgba(255,215,0,0.3));padding:25px;border-radius:25px;margin:20px auto;max-width:500px;box-shadow:0 20px 50px rgba(0,0,0,0.3);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2)">
+            <div style="font-size:28px;font-weight:bold">⏰ {r['title']}</div>
+            <div style="font-size:20px;color:#ffd700;margin-top:10px">{r['deadline']}</div>
         </div>
         '''
     
     return f'''
 <!DOCTYPE html>
-<html><head><title>Dashboard</title>
-<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:30px}}.container{{max-width:900px;margin:0 auto;text-align:center}}.btn{{display:inline-block;padding:22px 40px;margin:10px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;text-decoration:none;border-radius:20px;font-size:20px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:all 0.3s}}.btn:hover{{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}}</style></head>
+<html><head><title>Dashboard - StudyHub</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(-45deg,#8b5cf6,#ec4899,#f59e0b,#10b981);background-size:600% 600%;animation:gradientShift 20s ease infinite;color:#fff;min-height:100vh;padding:30px;position:relative;overflow-x:hidden}}
+@keyframes gradientShift{{0%,100%{{background-position:0% 50%}}33%{{background-position:100% 0%}}66%{{background-position:0% 100%}}}}
+body::before{{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,119,198,0.3) 0%,transparent 50%),radial-gradient(circle at 40% 40%,rgba(120,219,255,0.3) 0%,transparent 50%);animation:particles 15s ease-in-out infinite;pointer-events:none;z-index:1}}
+@keyframes particles{{0%,100%{{transform:scale(1) rotate(0deg)}}33%{{transform:scale(1.1) rotate(120deg)}}66%{{transform:scale(0.9) rotate(240deg)}}}}
+.container{{max-width:1200px;margin:0 auto;text-align:center;position:relative;z-index:10}}
+h1{{font-size:55px;margin-bottom:15px;font-weight:900;text-shadow:3px 3px 10px rgba(0,0,0,0.5);animation:glowPulse 3s ease-in-out infinite alternate;background:linear-gradient(45deg,#ffd700,#ffed4a,#f59e0b);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:300% 300%;animation:textGradient 8s ease infinite}}
+@keyframes glowPulse{{from{{text-shadow:3px 3px 10px rgba(0,0,0,0.5),0 0 40px rgba(255,215,0,0.8)}}to{{text-shadow:3px 3px 15px rgba(0,0,0,0.7),0 0 60px rgba(255,215,0,1)}}}}
+@keyframes textGradient{{0%,100%{{background-position:0% 50%}}50%{{background-position:100% 50%}}}}
+h2{{font-size:28px;margin-bottom:50px;color:#fff;font-weight:600;text-shadow:2px 2px 8px rgba(0,0,0,0.5)}}
+.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin:50px 0;max-width:1000px}}
+.stat-card{{background:linear-gradient(145deg,rgba(255,255,255,0.15),rgba(255,255,255,0.05));backdrop-filter:blur(25px);padding:40px;border-radius:30px;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);transition:all 0.5s ease;transform:translateY(0);position:relative;overflow:hidden}}
+.stat-card::before{{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#ffd700,#ffed4a,#f59e0b)}}
+.stat-card:hover{{transform:translateY(-15px) scale(1.05);box-shadow:0 40px 80px rgba(0,0,0,0.4);background:linear-gradient(145deg,rgba(255,255,255,0.25),rgba(255,255,255,0.1))}}
+.stat-number{{font-size:50px;font-weight:900;color:#ffd700;margin-bottom:15px;text-shadow:2px 2px 8px rgba(0,0,0,0.5)}}
+.stat-label{{font-size:20px;color:#e8f5e8;font-weight:500;letter-spacing:1px}}
+.btn-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:25px;margin:60px 0;padding:40px;background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border-radius:40px;border:1px solid rgba(255,255,255,0.15);max-width:1100px;margin-left:auto;margin-right:auto}}
+.btn{{display:block;padding:25px 30px;background:linear-gradient(135deg,#ec4899,#f59e0b);color:#fff;text-decoration:none;border-radius:25px;font-size:20px;font-weight:800;box-shadow:0 20px 50px rgba(236,72,153,0.4);transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);position:relative;overflow:hidden;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer}}
+.btn:nth-child(2){{background:linear-gradient(135deg,#10b981,#34d399)}}
+.btn:nth-child(3){{background:linear-gradient(135deg,#3b82f6,#60a5fa)}}
+.btn:nth-child(4){{background:linear-gradient(135deg,#f59e0b,#fbbf24)}}
+.btn:nth-child(5){{background:linear-gradient(135deg,#8b5cf6,#a78bfa)}}
+.btn:nth-child(6){{background:linear-gradient(135deg,#ef4444,#f87171)}}
+.btn:hover{{transform:translateY(-10px) scale(1.05);box-shadow:0 30px 70px rgba(0,0,0,0.5)}}
+.btn:active{{transform:translateY(-5px) scale(1.02)}}
+.particles{{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:0.1}}
+.particle{{position:absolute;width:6px;height:6px;background:#ffd700;border-radius:50%;animation:particleFloat 20s linear infinite}}
+@keyframes particleFloat{{0%{{transform:translateY(100vh) scale(0);opacity:1}}100%{{transform:translateY(-100px) scale(1);opacity:0}}}}
+</style></head>
 <body>
-<div class="container">
-    <h1 style="font-size:42px;margin-bottom:20px">🎓 Welcome {session.get("name", "User")}!</h1>
-    <h2 style="font-size:24px;margin-bottom:30px">Study Planner Dashboard</h2>
-    {notifications}
-    <div style="margin:40px 0">
-        <a href="/study" class="btn">📚 Study Dashboard</a>
-        <a href="/goals" class="btn">🎯 Set Goals</a>
-        <a href="/view-goals" class="btn">📊 View Goals</a>
-        <a href="/reminders" class="btn">⏰ Reminders</a>
-        <a href="/logout" class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">🚪 Logout</a>
+    <div class="particles" id="particles"></div>
+    <div class="container">
+        <h1>🎓 Welcome {session.get("name", "User")}!</h1>
+        <h2 style="font-size:24px">Your Study Dashboard ✨</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{goals}</div>
+                <div class="stat-label">🎯 Goals Set</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{len(reminders)}</div>
+                <div class="stat-label">⏰ Active Reminders</div>
+            </div>
+        </div>
+        
+        {notifications}
+        
+        <div class="btn-grid">
+            <a href="/study" class="btn">📚 Study</a>
+            <a href="/goals" class="btn">🎯 Goals</a>
+            <a href="/view-goals" class="btn">📊 Progress</a>
+            <a href="/reminders" class="btn">⏰ Reminders</a>
+            <a href="/myfiles" class="btn">📁 Files</a>
+            <a href="/logout" class="btn">🚪 Logout</a>
+        </div>
     </div>
-</div>
-{GLOBAL_ALARM_JS}
-</body></html>
-'''
+    <script>
+        // Floating particles
+        function createParticle() {{
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+            particle.style.animationDelay = Math.random() * 5 + 's';
+            document.getElementById('particles').appendChild(particle);
+            setTimeout(() => particle.remove(), 35000);
+        }}
+        setInterval(createParticle, 300);
+    </script>
+    {GLOBAL_ALARM_JS}
+</body></html>'''
 
 @app.route('/api/user-alarms')
 def user_alarms():
@@ -740,44 +796,54 @@ def download(subject, filename):
 
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
-    if not session.get('logged_in'): 
-        return redirect('/')
+    if not session.get('logged_in'): return redirect('/')
     
     if request.method == 'POST':
         conn = get_db_connection()
-        conn.execute('''INSERT INTO goals (email, subject, goal, target_score) 
-                       VALUES (?, ?, ?, ?)''', 
-                    (session['email'], 
-                     request.form['subject'], 
-                     request.form['goal'], 
-                     request.form['target_score']))
+        conn.execute("INSERT INTO goals (email, subject, goal) VALUES (?, ?, ?)",
+                    (session['email'], request.form['subject'], request.form['goal']))
         conn.commit()
         conn.close()
-        return redirect('/view-goals')
+        return redirect('/goals')
+    
+    conn = get_db_connection()
+    my_goals = conn.execute("SELECT * FROM goals WHERE email=? ORDER BY id DESC", (session['email'],)).fetchall()
+    conn.close()
+    
+    goals_html = ""
+    for g in my_goals:
+        goals_html += f'''
+        <div style="background:rgba(255,255,255,0.2);padding:25px;margin:15px;border-radius:20px;color:white">
+            <h3 style="margin-bottom:10px">{g['subject']}</h3>
+            <p style="font-size:18px">🎯 {g['goal']}</p>
+            <a href="/delete-goal/{g['id']}" onclick="return confirm('Delete?')" style="float:right;color:#ff6b6b;font-size:20px">🗑️</a>
+        </div>
+        '''
     
     return f'''
-    <!DOCTYPE html>
-    <html><head><title>Set Goals</title>
-    <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
-    .form-box{{background:rgba(255,255,255,0.15);padding:50px;border-radius:25px;margin:50px auto;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,0.2);backdrop-filter:blur(15px)}}
-    input{{width:100%;padding:18px;margin:15px 0;font-size:18px;border-radius:12px;border:none;box-shadow:0 5px 15px rgba(0,0,0,0.1)}}
-    button{{width:100%;padding:20px;background:#50c878;color:white;border:none;border-radius:15px;font-size:22px;font-weight:600;cursor:pointer;margin-top:20px;box-shadow:0 10px 30px rgba(80,200,120,0.4)}}
-    h1{{font-size:42px;margin-bottom:30px}}</style></head>
-    <body>
-    <div class="form-box">
-        <h1>🎯 Set Study Goals</h1>
-        <form method="POST">
-            <input name="subject" placeholder="Subject (ex: Mathematics)" required>
-            <input name="goal" placeholder="Goal Description" required>
-            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
-            <button type="submit">✅ Save Goal</button>
-        </form>
-        <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
-    </div>
-    <a href="/dashboard" style="position:fixed;top:30px;left:30px;color:white;font-size:20px;font-weight:600;text-decoration:none">← Dashboard</a>
-    {GLOBAL_ALARM_JS}
-    </body></html>
-    '''
+<!DOCTYPE html>
+<html><head><title>Set Goals</title>
+<style>
+body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;padding:50px}}
+.form-box{{background:rgba(255,255,255,0.15);backdrop-filter:blur(20px);padding:50px;border-radius:30px;max-width:600px;margin:0 auto}}
+input,select{{width:100%;padding:18px;margin:12px 0;border-radius:15px;border:none;font-size:16px}}
+button{{width:100%;padding:20px;background:linear-gradient(135deg,#00b894,#00cec9);color:white;border:none;border-radius:20px;font-size:20px;font-weight:700;cursor:pointer}}
+h1{{text-align:center;font-size:40px;margin-bottom:30px}}
+</style></head>
+<body>
+<div class="form-box">
+    <h1>🎯 Set Study Goals</h1>
+    <form method="POST">
+        <input name="subject" placeholder="📚 Subject (Maths/Python/etc)" required>
+        <input name="goal" placeholder="🎯 Goal (Score 90% in exam)" required>
+        <button type="submit">✅ Save Goal</button>
+    </form>
+    <h2 style="margin-top:40px;color:#ffd700">Your Goals:</h2>
+    {goals_html or '<p style="text-align:center;color:#f1c40f;font-size:20px">No goals set yet</p>'}
+    <a href="/dashboard" style="display:block;margin-top:30px;padding:18px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;text-align:center;font-weight:700">← Dashboard</a>
+</div>
+{GLOBAL_ALARM_JS}
+</body></html>'''
 
 @app.route('/quiz/<int:goal_id>', methods=['GET', 'POST'])
 def quiz(goal_id):
