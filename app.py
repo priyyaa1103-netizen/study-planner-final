@@ -3,7 +3,6 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
-import textwrap
 from datetime import datetime, timedelta
 import sqlite3
 import smtplib
@@ -779,15 +778,16 @@ def goals():
 def quiz(goal_id):
     if not session.get('logged_in'): 
         return redirect('/')
-
+    
     conn = get_db_connection()
     goal = conn.execute('SELECT * FROM goals WHERE id=? AND email=?', 
                        (goal_id, session['email'])).fetchone()
     conn.close()
-
+    
     if not goal:
         return redirect('/view-goals')
     
+    subject = goal['subject'].strip().lower()
     if subject in ['maths', 'math', 'mathematics']:
          subject = 'mathematics'
     elif subject in ['tamil', 'tamil-1', 'tamil1']:
@@ -1108,89 +1108,28 @@ def quiz(goal_id):
 ]
     }
     
-    subject = goal['subject'].strip().lower()
-    if subject in ['maths', 'math', 'mathematics']:
-         subject = 'mathematics'
-    elif subject in ['tamil', 'tamil-1', 'tamil1']:
-         subject = 'tamil-1'
-    elif subject in ['english', 'english-1', 'eng1']:
-         subject = 'english-1'
-
-# 2nd sem
-    elif subject in ['maths-2', 'math-2', 'mathematics-2']:
-         subject = 'mathematics-2'
-    elif subject in ['tamil-2']:
-         subject = 'tamil-2'
-    elif subject in ['english-2']:
-         subject = 'english-2'
-
-# 3rd sem
-    elif subject in ['java', 'java programming', 'java-programming']:
-         subject = 'java-programming'
-    elif subject in ['statistics-1', 'stats1']:
-         subject = 'statistics-1'
-    elif subject in ['tamil-3']:
-         subject = 'tamil-3'
-    elif subject in ['english-3']:
-         subject = 'english-3'
- 
-# 4th sem
-    elif subject in ['data structure', 'data-structure']:
-         subject = 'data-structure'
-    elif subject in ['statistics-2', 'stats2']:
-         subject = 'statistics-2'
-    elif subject in ['tamil-4']:
-         subject = 'tamil-4'
-    elif subject in ['english-4']:
-         subject = 'english-4'
-
-# 5th sem
-    elif subject in ['operating system', 'os']:
-         subject = 'operating-system'
-    elif subject in ['rdbms']:
-         subject = 'rdbms'
-    elif subject in ['software engineering', 'se']:
-         subject = 'software-engineering'
-    elif subject in ['data mining', 'data-warehousing', 'dm', 'dw']:
-         subject = 'data-mining-warehousing'
-
-# 6th sem
-    elif subject in ['asp.net', 'programming in asp.net']:
-         subject = 'asp-net'
-    elif subject in ['data science']:
-         subject = 'data-science'
-    elif subject in ['cloud computing', 'cloud']:
-         subject = 'cloud-computing'
-    
-    quiz_questions = all_questions.get(subject)
+    quiz_questions = all_questions.get(subject, [])
     if not quiz_questions:
-        return f"No questions found for subject: {subject}"
-
+        return render_template_string("<h3>No questions found for this subject.</h3>")
+    
     if request.method == 'POST':
-        # Process submitted quiz
         score = 0
-        for i in range(len(quiz_questions)):
+        for i in range(10):
             if request.form.get(f'q{i}') == quiz_questions[i]['answer']:
                 score += 1
-        # Update DB
+        
+        # Update progress
         progress_increase = score * 10
         new_progress = min(goal['progress'] + progress_increase, 100)
         new_max_score = max(goal['max_score'], score)
+        
         conn = get_db_connection()
         conn.execute('UPDATE goals SET progress=?, max_score=? WHERE id=? AND email=?',
-                     (new_progress, new_max_score, goal_id, session['email']))
+                    (new_progress, new_max_score, goal_id, session['email']))
         conn.commit()
         conn.close()
-        return f"<h1>Score: {score}/10</h1><p>Progress increased by {progress_increase}%</p>"
-
-    # GET request → show quiz
-    return render_template("quiz.html", quiz_questions=quiz_questions, subject=subject)
         
-    import textwrap
-
-    def my_function():
-    # HTML or multiline string proper indentation use panni return panrathu
-        return textwrap.dedent(f'''\   
+        return f'''
         <!DOCTYPE html>
         <html><head><title>Quiz Result</title>
         <style>body{{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;min-height:100vh;padding:50px;text-align:center}}
@@ -1206,7 +1145,7 @@ def quiz(goal_id):
         </div>
         {GLOBAL_ALARM_JS}
         </body></html>
-        ''')
+        '''
     
     # Quiz form
     questions_html = ''
