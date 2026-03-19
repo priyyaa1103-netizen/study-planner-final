@@ -778,16 +778,37 @@ def goals():
 def quiz(goal_id):
     if not session.get('logged_in'): 
         return redirect('/')
-    
+
     conn = get_db_connection()
     goal = conn.execute('SELECT * FROM goals WHERE id=? AND email=?', 
                        (goal_id, session['email'])).fetchone()
     conn.close()
-    
+
     if not goal:
         return redirect('/view-goals')
-    
+
     subject = goal['subject'].strip().lower()
+
+    # ← Add this here, **4 spaces indentation from function**
+    quiz_questions = all_questions.get(subject)
+
+    if not quiz_questions:
+        return "Questions not found for this subject"
+
+    # Render template
+    return render_template_string("""
+<h3>Quiz: {{subject}}</h3>
+<form method="POST">
+    {% for q in quiz_questions %}
+        <p>{{loop.index}}. {{q.q}}</p>
+        {% for opt in q.options %}
+            <input type="radio" name="q{{loop.parent.index}}" value="{{opt}}">{{opt}}<br>
+        {% endfor %}
+    {% endfor %}
+    <button type="submit">Submit</button>
+</form>
+""", quiz_questions=quiz_questions, subject=subject)
+    
     if subject in ['maths', 'math', 'mathematics']:
          subject = 'mathematics'
     elif subject in ['tamil', 'tamil-1', 'tamil1']:
@@ -1108,9 +1129,10 @@ def quiz(goal_id):
 ]
     }
     
-    quiz_questions = all_questions.get(subject, [])
+    quiz_questions = all_questions.get(subject)
     if not quiz_questions:
-        return render_template_string("<h3>No questions found for this subject.</h3>")
+       return "Questions not found"
+    return render_template("quiz.html", quiz_questions=quiz_questions, subject=subject)
     
     if request.method == 'POST':
         score = 0
