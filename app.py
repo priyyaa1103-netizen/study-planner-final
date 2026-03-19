@@ -204,11 +204,14 @@ def render_login_page(error=""):
             .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
             .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
             .tab.active{{background:#667eea;color:white}}
-            input{{width:100%;padding:18px;margin:15px 0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+            .input-group{{position:relative;margin:15px 0}}
+            input{{width:100%;padding:18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
             input:focus{{border-color:#667eea;outline:none}}
+            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:20px;background:none;border:none}}
             button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
             button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
             .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+            .hidden{{display:none !important}}
         </style>
     </head>
     <body>
@@ -224,38 +227,63 @@ def render_login_page(error=""):
             <!-- LOGIN FORM -->
             <form method="POST" id="loginForm">
                 <input type="hidden" name="action" value="login">
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Enter password" required>
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="password" id="loginPassword" placeholder="Enter password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">👁️</button>
+                </div>
                 <button type="submit">🚀 Login</button>
             </form>
             
             <!-- REGISTER FORM -->
-            <form method="POST" id="registerForm" style="display:none">
+            <form method="POST" id="registerForm" class="hidden">
                 <input type="hidden" name="action" value="register">
-                <input type="text" name="name" placeholder="Your Full Name" required>
-                <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                <input type="password" name="password" placeholder="Create Password (6+ chars)" required>
+                <div class="input-group">
+                    <input type="text" name="name" placeholder="Your Full Name" required>
+                </div>
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="password" id="registerPassword" placeholder="Create Password (6+ chars)" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">👁️</button>
+                </div>
                 <button type="submit">✅ Create Account</button>
             </form>
         </div>
         
         <script>
-        function showTab(tabName) {{
+        function showTab(tabName) {
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
             const tabs = document.querySelectorAll('.tab');
             
-            if (tabName === 'login') {{
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-            }} else {{
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-            }}
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-        }}
+            if (tabName === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+            }
+        }
+        
+        function togglePassword(passwordId) {
+            const passwordField = document.getElementById(passwordId);
+            const toggleIcon = passwordField.nextElementSibling;
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
         </script>
     </body>
     </html>
