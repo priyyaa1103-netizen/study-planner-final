@@ -38,7 +38,7 @@ if(window.alarmRunning){
                     firedAlarms.add(alarm.id);
                     console.log("🚨 TRIGGER:", alarm.title);
 
-                    playAlarmSound(alarm.id, alarm.title);
+                    playAlarm(alarm.id, alarm.title);
                 }
             });
         })
@@ -47,50 +47,53 @@ if(window.alarmRunning){
     }, 2000);
 
 
-    // 🚨 Alarm function
-    function playAlarmSound(id, title) {
+    // 🚨 MAIN FUNCTION
+    function playAlarm(id, title) {
 
-        // 🔥 Delete from DB
+        // 🔥 mark triggered
         fetch("/mark-triggered/" + id, {method: "POST"});
 
-        // 🔊 Main sound
+        // 🔊 SOUND
         const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
         audio.volume = 1.0;
-        audio.play().catch(e => console.log("Audio blocked:", e));
+
+        // autoplay issue fix
+        audio.play().catch(() => {
+            document.body.addEventListener("click", () => {
+                audio.play();
+            }, { once: true });
+        });
 
         // 🔊 Backup beep
         playBeepSound();
 
-        // 🔴 Red alert screen
+        // 🔴 RED SCREEN (SUPER STRONG)
         const alarmDiv = document.createElement("div");
 
-alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
+        alarmDiv.innerHTML = "🚨 " + title.toUpperCase() + " 🚨";
 
-alarmDiv.style.position = "fixed";
-alarmDiv.style.top = "0";
-alarmDiv.style.left = "0";
-alarmDiv.style.width = "100vw";
-alarmDiv.style.height = "100vh";
-alarmDiv.style.background = "rgba(255,0,0,0.9)";
-alarmDiv.style.zIndex = "999999";
-alarmDiv.style.display = "flex";
-alarmDiv.style.alignItems = "center";
-alarmDiv.style.justifyContent = "center";
-alarmDiv.style.fontSize = "50px";
-alarmDiv.style.fontWeight = "bold";
-alarmDiv.style.color = "white";
-alarmDiv.style.textShadow = "0 0 20px #fff";
-alarmDiv.style.animation = "pulse 1s infinite";
+        alarmDiv.style.cssText = `
+            position:fixed;
+            top:0;
+            left:0;
+            width:100vw;
+            height:100vh;
+            background:red;
+            z-index:999999;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:50px;
+            font-weight:bold;
+            color:white;
+        `;
 
-// click pannina close
-alarmDiv.onclick = () => alarmDiv.remove();
+        // click pannina remove
+        alarmDiv.onclick = () => alarmDiv.remove();
 
-document.body.appendChild(alarmDiv);
+        document.body.appendChild(alarmDiv);
 
-// 🔥 ensure visible
-document.body.style.overflow = "hidden";
-
-        // 📳 Shake effect
+        // shake
         document.body.classList.add('shake');
         setTimeout(() => document.body.classList.remove('shake'), 2000);
     }
@@ -105,7 +108,6 @@ document.body.style.overflow = "hidden";
                     const o = ctx.createOscillator(), g = ctx.createGain();
                     o.connect(g); g.connect(ctx.destination);
                     o.frequency.value = 800 + i*200;
-                    o.type = "sine";
                     g.gain.setValueAtTime(0.3, ctx.currentTime);
                     g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
                     o.start(ctx.currentTime);
@@ -119,10 +121,6 @@ document.body.style.overflow = "hidden";
 </script>
 
 <style>
-@keyframes pulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
 @keyframes shake {
     0%,100% { transform: translateX(0); }
     25% { transform: translateX(-10px); }
@@ -676,21 +674,23 @@ def upload(subject, unit):
     </body></html>
     '''
     
-@app.route('/view-pdf/<subject>/<filename>')
-def view_pdf(subject, filename):
-    if not session.get('logged_in'): 
-        return redirect('/')
-    
+@app.route('/view-pdf')
+def view_pdf():
     return f'''
+    <!DOCTYPE html>
     <html>
-    <body>
+    <head>
+        <title>PDF Viewer</title>
+    </head>
+    <body style="margin:0">
 
-    <!-- 📄 PDF -->
-    <iframe src="/static/uploads/{subject}/{filename}" 
-            style="width:100%; height:100vh;"></iframe>
+        <!-- ✅ PDF -->
+        <iframe src="/static/sample.pdf" 
+                style="width:100%;height:100vh;border:none;">
+        </iframe>
 
-    <!-- 🔥 இத தான் IMPORTANT -->
-    {GLOBAL_ALARM_JS}
+        <!-- 🔥 IMPORTANT: ADD HERE -->
+        {GLOBAL_ALARM_JS}
 
     </body>
     </html>
