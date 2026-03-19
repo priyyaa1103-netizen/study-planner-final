@@ -192,102 +192,98 @@ def home():
     
 def render_login_page(error=""):
     error_html = f'<div class="error">{error}</div>' if error else ''
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Study Planner</title>
-        <style>
-            *{{margin:0;padding:0;box-sizing:border-box}}
-            body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-            .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
-            .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
-            .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
-            .tab.active{{background:#667eea;color:white}}
-            .input-group{{position:relative;margin:15px 0}}
-            input{{width:100%;padding:18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
-            input:focus{{border-color:#667eea;outline:none}}
-            .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:20px;background:none;border:none}}
-            button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
-            button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
-            .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
-            .hidden{{display:none !important}}
-        </style>
-    </head>
-    <body>
-        <div class="login-box">
-            <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
-            {error_html}
-            
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('login')">Login</button>
-                <button class="tab" onclick="showTab('register')">Register</button>
-            </div>
-            
-            <!-- LOGIN FORM -->
-            <form method="POST" id="loginForm">
-                <input type="hidden" name="action" value="login">
-                <div class="input-group">
-                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" name="password" id="loginPassword" placeholder="Enter password" required>
-                    <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">👁️</button>
-                </div>
-                <button type="submit">🚀 Login</button>
-            </form>
-            
-            <!-- REGISTER FORM -->
-            <form method="POST" id="registerForm" class="hidden">
-                <input type="hidden" name="action" value="register">
-                <div class="input-group">
-                    <input type="text" name="name" placeholder="Your Full Name" required>
-                </div>
-                <div class="input-group">
-                    <input type="email" name="email" placeholder="your-email@gmail.com" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" name="password" id="registerPassword" placeholder="Create Password (6+ chars)" required>
-                    <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">👁️</button>
-                </div>
-                <button type="submit">✅ Create Account</button>
-            </form>
+    return f'''<!DOCTYPE html>
+<html>
+<head>
+    <title>Study Planner</title>
+    <style>
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Segoe UI';background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+        .login-box{{background:#fff;padding:50px;border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.3);width:90%;max-width:450px;text-align:center}}
+        .tabs{{display:flex;margin:20px 0;border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.2)}}
+        .tab{{flex:1;padding:18px;background:#f8fafc;cursor:pointer;border:none;font-weight:600;font-size:16px;transition:all 0.3s}}
+        .tab.active{{background:#667eea;color:white}}
+        .input-group{{position:relative;margin:15px 0}}
+        input{{width:100%;padding:18px;margin:0;border:2px solid #e1e5e9;border-radius:15px;font-size:17px;box-sizing:border-box}}
+        input:focus{{border-color:#667eea;outline:none}}
+        .password-toggle{{position:absolute;right:20px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;font-size:20px;background:none;border:none}}
+        button{{width:100%;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer;margin:10px 0;transition:all 0.3s}}
+        button:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(102,126,234,0.4)}}
+        .error{{background:#fee2e2;color:#dc2626;padding:15px;border-radius:10px;margin:20px 0;font-weight:500}}
+        .hidden{{display:none !important}}
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1 style="font-size:40px;margin-bottom:20px;color:#333">🎓 Study Planner</h1>
+        {error_html}
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login')">Login</button>
+            <button class="tab" onclick="showTab('register')">Register</button>
         </div>
         
-        <script>
-        function showTab(tabName) {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const tabs = document.querySelectorAll('.tab');
-            
-            if (tabName === 'login') {
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-                tabs[0].classList.add('active');
-                tabs[1].classList.remove('active');
-            } else {
-                loginForm.classList.add('hidden');
-                registerForm.classList.remove('hidden');
-                tabs[0].classList.remove('active');
-                tabs[1].classList.add('active');
-            }
-        }
+        <form method="POST" id="loginForm">
+            <input type="hidden" name="action" value="login">
+            <div class="input-group">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="password" id="loginPassword" placeholder="Enter password" required>
+                <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">👁️</button>
+            </div>
+            <button type="submit">🚀 Login</button>
+        </form>
         
-        function togglePassword(passwordId) {
-            const passwordField = document.getElementById(passwordId);
-            const toggleIcon = passwordField.nextElementSibling;
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                toggleIcon.textContent = '🙈';
-            } else {
-                passwordField.type = 'password';
-                toggleIcon.textContent = '👁️';
-            }
-        }
-        </script>
-    </body>
-    </html>
-    '''
+        <form method="POST" id="registerForm" class="hidden">
+            <input type="hidden" name="action" value="register">
+            <div class="input-group">
+                <input type="text" name="name" placeholder="Your Full Name" required>
+            </div>
+            <div class="input-group">
+                <input type="email" name="email" placeholder="your-email@gmail.com" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="password" id="registerPassword" placeholder="Create Password (6+ chars)" required>
+                <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">👁️</button>
+            </div>
+            <button type="submit">✅ Create Account</button>
+        </form>
+    </div>
+    
+    <script>
+    function showTab(tabName) {{
+        var loginForm = document.getElementById('loginForm');
+        var registerForm = document.getElementById('registerForm');
+        var tabs = document.querySelectorAll('.tab');
+        
+        if (tabName === 'login') {{
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            tabs[0].classList.add('active');
+            tabs[1].classList.remove('active');
+        }} else {{
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+            tabs[0].classList.remove('active');
+            tabs[1].classList.add('active');
+        }}
+    }}
+    
+    function togglePassword(passwordId) {{
+        var passwordField = document.getElementById(passwordId);
+        var toggleIcon = passwordField.nextElementSibling;
+        if (passwordField.type === 'password') {{
+            passwordField.type = 'text';
+            toggleIcon.textContent = '🙈';
+        }} else {{
+            passwordField.type = 'password';
+            toggleIcon.textContent = '👁️';
+        }}
+    }}
+    </script>
+</body>
+</html>'''
     
 @app.route('/dashboard')
 def dashboard():
