@@ -841,7 +841,7 @@ def quiz(goal_id):
     elif subject in ['cloud computing', 'cloud']:
          subject = 'cloud-computing'
     
-    all_questions = {
+    quiz_questions = {
         'mathematics': [
     {"q": "What is |−10| ?", "options": ["-10", "10", "0", "1"], "answer": "10"},
     {"q": "If A = {1,2,3} and B = {2,3,4}, what is A ∩ B?", "options": ["{1,2}", "{2,3}", "{3,4}", "{1,4}"], "answer": "{2,3}"},
