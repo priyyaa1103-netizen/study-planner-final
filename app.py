@@ -15,22 +15,22 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = """
 <script>
-// ✅ Prevent multiple runs
 if(window.alarmRunning){
     console.log("Alarm already running");
 } else {
     window.alarmRunning = true;
-    let firedAlarms = new Set();
+    window.firedAlarms = new Set();  // GLOBAL SET
+    
     console.log("🎵 GLOBAL ALARM ACTIVE");
-
+    
     setInterval(() => {
         fetch("/api/user-alarms")
         .then(r => r.json())
         .then(data => {
             const now = new Date();
             data.forEach(alarm => {
-                if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
-                    firedAlarms.add(alarm.id);
+                if(new Date(alarm.deadline) <= now && !window.firedAlarms.has(alarm.id)) {
+                    window.firedAlarms.add(alarm.id);  // GLOBAL MARK
                     console.log("🚨 TRIGGER:", alarm.title);
                     playAlarmSound(alarm.id, alarm.title);
                 }
@@ -39,37 +39,31 @@ if(window.alarmRunning){
         .catch(err => console.log("Alarm fetch error:", err));
     }, 2000);
 
-    // 🔥 NEW ALARM FUNCTION - PDF + Normal pages support
     function playAlarmSound(id, title) {
-      // ✅ PDF page check - overlay show pannunga
-      if (window.location.pathname.includes('/view-pdf/')) {
+        fetch(`/mark-triggered/${id}`, {method: "POST"});
+        
+        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+        audio.volume = 1.0; 
+        audio.play().catch(e => {});
+        playBeepSound();
+        
+        // RED OVERLAY - EVERYWHERE SAME
         const overlay = document.createElement('div');
-        overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click to close</small>`;
+        overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click pannunga</small>`;
         overlay.style.cssText = `
-          position:fixed;top:0;left:0;width:100vw;height:100vh;
-          background:rgba(255,0,0,0.85);z-index:1000000;
-          display:flex;flex-direction:column;align-items:center;justify-content:center;
-          font-size:50px;font-weight:bold;color:white;text-align:center;
-          text-shadow:0 0 20px #fff; cursor:pointer; padding:20px;
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            background:rgba(255,0,0,0.9);z-index:1000000;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            font-size:50px;font-weight:bold;color:white;text-align:center;
+            text-shadow:0 0 20px #fff;cursor:pointer;padding:20px;
         `;
         overlay.onclick = () => overlay.remove();
         document.documentElement.appendChild(overlay);
-      } else {
-        // Normal pages-la old logic
-        document.body.innerHTML += `<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;color:white;text-shadow:0 0 20px #fff;animation:pulse 1s infinite;cursor:pointer;" onclick="this.remove()">🚨 ${title.toUpperCase()} 🚨</div>`;
-      }
-
-      // Sound common
-      const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-      audio.volume = 1.0; audio.play().catch(()=>{});
-      playBeepSound();
-      
-      fetch(`/mark-triggered/${id}`, {method: "POST"});
-      
-      document.body.classList.add('shake');
-      setTimeout(()=>document.body.classList.remove('shake'), 2000);
+        
+        document.body.classList.add('shake');
+        setTimeout(() => document.body.classList.remove('shake'), 2000);
     }
-
+    
     function playBeepSound() {
         for(let i=0; i<3; i++) {
             setTimeout(() => {
@@ -89,18 +83,10 @@ if(window.alarmRunning){
     }
 }
 </script>
-
 <style>
-@keyframes pulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-@keyframes shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
-}
-body.shake { animation: shake 0.2s infinite; }
+@keyframes pulse {{0%,100% {{transform: scale(1);}} 50% {{transform: scale(1.1);}}}}
+@keyframes shake {{0%,100% {{transform: translateX(0);}} 25% {{transform: translateX(-10px);}} 75% {{transform: translateX(10px);}}}}
+body.shake {{animation: shake 0.2s infinite;}}
 </style>
 """
 
@@ -654,56 +640,11 @@ def view_pdf(subject, filename):
         return redirect('/')
     return f'''
     <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-    body {{ margin:0; height:100vh; overflow:hidden; background:#000; }}
-    iframe {{ width:100%; height:90vh; border:none; }}
-    .pdf-container {{ position:relative; width:100%; height:90vh; }}
-    </style>
-    </head>
-    <body>
-    <div class="pdf-container">
-        <iframe src="/static/uploads/{subject}/{filename}"></iframe>
-    </div>
-    
-    <script>
-    let pdfAlarmRunning = false;
-    if(!pdfAlarmRunning) {{
-        pdfAlarmRunning = true;
-        setInterval(function() {{
-            fetch("/api/user-alarms")
-            .then(function(r) {{ return r.json(); }})
-            .then(function(data) {{
-                var now = new Date();
-                data.forEach(function(alarm) {{
-                    if(new Date(alarm.deadline) <= now) {{
-                        var audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-                        audio.volume = 1.0; 
-                        audio.play();
-                        
-                        var overlay = document.createElement('div');
-                        overlay.innerHTML = '🚨 ' + alarm.title.toUpperCase() + ' 🚨<br><small>Click to close</small>';
-                        overlay.style.cssText = `
-                            position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999999;
-                            background:rgba(255,0,0,0.95); display:flex; flex-direction:column;
-                            align-items:center; justify-content:center; font-size:50px; font-weight:bold;
-                            color:white; text-shadow:0 0 20px #fff; cursor:pointer; text-align:center;
-                        `;
-                        overlay.onclick = function() {{ overlay.remove(); }};
-                        document.body.appendChild(overlay);
-                        
-                        fetch('/mark-triggered/' + alarm.id, {{method: "POST"}});
-                    }}
-                }});
-            }});
-        }}, 2000);
-    }}
-    </script>
-    </body>
-    </html>
+    <html><body style="margin:0;height:100vh">
+    <iframe src="/static/uploads/{subject}/{filename}" style="width:100%;height:100vh;border:none"></iframe>
+    {GLOBAL_ALARM_JS}
+    </body></html>
     '''
-    
 # ===== MY FILES PAGE (COMPLETE VERSION) =====
 @app.route('/myfiles')
 def myfiles_page():  # Function name change pannirukken
