@@ -78,7 +78,7 @@ if(window.alarmRunning){
             left:0;
             width:100vw;
             height:100vh;
-            background:red;
+            background:rgba(255,0,0,0.8);
             z-index:999999;
             display:flex;
             align-items:center;
@@ -674,8 +674,11 @@ def upload(subject, unit):
     </body></html>
     '''
     
-@app.route('/view-pdf')
-def view_pdf():
+@app.route('/view-pdf/<subject>/<filename>')
+def view_pdf(subject, filename):
+    if not session.get('logged_in'): 
+        return redirect('/')
+        
     return f'''
     <!DOCTYPE html>
     <html>
