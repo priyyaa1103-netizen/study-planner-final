@@ -62,18 +62,33 @@ if(window.alarmRunning){
         playBeepSound();
 
         // 🔴 Red alert screen
-        document.body.innerHTML += `
-            <div style="
-                position:fixed;top:0;left:0;width:100vw;height:100vh;
-                background:rgba(255,0,0,0.8);z-index:99999;
-                display:flex;align-items:center;justify-content:center;
-                font-size:50px;font-weight:bold;color:white;
-                text-shadow:0 0 20px #fff;
-                animation: pulse 1s infinite;" 
-                onclick="this.remove()">
-                🚨 ${title.toUpperCase()} 🚨
-            </div>
-        `;
+        const alarmDiv = document.createElement("div");
+
+alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
+
+alarmDiv.style.position = "fixed";
+alarmDiv.style.top = "0";
+alarmDiv.style.left = "0";
+alarmDiv.style.width = "100vw";
+alarmDiv.style.height = "100vh";
+alarmDiv.style.background = "rgba(255,0,0,0.9)";
+alarmDiv.style.zIndex = "999999";
+alarmDiv.style.display = "flex";
+alarmDiv.style.alignItems = "center";
+alarmDiv.style.justifyContent = "center";
+alarmDiv.style.fontSize = "50px";
+alarmDiv.style.fontWeight = "bold";
+alarmDiv.style.color = "white";
+alarmDiv.style.textShadow = "0 0 20px #fff";
+alarmDiv.style.animation = "pulse 1s infinite";
+
+// click pannina close
+alarmDiv.onclick = () => alarmDiv.remove();
+
+document.body.appendChild(alarmDiv);
+
+// 🔥 ensure visible
+document.body.style.overflow = "hidden";
 
         // 📳 Shake effect
         document.body.classList.add('shake');
