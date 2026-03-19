@@ -68,7 +68,7 @@ if(window.alarmRunning){
         playBeepSound();
 
         // 🔴 RED SCREEN (SUPER STRONG)
-        const alarmDiv = document.createElement("div");
+        const alarmDiv = document.body.innerHTML("div");
 
         alarmDiv.innerHTML = "🚨 " + title.toUpperCase() + " 🚨";
 
