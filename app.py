@@ -430,7 +430,7 @@ def reminders():
         <div class="input-group">
             <input name="title" placeholder="Reminder Title (ex: Math Exam)" required>
             <input name="deadline" type="datetime-local" required>
-            <button style="width:98%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer">✅ Add Reminder</button>
+            <button style="width:80%;padding:18px;background:#50c878;color:white;border:none;border-radius:15px;font-size:20px;font-weight:600;cursor:pointer">✅ Add Reminder</button>
         </div>
     </form>
     <h2 style="margin-top:40px">Your Reminders:</h2>
