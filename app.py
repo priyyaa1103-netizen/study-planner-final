@@ -788,6 +788,9 @@ def quiz(goal_id):
         return redirect('/view-goals')
 
     subject = goal['subject'].strip().lower()
+    # --- Debug prints, add right after subject ---
+    print("Subject:", subject)  # Debug for checking
+    print("All keys:", list(all_questions.keys()))
 
     # ← Add this here, **4 spaces indentation from function**
     quiz_questions = all_questions.get(subject)
