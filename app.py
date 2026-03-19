@@ -15,68 +15,61 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = """
 <script>
-
 // ✅ Prevent multiple runs
 if(window.alarmRunning){
     console.log("Alarm already running");
 } else {
     window.alarmRunning = true;
-
     let firedAlarms = new Set();
-
     console.log("🎵 GLOBAL ALARM ACTIVE");
 
-    // ⏰ Check every 2 sec
     setInterval(() => {
         fetch("/api/user-alarms")
         .then(r => r.json())
         .then(data => {
             const now = new Date();
-
             data.forEach(alarm => {
                 if(new Date(alarm.deadline) <= now && !firedAlarms.has(alarm.id)) {
                     firedAlarms.add(alarm.id);
                     console.log("🚨 TRIGGER:", alarm.title);
-
                     playAlarmSound(alarm.id, alarm.title);
                 }
             });
         })
         .catch(err => console.log("Alarm fetch error:", err));
-
     }, 2000);
 
-
+    // 🔥 NEW ALARM FUNCTION - PDF + Normal pages support
     function playAlarmSound(id, title) {
-  fetch(`/mark-triggered/${id}`, {method: "POST"});
+      // ✅ PDF page check - overlay show pannunga
+      if (window.location.pathname.includes('/view-pdf/')) {
+        const overlay = document.createElement('div');
+        overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click to close</small>`;
+        overlay.style.cssText = `
+          position:fixed;top:0;left:0;width:100vw;height:100vh;
+          background:rgba(255,0,0,0.85);z-index:1000000;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          font-size:50px;font-weight:bold;color:white;text-align:center;
+          text-shadow:0 0 20px #fff; cursor:pointer; padding:20px;
+        `;
+        overlay.onclick = () => overlay.remove();
+        document.documentElement.appendChild(overlay);
+      } else {
+        // Normal pages-la old logic
+        document.body.innerHTML += `<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:bold;color:white;text-shadow:0 0 20px #fff;animation:pulse 1s infinite;cursor:pointer;" onclick="this.remove()">🚨 ${title.toUpperCase()} 🚨</div>`;
+      }
 
-  // Sound
-  const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-  audio.volume = 1.0; 
-  audio.play().catch(e => {});
+      // Sound common
+      const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+      audio.volume = 1.0; audio.play().catch(()=>{});
+      playBeepSound();
+      
+      fetch(`/mark-triggered/${id}`, {method: "POST"});
+      
+      document.body.classList.add('shake');
+      setTimeout(()=>document.body.classList.remove('shake'), 2000);
+    }
 
-  playBeepSound();
-
-  // ✅ RED OVERLAY - CREATE ELEMENT use pannunga (safe!)
-  const overlay = document.createElement('div');
-  overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
-  overlay.style.cssText = `
-    position:fixed; top:0; left:0; width:100vw; height:100vh;
-    background:rgba(255,0,0,0.9); z-index:999999 !important;
-    display:flex; align-items:center; justify-content:center;
-    font-size:60px; font-weight:bold; color:white;
-    text-shadow:0 0 30px #fff; cursor:pointer;
-    animation: pulse 1s infinite;
-  `;
-  overlay.onclick = () => overlay.remove();
-  document.body.appendChild(overlay);  // append pannunga!
-
-  document.body.classList.add('shake');
-  setTimeout(() => document.body.classList.remove('shake'), 2000);
-}
-
-
-    // 🔊 Beep sound
     function playBeepSound() {
         for(let i=0; i<3; i++) {
             setTimeout(() => {
@@ -94,7 +87,6 @@ if(window.alarmRunning){
             }, i*600);
         }
     }
-
 }
 </script>
 
@@ -660,15 +652,11 @@ def upload(subject, unit):
 def view_pdf(subject, filename):
     if not session.get('logged_in'): 
         return redirect('/')
-    
     return f'''
     <!DOCTYPE html>
-    <html><head><title>PDF Viewer</title>
-    <style>body{{margin:0;height:100vh}}</style></head>
-    <body>
+    <html><body style="margin:0;height:100vh">
     <iframe src="/static/uploads/{subject}/{filename}" 
-            style="width:100%;height:100vh;border:none"
-            sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+            style="width:100%;height:100vh;border:none"></iframe>
     {GLOBAL_ALARM_JS}
     </body></html>
     '''
