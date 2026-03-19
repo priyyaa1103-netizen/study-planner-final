@@ -796,8 +796,8 @@ def quiz(goal_id):
          subject = 'english-1'
 
 # 2nd sem
-    elif subject in ['maths-2', 'math-2', 'mathematics-2']:
-         subject = 'mathematics-2'
+    elif subject in ['Maths-2', 'math-2', 'mathematics-2']:
+         subject = 'maths-2'
     elif subject in ['tamil-2']:
          subject = 'tamil-2'
     elif subject in ['english-2']:
@@ -805,7 +805,7 @@ def quiz(goal_id):
 
 # 3rd sem
     elif subject in ['java', 'java programming', 'java-programming']:
-         subject = 'java-programming'
+         subject = 'java'
     elif subject in ['statistics-1', 'stats1']:
          subject = 'statistics-1'
     elif subject in ['tamil-3']:
@@ -815,7 +815,7 @@ def quiz(goal_id):
  
 # 4th sem
     elif subject in ['data structure', 'data-structure']:
-         subject = 'data-structure'
+         subject = 'data_structure'
     elif subject in ['statistics-2', 'stats2']:
          subject = 'statistics-2'
     elif subject in ['tamil-4']:
@@ -825,23 +825,23 @@ def quiz(goal_id):
 
 # 5th sem
     elif subject in ['operating system', 'os']:
-         subject = 'operating-system'
+         subject = 'operating_system'
     elif subject in ['rdbms']:
          subject = 'rdbms'
     elif subject in ['software engineering', 'se']:
-         subject = 'software-engineering'
+         subject = 'software_engineering'
     elif subject in ['data mining', 'data-warehousing', 'dm', 'dw']:
-         subject = 'data-mining-warehousing'
+         subject = 'DMW'
 
 # 6th sem
     elif subject in ['asp.net', 'programming in asp.net']:
-         subject = 'asp-net'
+         subject = 'asp'
     elif subject in ['data science']:
-         subject = 'data-science'
+         subject = 'data_science'
     elif subject in ['cloud computing', 'cloud']:
-         subject = 'cloud-computing'
+         subject = 'cloud_computing'
     
-    quiz_questions = {
+    all_questions = {
         'mathematics': [
     {"q": "What is |−10| ?", "options": ["-10", "10", "0", "1"], "answer": "10"},
     {"q": "If A = {1,2,3} and B = {2,3,4}, what is A ∩ B?", "options": ["{1,2}", "{2,3}", "{3,4}", "{1,4}"], "answer": "{2,3}"},
