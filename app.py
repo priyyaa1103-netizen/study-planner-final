@@ -15,20 +15,6 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = """
 <script>
-let alarmAudio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-alarmAudio.volume = 1.0;
-
-// 🔥 trick: load + try play once silently
-alarmAudio.muted = true;
-
-alarmAudio.play().then(() => {
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
-    alarmAudio.muted = false;
-    console.log("✅ Audio unlocked");
-}).catch(() => {
-    console.log("❌ Autoplay still blocked");
-});
 
 // ✅ Prevent multiple runs
 if(window.alarmRunning){
@@ -68,32 +54,26 @@ if(window.alarmRunning){
         fetch("/mark-triggered/" + id, {method: "POST"});
 
         // 🔊 Main sound
-        alarmAudio.currentTime = 0;
-        alarmAudio.play().catch(e => console.log("Still blocked:", e));
+        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+        audio.volume = 1.0;
         audio.play().catch(e => console.log("Audio blocked:", e));
 
         // 🔊 Backup beep
         playBeepSound();
 
         // 🔴 Red alert screen
-       const alarmDiv = document.createElement("div");
-       alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
-
-    alarmDiv.style.cssText = `
-    position:fixed;
-    top:0;left:0;
-    width:100vw;height:100vh;
-    background:red;
-    z-index:99999;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:50px;
-    font-weight:bold;
-    color:white;
-`;
-
-document.body.appendChild(alarmDiv);
+        document.body.innerHTML += `
+            <div style="
+                position:fixed;top:0;left:0;width:100vw;height:100vh;
+                background:rgba(255,0,0,0.8);z-index:99999;
+                display:flex;align-items:center;justify-content:center;
+                font-size:50px;font-weight:bold;color:white;
+                text-shadow:0 0 20px #fff;
+                animation: pulse 1s infinite;" 
+                onclick="this.remove()">
+                🚨 ${title.toUpperCase()} 🚨
+            </div>
+        `;
 
         // 📳 Shake effect
         document.body.classList.add('shake');
