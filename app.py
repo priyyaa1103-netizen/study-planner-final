@@ -668,34 +668,32 @@ def view_pdf(subject, filename):
     </div>
     
     <script>
-    // PDF-SPECIFIC ALARM - NO GLOBAL CONFLICT
     let pdfAlarmRunning = false;
     if(!pdfAlarmRunning) {{
         pdfAlarmRunning = true;
-        setInterval(() => {{
+        setInterval(function() {{
             fetch("/api/user-alarms")
-            .then(r => r.json())
-            .then(data => {{
-                const now = new Date();
-                data.forEach(alarm => {{
+            .then(function(r) {{ return r.json(); }})
+            .then(function(data) {{
+                var now = new Date();
+                data.forEach(function(alarm) {{
                     if(new Date(alarm.deadline) <= now) {{
-                        // PDF SOUND + RED SCREEN
-                        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-                        audio.volume = 1.0; audio.play().catch(()=>{});
+                        var audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+                        audio.volume = 1.0; 
+                        audio.play();
                         
-                        // FULL RED OVERLAY
-                        const overlay = document.createElement('div');
-                        overlay.innerHTML = `🚨 ${{alarm.title.toUpperCase()}} 🚨<br><small>Click to close</small>`;
+                        var overlay = document.createElement('div');
+                        overlay.innerHTML = '🚨 ' + alarm.title.toUpperCase() + ' 🚨<br><small>Click to close</small>';
                         overlay.style.cssText = `
                             position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999999;
                             background:rgba(255,0,0,0.95); display:flex; flex-direction:column;
                             align-items:center; justify-content:center; font-size:50px; font-weight:bold;
                             color:white; text-shadow:0 0 20px #fff; cursor:pointer; text-align:center;
                         `;
-                        overlay.onclick = () => overlay.remove();
+                        overlay.onclick = function() {{ overlay.remove(); }};
                         document.body.appendChild(overlay);
                         
-                        fetch(`/mark-triggered/${{alarm.id}}`, {{method: "POST"}});
+                        fetch('/mark-triggered/' + alarm.id, {{method: "POST"}});
                     }}
                 }});
             }});
