@@ -654,10 +654,56 @@ def view_pdf(subject, filename):
         return redirect('/')
     return f'''
     <!DOCTYPE html>
-    <html><body style="margin:0;height:100vh">
-    <iframe src="/static/uploads/{subject}/{filename}" 
-            style="width:100%;height:100vh;border:none"></iframe>
-    </body></html>
+    <html>
+    <head>
+    <style>
+    body {{ margin:0; height:100vh; overflow:hidden; background:#000; }}
+    iframe {{ width:100%; height:90vh; border:none; }}
+    .pdf-container {{ position:relative; width:100%; height:90vh; }}
+    </style>
+    </head>
+    <body>
+    <div class="pdf-container">
+        <iframe src="/static/uploads/{subject}/{filename}"></iframe>
+    </div>
+    
+    <script>
+    // PDF-SPECIFIC ALARM - NO GLOBAL CONFLICT
+    let pdfAlarmRunning = false;
+    if(!pdfAlarmRunning) {{
+        pdfAlarmRunning = true;
+        setInterval(() => {{
+            fetch("/api/user-alarms")
+            .then(r => r.json())
+            .then(data => {{
+                const now = new Date();
+                data.forEach(alarm => {{
+                    if(new Date(alarm.deadline) <= now) {{
+                        // PDF SOUND + RED SCREEN
+                        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+                        audio.volume = 1.0; audio.play().catch(()=>{});
+                        
+                        // FULL RED OVERLAY
+                        const overlay = document.createElement('div');
+                        overlay.innerHTML = `🚨 ${{alarm.title.toUpperCase()}} 🚨<br><small>Click to close</small>`;
+                        overlay.style.cssText = `
+                            position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999999;
+                            background:rgba(255,0,0,0.95); display:flex; flex-direction:column;
+                            align-items:center; justify-content:center; font-size:50px; font-weight:bold;
+                            color:white; text-shadow:0 0 20px #fff; cursor:pointer; text-align:center;
+                        `;
+                        overlay.onclick = () => overlay.remove();
+                        document.body.appendChild(overlay);
+                        
+                        fetch(`/mark-triggered/${{alarm.id}}`, {{method: "POST"}});
+                    }}
+                }});
+            }});
+        }}, 2000);
+    }}
+    </script>
+    </body>
+    </html>
     '''
     
 # ===== MY FILES PAGE (COMPLETE VERSION) =====
