@@ -231,7 +231,7 @@ def render_login_page(error=""):
     </div>
     
     <div class="login-box">
-        <h1 style="font-size:45px;margin-bottom:25px;color:#333;font-weight:800;text-shadow:2px 2px 4px rgba(0,0,0,0.1)">🎓 StudyHub</h1>
+        <h1 style="font-size:45px;margin-bottom:25px;color:#333;font-weight:800;text-shadow:2px 2px 4px rgba(0,0,0,0.1)">🎓 StudyPlanner</h1>
         {error_html}
         
         <div class="tabs">
@@ -769,7 +769,6 @@ def goals():
         <form method="POST">
             <input name="subject" placeholder="Subject (ex: Mathematics)" required>
             <input name="goal" placeholder="Goal Description" required>
-            <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
             <button type="submit">✅ Save Goal</button>
         </form>
         <p style="font-size:16px;margin-top:20px;color:#f1c40f">📝 Complete 10-question quiz to earn progress!</p>
