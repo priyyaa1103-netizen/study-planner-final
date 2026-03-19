@@ -38,7 +38,7 @@ if(window.alarmRunning){
                     firedAlarms.add(alarm.id);
                     console.log("🚨 TRIGGER:", alarm.title);
 
-                    playAlarm(alarm.id, alarm.title);
+                    playAlarmSound(alarm.id, alarm.title);
                 }
             });
         })
@@ -47,53 +47,35 @@ if(window.alarmRunning){
     }, 2000);
 
 
-    // 🚨 MAIN FUNCTION
-    function playAlarm(id, title) {
+    // 🚨 Alarm function
+    function playAlarmSound(id, title) {
 
-        // 🔥 mark triggered
+        // 🔥 Delete from DB
         fetch("/mark-triggered/" + id, {method: "POST"});
 
-        // 🔊 SOUND
+        // 🔊 Main sound
         const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
         audio.volume = 1.0;
-
-        // autoplay issue fix
-        audio.play().catch(() => {
-            document.body.addEventListener("click", () => {
-                audio.play();
-            }, { once: true });
-        });
+        audio.play().catch(e => console.log("Audio blocked:", e));
 
         // 🔊 Backup beep
         playBeepSound();
 
-        // 🔴 RED SCREEN (SUPER STRONG)
-        const alarmDiv = document.body.innerHTML("div");
-
-        alarmDiv.innerHTML = "🚨 " + title.toUpperCase() + " 🚨";
-
-        alarmDiv.style.cssText = `
-            position:fixed;
-            top:0;
-            left:0;
-            width:100vw;
-            height:100vh;
-            background:rgba(255,0,0,0.8);
-            z-index:999999;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:50px;
-            font-weight:bold;
-            color:white;
+        // 🔴 Red alert screen
+        document.body.innerHTML += `
+            <div style="
+                position:fixed;top:0;left:0;width:100vw;height:100vh;
+                background:rgba(255,0,0,0.8);z-index:99999;
+                display:flex;align-items:center;justify-content:center;
+                font-size:50px;font-weight:bold;color:white;
+                text-shadow:0 0 20px #fff;
+                animation: pulse 1s infinite;" 
+                onclick="this.remove()">
+                🚨 ${title.toUpperCase()} 🚨
+            </div>
         `;
 
-        // click pannina remove
-        alarmDiv.onclick = () => alarmDiv.remove();
-
-        document.body.appendChild(alarmDiv);
-
-        // shake
+        // 📳 Shake effect
         document.body.classList.add('shake');
         setTimeout(() => document.body.classList.remove('shake'), 2000);
     }
@@ -108,6 +90,7 @@ if(window.alarmRunning){
                     const o = ctx.createOscillator(), g = ctx.createGain();
                     o.connect(g); g.connect(ctx.destination);
                     o.frequency.value = 800 + i*200;
+                    o.type = "sine";
                     g.gain.setValueAtTime(0.3, ctx.currentTime);
                     g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
                     o.start(ctx.currentTime);
@@ -121,6 +104,10 @@ if(window.alarmRunning){
 </script>
 
 <style>
+@keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
 @keyframes shake {
     0%,100% { transform: translateX(0); }
     25% { transform: translateX(-10px); }
