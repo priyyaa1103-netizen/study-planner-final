@@ -678,22 +678,17 @@ def upload(subject, unit):
 def view_pdf(subject, filename):
     if not session.get('logged_in'): 
         return redirect('/')
-        
+    
     return f'''
-    <!DOCTYPE html>
     <html>
-    <head>
-        <title>PDF Viewer</title>
-    </head>
-    <body style="margin:0">
+    <body>
 
-        <!-- ✅ PDF -->
-        <iframe src="/static/sample.pdf" 
-                style="width:100%;height:100vh;border:none;">
-        </iframe>
+    <!-- 📄 PDF -->
+    <iframe src="/static/uploads/{subject}/{filename}" 
+            style="width:100%; height:100vh;"></iframe>
 
-        <!-- 🔥 IMPORTANT: ADD HERE -->
-        {GLOBAL_ALARM_JS}
+    <!-- 🔥 இத தான் IMPORTANT -->
+    {GLOBAL_ALARM_JS}
 
     </body>
     </html>
