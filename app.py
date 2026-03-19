@@ -15,15 +15,19 @@ app.secret_key = os.getenv('SECRET_KEY', 'study2026-default-key')
 # Fixed GLOBAL_ALARM_JS - completed audio URLs and syntax
 GLOBAL_ALARM_JS = """
 <script>
-let userInteracted = false;
+let alarmAudio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
+alarmAudio.volume = 1.0;
 
-// user click / touch detect
-document.addEventListener("click", () => {
-    userInteracted = true;
-});
+// 🔥 trick: load + try play once silently
+alarmAudio.muted = true;
 
-document.addEventListener("touchstart", () => {
-    userInteracted = true;
+alarmAudio.play().then(() => {
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    alarmAudio.muted = false;
+    console.log("✅ Audio unlocked");
+}).catch(() => {
+    console.log("❌ Autoplay still blocked");
 });
 
 // ✅ Prevent multiple runs
@@ -64,30 +68,32 @@ if(window.alarmRunning){
         fetch("/mark-triggered/" + id, {method: "POST"});
 
         // 🔊 Main sound
-        const audio = new Audio("https://freesound.org/data/previews/316/316847_4939433-lq.mp3");
-        audio.volume = 1.0;
-        if(userInteracted){
-    audio.play().catch(e => console.log("Audio blocked:", e));
-} else {
-    console.log("❌ User interaction இல்ல → sound block ஆகும்");
-}
+        alarmAudio.currentTime = 0;
+        alarmAudio.play().catch(e => console.log("Still blocked:", e));
+        audio.play().catch(e => console.log("Audio blocked:", e));
 
         // 🔊 Backup beep
         playBeepSound();
 
         // 🔴 Red alert screen
-        document.body.innerHTML += `
-            <div style="
-                position:fixed;top:0;left:0;width:100vw;height:100vh;
-                background:rgba(255,0,0,0.8);z-index:99999;
-                display:flex;align-items:center;justify-content:center;
-                font-size:50px;font-weight:bold;color:white;
-                text-shadow:0 0 20px #fff;
-                animation: pulse 1s infinite;" 
-                onclick="this.remove()">
-                🚨 ${title.toUpperCase()} 🚨
-            </div>
-        `;
+       const alarmDiv = document.createElement("div");
+       alarmDiv.innerHTML = `🚨 ${title.toUpperCase()} 🚨`;
+
+    alarmDiv.style.cssText = `
+    position:fixed;
+    top:0;left:0;
+    width:100vw;height:100vh;
+    background:red;
+    z-index:99999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:50px;
+    font-weight:bold;
+    color:white;
+`;
+
+document.body.appendChild(alarmDiv);
 
         // 📳 Shake effect
         document.body.classList.add('shake');
@@ -96,29 +102,24 @@ if(window.alarmRunning){
 
 
     // 🔊 Beep sound
-   function playBeepSound() {
-    if(!userInteracted) return; // 🔥 IMPORTANT
-
-    for(let i=0; i<3; i++) {
-        setTimeout(() => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-                if (ctx.state === "suspended") {
-                    ctx.resume(); // 🔥 resume fix
-                }
-
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.connect(g); g.connect(ctx.destination);
-                o.frequency.value = 800 + i*200;
-                o.type = "sine";
-                g.gain.setValueAtTime(0.3, ctx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime);
-                o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
-        }, i*600);
+    function playBeepSound() {
+        for(let i=0; i<3; i++) {
+            setTimeout(() => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.connect(g); g.connect(ctx.destination);
+                    o.frequency.value = 800 + i*200;
+                    o.type = "sine";
+                    g.gain.setValueAtTime(0.3, ctx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    o.start(ctx.currentTime);
+                    o.stop(ctx.currentTime + 0.5);
+                } catch(e) {}
+            }, i*600);
+        }
     }
+
 }
 </script>
 
