@@ -657,7 +657,6 @@ def view_pdf(subject, filename):
     <html><body style="margin:0;height:100vh">
     <iframe src="/static/uploads/{subject}/{filename}" 
             style="width:100%;height:100vh;border:none"></iframe>
-    {GLOBAL_ALARM_JS}
     </body></html>
     '''
     
