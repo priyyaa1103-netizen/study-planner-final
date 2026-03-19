@@ -49,7 +49,7 @@ if(window.alarmRunning){
         
         // RED OVERLAY - EVERYWHERE SAME
         const overlay = document.createElement('div');
-        overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br><small>Click pannunga</small>`;
+        overlay.innerHTML = `🚨 ${title.toUpperCase()} 🚨<br>`;
         overlay.style.cssText = `
             position:fixed;top:0;left:0;width:100vw;height:100vh;
             background:rgba(255,0,0,0.9);z-index:1000000;
