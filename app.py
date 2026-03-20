@@ -803,6 +803,7 @@ h1{{text-align:center;font-size:40px;margin-bottom:30px}}
     <form method="POST">
         <input name="subject" placeholder="📚 Subject (Maths/Python/etc)" required>
         <input name="goal" placeholder="🎯 Goal (Score 90% in exam)" required>
+        <input name="target_score" type="number" placeholder="Target Score (ex: 90)" required>
         <button type="submit">✅ Save Goal</button>
     </form>
     <h2 style="margin-top:40px;color:#ffd700">Your Goals:</h2>
