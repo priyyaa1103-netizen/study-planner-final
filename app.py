@@ -766,12 +766,12 @@ def goals():
     if not session.get('logged_in'): return redirect('/')
     
     if request.method == 'POST':
-        conn = get_db_connection()
-        conn.execute("INSERT INTO goals (email, subject, goal) VALUES (?, ?, ?)",
-                    (session['email'], request.form['subject'], request.form['goal']))
-        conn.commit()
-        conn.close()
-        return redirect('/goals')
+    conn = get_db_connection()
+    goal_id = conn.execute("INSERT INTO goals (email, subject, goal, target_score, progress, max_score) VALUES (?, ?, ?, ?, 0, 0)",
+                (session['email'], request.form['subject'], request.form['goal'], request.form['target_score'])).lastrowid
+    conn.commit()
+    conn.close()
+    return redirect(f'/quiz/{goal_id}')  # ✅ QUIZ START!
     
     conn = get_db_connection()
     my_goals = conn.execute("SELECT * FROM goals WHERE email=? ORDER BY id DESC", (session['email'],)).fetchall()
@@ -1288,16 +1288,33 @@ def myfiles():
     <a href="/dashboard" style="display:block;text-align:center;margin:50px 0;padding:20px 50px;background:#f39c12;color:white;text-decoration:none;border-radius:20px;font-size:24px;width:300px;margin:50px auto">← Dashboard</a>
     </div></body></html>
     '''
-    
-@app.route('/delete_goal/<int:id>')
-def delete_goal(id):
+
+@app.route('/delete-goal/<int:goal_id>')
+def delete_goal(goal_id):
     if not session.get('logged_in'): return redirect('/')
-    conn = sqlite3.connect('users.db')
-    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (id, session['email']))
+    conn = get_db_connection()
+    conn.execute('DELETE FROM goals WHERE id=? AND email=?', (goal_id, session['email']))
     conn.commit()
     conn.close()
     return redirect('/view-goals')
 
+@app.route('/delete_goal/<int:goal_id>')
+def delete_goal_alt(goal_id):  # Backup route
+    return delete_goal(goal_id)
+
+# ONE TIME RUN - Add missing columns
+def fix_database():
+    conn = get_db_connection()
+    conn.execute("ALTER TABLE goals ADD COLUMN target_score INTEGER DEFAULT 0")
+    conn.execute("ALTER TABLE goals ADD COLUMN progress INTEGER DEFAULT 0") 
+    conn.execute("ALTER TABLE goals ADD COLUMN max_score INTEGER DEFAULT 0")
+    conn.commit()
+    conn.close()
+    print("✅ Database fixed!")
+
+# UNCOMMENT & RUN ONCE, then delete
+# fix_database()
+    
 @app.route('/logout')
 def logout():
     session.clear()
